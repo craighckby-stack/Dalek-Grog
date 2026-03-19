@@ -1,0 +1,18 @@
+{
+  "wait_60s_retry": {
+    "action": "wait",
+    "params": { "ms": 60000 }
+  },
+  "rotate_keys": {
+    "action": "rotate",
+    "params": {}
+  },
+  "create_branch": {
+    "action": "create_branch",
+    "params": {}
+  },
+  "reduce_batch_50": {
+    "action": "reduce_concurrency",
+    "params": { "factor": 0.5 }
+  }
+}

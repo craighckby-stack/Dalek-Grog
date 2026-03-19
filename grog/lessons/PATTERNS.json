@@ -1,0 +1,22 @@
+{
+  "rate_limit": {
+    "trigger": "429",
+    "lesson": "API rate limit reached. System must cool down.",
+    "strategy": "wait_60s_retry"
+  },
+  "quota_exceeded": {
+    "trigger": "quota exceeded",
+    "lesson": "API quota exhausted.",
+    "strategy": "rotate_keys"
+  },
+  "branch_missing": {
+    "trigger": "branch not found",
+    "lesson": "Target branch does not exist in repository.",
+    "strategy": "create_branch"
+  },
+  "oom": {
+    "trigger": "memory",
+    "lesson": "System memory exhausted due to large batch size.",
+    "strategy": "reduce_batch_50"
+  }
+}
