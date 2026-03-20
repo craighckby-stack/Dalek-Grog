@@ -1,20 +1,22 @@
-**Nexus Core Precision Audit Results: Enhanced Diagnostic Service and Lanes**
-
-**Diagnostic Service and Related Messages**
-
 class NexusDiagnosticService {
   constructor() {
     this.listeners = new Set();
     this.history = [];
     this.diagnosticEmitter = new EnhancedDiagnosticEmitter();
+    this.factories = {
+      diagnosticService: new NexusDiagnosticServiceFactory(),
+      lane: new NexusLaneFactory()
+    };
   }
 
   subscribe(fn) {
     this.listeners.add(fn);
+    this.diagnosticEmitter.subscribe(fn);
   }
 
   unsubscribe(fn) {
     this.listeners.delete(fn);
+    this.diagnosticEmitter.unsubscribe(fn);
   }
 
   emit(diagnostic, ...args) {
@@ -23,11 +25,17 @@ class NexusDiagnosticService {
       code: diagnostic.code,
       category: diagnostic.category,
       message: diagnostic.message,
-      id: randomId(),
+      id: crypto.randomUUID(),
       args,
       relatedInformation: []
     };
-    this.handlePayload(payload);
+
+    const enhancedPayload = this.diagnosticEmitter.enhancePayload(payload);
+    this.factories_diagnosticService.createDiagnosticService().handlePayload(enhancedPayload);
+  }
+
+  createDiagnosticService() {
+    return this.factories.diagnosticService.createDiagnosticService();
   }
 
   chainRelated(parentDiagnostic, relatedMessage, ...args) {
@@ -47,19 +55,21 @@ class NexusDiagnosticService {
 
   handlePayload(payload) {
     this.history.push(payload);
+
     if (this.history.length > 1000) {
-      this.history.shift();
+      setTimeout(() => {
+        this.history.shift();
+      }, 0);
     }
   }
-}
-
-function randomId() {
-  return Math.random().toString(36).substring(2, 11);
 }
 
 class EnhancedDiagnosticEmitter {
   constructor() {
     this.listeners = new Set();
+    this.decorations = {
+      enhancePayload: this.enhancePayload.bind(this)
+    };
   }
 
   subscribe(fn) {
@@ -70,86 +80,96 @@ class EnhancedDiagnosticEmitter {
     this.listeners.delete(fn);
   }
 
-  emit(diagnostic, ...args) {
-    const payload = {
-      timestamp: performance.now(),
-      code: diagnostic.code,
-      category: diagnostic.category,
-      message: diagnostic.message,
-      id: randomId(),
-      args,
-      relatedInformation: []
-    };
-    this.handlePayload(payload);
+  enhancePayload(payload) {
+    payload.relatedInformation = [...payload.relatedInformation];
+    return this.decorations.enhancePayload(payload);
   }
 
-  handlePayload(payload) {
-    this.history.push(payload);
-    if (this.history.length > 1000) {
-      this.history.shift();
-    }
+  decorates() {
+    return this.decorations;
   }
 }
 
-class NexusDiagnosticServiceImplementation extends NexusDiagnosticService {}
-
-const diagnosticMessages = {
-  FIBER_UPDATED: {
-    code: 9011,
-    category: 1,
-    message: "Fiber updated with new update queue"
-  }
-};
-
-**Lane Manager and Lanes**
-
-class EnhancedLaneManager {
-  constructor() {
-    this.laneSet = 0;
-  }
-
-  includesLane(set, subset) {
-    return (set & subset) !== 0;
-  }
-
-  mergeLanes(a, b) {
-    return a | b;
-  }
-
-  removeLanes(set, subset) {
-    return set & ~subset;
-  }
-
-  isSyncLane(lanes) {
-    return (lanes & 1) !== 0;
-  }
-
-  pickArbitraryLane(lanes) {
-    return 1 << (31 - Math.clz32(lanes));
-  }
-
-  getExpirationTime(lane, currentTime) {
-    if (lane === 1) {
-      return currentTime + 500;
-    } else if (lane === 2) {
-      return currentTime + 1000;
-    } else if (lane === 4) {
-      return currentTime + 5000;
-    } else if (lane === 0b10000000000000000000000000000000) {
-      return currentTime + 10000;
-    } else {
-      return currentTime + 5000;
-    }
+class NexusDiagnosticServiceFactory {
+  createDiagnosticService() {
+    return new NexusDiagnosticServiceImplementation();
   }
 }
 
-class EnhancedLane {
+class NexusLaneFactory {
+  createLane(laneSet) {
+    const lane = new Lane(laneSet);
+    return lane;
+  }
+}
+
+class ReconciliationEngine {
+  constructor(diagnosticsService) {
+    this.diagnosticsService = diagnosticsService;
+    this.reconciliationFibers = new Set();
+    this.observers = [];
+  }
+
+  observe(observer) {
+    this.observers.push(observer);
+  }
+
+  unobserve(observer) {
+    this.observers = this.observers.filter(o => o !== observer);
+  }
+
+  reconcile() {
+    const fiberUpdates = this.getFiberUpdates();
+    fiberUpdates.forEach(updateQueue => {
+      this.diagnosticsService.emit(diagnosticMessages.FIBER_UPDATED, updateQueue);
+    });
+  }
+
+  getFiberUpdates() {
+    const fiberUpdates = [];
+    this.reconciliationFibers.forEach(fiber => {
+      fiberUpdates.push(fiber.updateQueue.slice());
+    });
+    return fiberUpdates;
+  }
+
+  addFiber(fiber) {
+    this.reconciliationFibers.add(fiber);
+    this.observers.forEach(observer => {
+      observer.reconcile();
+    });
+  }
+
+  removeFiber(fiber) {
+    this.reconciliationFibers.delete(fiber);
+  }
+}
+
+class ReconciliationEngineDelegate {
+  constructor(engine) {
+    this.engine = engine;
+  }
+
+  reconcile() {
+    this.engine.reconcile();
+  }
+
+  addFiber(fiber) {
+    this.engine.addFiber(fiber);
+  }
+
+  removeFiber(fiber) {
+    this.engine.removeFiber(fiber);
+  }
+}
+
+class Lane {
   constructor(laneSet) {
     this.laneSet = laneSet;
   }
 
-  async isSyncLane() {
-    const result = await this.isSyncLaneSync();
+  isSyncLane() {
+    const result = this.isSyncLaneSync();
     return result;
   }
 
@@ -176,69 +196,10 @@ class EnhancedLane {
   }
 }
 
-class NexusLaneFactory {
-  createLane(laneSet) {
-    const lane = new EnhancedLane(laneSet);
-    return lane;
+const diagnosticMessages = {
+  FIBER_UPDATED: {
+    code: 9011,
+    category: 1,
+    message: "Fiber updated with new update queue"
   }
-}
-
-**Nexus Diagnostic Service Factory and Reconciliation Engine**
-
-class NexusDiagnosticServiceFactory {
-  createDiagnosticService() {
-    return new NexusDiagnosticServiceImplementation();
-  }
-}
-
-class NexusReconciliationEngine {
-  constructor(diagnosticsService) {
-    this.diagnosticsService = diagnosticsService;
-    this.reconciliationFibers = new Set();
-  }
-
-  reconcile() {
-    const fiberUpdates = this.getFiberUpdates();
-    this.commitFiberUpdates(fiberUpdates);
-  }
-
-  getFiberUpdates() {
-    const fiberUpdates = [];
-    this.reconciliationFibers.forEach((fiber) => {
-      fiberUpdates.push(fiber.updateQueue.slice());
-    });
-    return fiberUpdates;
-  }
-
-  commitFiberUpdates(fiberUpdates) {
-    fiberUpdates.forEach((updateQueue) => {
-      this.diagnosticsService.emit(diagnosticMessages.FIBER_UPDATED, updateQueue);
-    });
-  }
-
-  addFiber(fiber) {
-    this.reconciliationFibers.add(fiber);
-  }
-
-  removeFiber(fiber) {
-    this.reconciliationFibers.delete(fiber);
-  }
-}
-
-class NexusReconciliationEngineDelegate {
-  constructor(engine) {
-    this.engine = engine;
-  }
-
-  reconcile() {
-    this.engine.reconcile();
-  }
-
-  addFiber(fiber) {
-    this.engine.addFiber(fiber);
-  }
-
-  removeFiber(fiber) {
-    this.engine.removeFiber(fiber);
-  }
-}
+};
