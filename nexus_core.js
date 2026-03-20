@@ -8,16 +8,32 @@ import { ReconfigurationFilterStrategy } from './ReconfigurationFilterStrategy';
 import { SymbioticFiberManagerFactory } from './SymbioticFiberManagerFactory';
 import { SymbioticFiberManager } from './SymbioticFiberManager';
 import { SymbioticFiberManagerPool } from './SymbioticFiberManagerPool';
-
 import { SubjectWrapper } from './Dependencies';
 
+class ContextManagerFactory {
+  static createContextManager(contextType) {
+    switch (contextType) {
+      case 'decorator':
+        return new ContextDelegatingDecorator(contextType);
+      case 'filter':
+        return new ContextDelegatingFilter(contextType);
+      case 'async':
+        return new asyncContextManager();
+      default:
+        throw new Error('Invalid context manager type');
+    }
+  }
+}
+
 class DiagnosticServices extends EventDispatcher {
-  constructor(nexus) {
+  constructor(nexus, contextManagerFactory) {
     super();
     this.observers = [];
     this.diagnosticServices = [];
     this.nexus = nexus;
     this._diagnosticSubject = new SubjectWrapper();
+    this.contextManagerFactory = contextManagerFactory;
+    this.contextManagerPool = {};
   }
 
   subscribe(diagnosticService) {
@@ -45,81 +61,79 @@ class DiagnosticServices extends EventDispatcher {
     const events$ = this._diagnosticSubject.subject.pipe(map((event) => JSON.parse(event)));
     return events$;
   }
-}
 
-class DiagnosticStrategyFactory {
-  static createStrategy(strategyType) {
-    switch (strategyType) {
-      case 'decorator':
-        return new ReconfigurationDecoratorStrategy();
-      case 'filter':
-        return new ReconfigurationFilterStrategy();
-      default:
-        throw new Error('Invalid strategy type');
+  getContextManager(contextId) {
+    if (!this.contextManagerPool[contextId]) {
+      const contextManager = this.contextManagerFactory.createContextManager(contextId);
+      this.contextManagerPool[contextId] = contextManager;
     }
+    return this.contextManagerPool[contextId];
   }
 }
 
-class DiagnosticDispatcher extends EventDispatcher {
-  constructor(nexus) {
+class ContextDelegatingDecorator extends EventDispatcher {
+  constructor(contextType) {
     super();
-    this.nexus = nexus;
-  }
-
-  addObserver(diagnosticService) {
-    this.nexus.diagnosticServices.subscribe(diagnosticService);
-  }
-
-  removeObserver(diagnosticService) {
-    this.nexus.diagnosticServices.unsubscribe(diagnosticService);
-  }
-}
-
-class ReconciliationObserver extends Observable {
-  constructor(diagnosticServices) {
-    super();
-    this.diagnosticServices = diagnosticServices;
+    this.contextType = contextType;
   }
 
   handleDiagnostic(diagnostic) {
-    this.diagnosticServices.reconcile(diagnostic);
+    this.next(diagnostic);
+  }
+}
+
+class ContextDelegatingFilter extends EventDispatcher {
+  constructor(contextType) {
+    super();
+    this.contextType = contextType;
   }
 
-  addObserver(fn) {
-    this.observers.push(fn);
-  }
-
-  removeObserver(fn) {
-    const index = this.observers.indexOf(fn);
-    if (index !== -1) {
-      this.observers.splice(index, 1);
+  handleDiagnostic(diagnostic) {
+    if (this.contextType === 'filtered') {
+      diagnostic.filtered = true;
     }
+    this.next(diagnostic);
+  }
+}
+
+class asyncContextManager extends EventDispatcher {
+  async handleDiagnostic(diagnostic) {
+    try {
+      const result = await this.doAsyncOperation(diagnostic.metadata);
+      diagnostic.result = result;
+    } catch (error) {
+      diagnostic.error = error;
+    }
+    this.next(diagnostic);
+  }
+
+  doAsyncOperation(metadata) {
+    return Promise.resolve(metadata);
+  }
+}
+
+class DiagnosticHandler extends EventDispatcher {
+  handleDiagnostic(diagnostic) {
+    this.observers.forEach(observer => observer.handleDiagnostic(diagnostic));
   }
 }
 
 class SymbioticFiberManagerFactory {
-  constructor(nexus, fiberManagerPool) {
+  constructor(nexus, contextManagerFactory) {
     this.nexus = nexus;
-    this.fiberManagerPool = fiberManagerPool;
+    this.contextManagerFactory = contextManagerFactory;
   }
 
   async createFiberManager(fiber) {
-    const existingFiberManager = this.fiberManagerPool.getFiberManager(fiber);
+    const existingFiberManager = SymbioticFiberManagerPool.getFiberManager(fiber);
     if (existingFiberManager) {
       return existingFiberManager;
     }
     const fiberManager = SymbioticFiberManager.createManager(fiber);
     await fiberManager.addFibers();
-    this.fiberManagerPool.addFiberManager(fiber, fiberManager);
+    SymbioticFiberManagerPool.addFiberManager(fiber, fiberManager);
     this.nexus.fiberManagers.push(fiberManager);
     return fiberManager;
-  }
-
-  async deleteFiberManager(fiber) {
-    const index = this.nexus.fiberManagers.findIndex(manager => manager.fiber === fiber);
-    if (index !== -1) {
-      this.nexus.fiberManagers.splice(index, 1);
-    }
   }
 }
 
@@ -131,11 +145,6 @@ class SymbioticFiberManager {
     return new SymbioticFiberManager(fiber);
   }
 
-  constructor(fiber) {
-    this.fibers = new Set();
-    this.pendingFibers = new Set();
-  }
-
   async addFibers() {
     await Promise.all(this.pendingFibers);
     this.fibers.forEach(fiber => this.addFiber(fiber));
@@ -145,20 +154,12 @@ class SymbioticFiberManager {
     this.fibers.add(fiber);
   }
 
-  removeFiber(fiber) {
-    this.fibers.delete(fiber);
-  }
-
   getFibers() {
     return Array.from(this.fibers);
   }
 }
 
 class SymbioticFiberManagerPool {
-  constructor() {
-    this.fibersToManagers = new Map();
-  }
-
   hasFiberManager(fiber) {
     return this.fibersToManagers.has(fiber);
   }
@@ -173,11 +174,6 @@ class SymbioticFiberManagerPool {
 }
 
 class SubjectWrapper extends Subject {
-  constructor(defaultData = null) {
-    super(defaultData);
-    this.observers = [];
-  }
-
   subscribe(fn) {
     this.observers.push(fn);
   }
@@ -194,17 +190,11 @@ class SubjectWrapper extends Subject {
   }
 }
 
-export { DiagnosticServices, DiagnosticStrategyFactory, DiagnosticDispatcher, ReconciliationObserver, SymbioticFiberManagerFactory, SymbioticFiberManager, SymbioticFiberManagerPool };
-
-export {
-  SubjectWrapper,
-};
-
 class Nexus extends EventDispatcher {
   constructor() {
     super();
     this.fiberManagers = [];
-    this._diagnosticServices = new DiagnosticServices(this);
+    this._diagnosticServices = new DiagnosticServices(this, new ContextManagerFactory());
   }
 
   getDiagnosticServices() {
@@ -218,10 +208,6 @@ class Nexus extends EventDispatcher {
   async createFiberManager(fiber) {
     return await this.SymbioticFiberManagerFactory.createFiberManager(fiber);
   }
-
-  async deleteFiberManager(fiber) {
-    await this.SymbioticFiberManagerFactory.deleteFiberManager(fiber);
-  }
 }
 
-export { Nexus };
+export { DiagnosticServices, DiagnosticHandler, SymbioticFiberManagerFactory, SymbioticFiberManager, SymbioticFiberManagerPool, Nexus };
