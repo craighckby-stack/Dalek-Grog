@@ -1,68 +1,99 @@
 class ContextManagerFactory {
-  constructor(strategyManager, contextManagerFactoryInterface) {
+  constructor(strategyManager, contextManagerFactoryInterface, cacheSize = 10) {
     this.strategyManager = strategyManager;
     this.contextManagerFactoryInterface = contextManagerFactoryInterface;
+    this._contextManagerCaches = {};
+    this._cacheSize = cacheSize;
   }
 
   async getContextManager(strategyName, contextManagerName) {
-    return await this.contextManagerFactoryInterface.getContextManager(strategyName, contextManagerName);
+    if (!this._contextManagerCaches[`${strategyName}_${contextManagerName}`]) {
+      await this._cacheContextManager(strategyName, contextManagerName);
+    }
+    return this._contextManagerCaches[`${strategyName}_${contextManagerName}`];
   }
 
-  async getStrategy(strategyName) {
-    return this.strategyManager.getStrategy(strategyName);
-  }
-}
-
-class StrategyManager {
-  constructor() {
-    this.strategies = {
-      reconfiguration: new ReconfigurationStrategy(),
-    };
-  }
-
-  async getStrategy(strategyName) {
-    return this.strategies[strategyName] || new AbstractStrategy();
+  async _cacheContextManager(strategyName, contextManagerName) {
+    this._contextManagerCaches[`${strategyName}_${contextManagerName}`] = await this.contextManagerFactoryInterface.getContextManager(strategyName, contextManagerName);
+    if (Object.keys(this._contextManagerCaches).length > this._cacheSize) {
+      this._contextManagerCaches = {};
+    }
   }
 }
 
 class ContextManagerPool {
-  constructor() {
-    this.contextManagers = {};
+  constructor(strategyManager, contextManagerFactoryInterface, cacheSize) {
+    this.contextManagerFactoryInterface = contextManagerFactoryInterface;
+    this._cacheSize = cacheSize;
+    this._strategyManager = strategyManager;
   }
 
   async getContextManager(strategyName, contextManagerName) {
-    const contextManagerId = `${strategyName}_${contextManagerName}`;
-    if (!this.contextManagers[contextManagerId]) {
-      this.contextManagers[contextManagerId] = await this.createContextManager(strategyName, contextManagerName);
+    const strategy = await this._strategyManager.getStrategy(strategyName);
+    if (!this.contextManagers[`${strategyName}_${contextManagerName}`]) {
+      await this._cacheContextManager(strategyName, contextManagerName, strategy);
     }
-    return this.contextManagers[contextManagerId];
+    return this.contextManagers[`${strategyName}_${contextManagerName}`];
   }
 
-  async createContextManager(strategyName, contextManagerName) {
+  async _cacheContextManager(strategyName, contextManagerName, strategy) {
+    const contextManager = await this.createContextManager(strategyName, contextManagerName, strategy);
+    this.contextManagers[`${strategyName}_${contextManagerName}`] = contextManager;
+  }
+
+  async createContextManager(strategyName, contextManagerName, strategy) {
     const contextManager = new ContextManager(strategyName, contextManagerName);
+    await contextManager.init();
     return contextManager;
   }
 }
 
-class StrategyPool {
-  constructor() {
-    this.strategies = {};
-  }
-
-  async getStrategy(strategyName) {
-    return this.strategies[strategyName] || new AbstractStrategy();
-  }
-
-  async setStrategy(strategyName, strategy) {
-    this.strategies[strategyName] = strategy;
-  }
-}
-
-abstract class ContextManager {
+class ContextManager {
   constructor(strategyName, contextManagerName) {}
 
   async executeContextManager(contextManagerName) {
-    throw new Error('Method must be implemented.');
+    const observer = new ContextManagerObserver();
+    this.attachObserver(observer);
+    // Implement context manager logic
+    // Detach the observer after execution
+    this.detachObserver(observer);
+    return undefined;
+  }
+
+  attachObserver(observer) {
+    this.observers.push(observer);
+  }
+
+  detachObserver(observer) {
+    const index = this.observers.indexOf(observer);
+    if (index !== -1) {
+      this.observers.splice(index, 1);
+    }
+  }
+
+  get observers() {
+    return this.observers;
+  }
+}
+
+class ContextManagerObserver {
+  async execute(contextManager) {
+    // Handle the context manager event
+    // ...
+  }
+}
+
+class ReconfigurationStrategy {
+  async execute(strategyContext) {
+    const { state } = strategyContext;
+    const reconfiguredState = await this.reconfigureState(state);
+    return reconfiguredState;
+  }
+
+  async reconfigureState(state) {
+    const decorator = new ReconfigurationDecorator(this);
+    const decoratedStrategy = new StrategyDecorator(decorator, this);
+    return await decoratedStrategy.execute({ state });
   }
 }
 
@@ -72,7 +103,8 @@ class ReconfigurationContextManager extends ContextManager {
   }
 
   async executeContextManager(contextManagerName) {
-    // Reconfiguration context management logic
+    // Implement reconfiguration context management logic
+    // ...
   }
 }
 
@@ -88,11 +120,23 @@ class StrategyDecorator {
   }
 }
 
+class ReconfigurationDecorator {
+  constructor(strategy) {
+    this.strategy = strategy;
+  }
+
+  async execute(strategyContext) {
+    // Customization logic
+    // ...
+  }
+}
+
 class Nexus {
-  constructor(strategyManager, contextManagerPool, strategyPool) {
+  constructor(strategyManager, contextManagerPool, strategyPool, contextManagerFactoryInterface) {
     this.strategyManager = strategyManager;
     this.contextManagerPool = contextManagerPool;
     this.strategyPool = strategyPool;
+    this.contextManagerFactoryInterface = contextManagerFactoryInterface;
     this._diagnostics = new DiagnosisEvents();
   }
 
@@ -109,36 +153,37 @@ class Nexus {
   }
 }
 
-class NexusCore {
+class DiagnosisEvents {
+  constructor() {
+    this._events = [];
+  }
+
   async start() {
-    this.nexus = new Nexus(new StrategyManager(), new ContextManagerPool(), new StrategyPool());
-    await this.nexus.start();
+    // Start diagnostic events logic
   }
 
   async stop() {
-    await this.nexus.stop();
+    // Stop diagnostic events logic
   }
 
   async getDiagnosticEvents() {
-    return await this.nexus.getDiagnosticEvents();
+    return this._events;
   }
 }
 
 class ContextDelegatingDecorator {
-  constructor(strategyManager, contextManagerPool, contextManagerFactoryInterface) {
+  constructor(strategyManager) {
     this.strategyManager = strategyManager;
-    this.contextManagerPool = contextManagerPool;
-    this.contextManagerFactoryInterface = contextManagerFactoryInterface;
   }
 
   async handleDiagnostic(diagnostic) {
-    const contextManager = this.contextManagerPool.getContextManager('reconfiguration', 'diagnostic');
+    const contextManager = await this.contextManagerPool.getContextManager('reconfiguration', 'diagnostic');
     await contextManager.executeContextManager('diagnostic');
-  }
-
-  async getConfig() {
-    return await this.contextManagerFactoryInterface.getConfig('reconfiguration', 'diagnostic');
   }
 }
 
-Note: I've assumed that `DiagnosisEvents` class and `AbstractStrategy` class are still present in your codebase as they were used in the original code. If not, you'll need to define them or import them from another module. Also, `ReconfigurationStrategy` class is not shown in the code snippet, you'll need to define it or import it from another module.
+class AbstractStrategy {
+  isSingleton() {
+    throw new Error('Method must be implemented.');
+  }
+}
