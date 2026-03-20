@@ -4,6 +4,7 @@ class ContextManagerFactory {
     this.contextManagerFactoryInterface = contextManagerFactoryInterface;
     this._contextManagerCaches = {};
     this._cacheSize = cacheSize;
+    this._cache = new Observable();
   }
 
   async getContextManager(strategyName, contextManagerName) {
@@ -17,6 +18,7 @@ class ContextManagerFactory {
     this._contextManagerCaches[`${strategyName}_${contextManagerName}`] = await this.contextManagerFactoryInterface.getContextManager(strategyName, contextManagerName);
     if (Object.keys(this._contextManagerCaches).length > this._cacheSize) {
       this._contextManagerCaches = {};
+      await this._cache.next(this._cacheSize);
     }
   }
 }
@@ -26,6 +28,8 @@ class ContextManagerPool {
     this.contextManagerFactoryInterface = contextManagerFactoryInterface;
     this._cacheSize = cacheSize;
     this._strategyManager = strategyManager;
+    this._cache = new Observable();
+    this.contextManagers = {};
   }
 
   async getContextManager(strategyName, contextManagerName) {
@@ -39,6 +43,7 @@ class ContextManagerPool {
   async _cacheContextManager(strategyName, contextManagerName, strategy) {
     const contextManager = await this.createContextManager(strategyName, contextManagerName, strategy);
     this.contextManagers[`${strategyName}_${contextManagerName}`] = contextManager;
+    await this._cache.next(this.contextManagers);
   }
 
   async createContextManager(strategyName, contextManagerName, strategy) {
@@ -76,10 +81,14 @@ class ContextManager {
   }
 }
 
-class ContextManagerObserver {
+class ContextManagerObserver implements Observer {
   async execute(contextManager) {
     // Handle the context manager event
-    // ...
+    this.subject.next(contextManager);
+  }
+
+  constructor() {
+    this.subject = new Subject();
   }
 }
 
@@ -94,17 +103,6 @@ class ReconfigurationStrategy {
     const decorator = new ReconfigurationDecorator(this);
     const decoratedStrategy = new StrategyDecorator(decorator, this);
     return await decoratedStrategy.execute({ state });
-  }
-}
-
-class ReconfigurationContextManager extends ContextManager {
-  constructor(strategyName, contextManagerName) {
-    super(strategyName, contextManagerName);
-  }
-
-  async executeContextManager(contextManagerName) {
-    // Implement reconfiguration context management logic
-    // ...
   }
 }
 
@@ -127,7 +125,6 @@ class ReconfigurationDecorator {
 
   async execute(strategyContext) {
     // Customization logic
-    // ...
   }
 }
 
@@ -138,14 +135,15 @@ class Nexus {
     this.strategyPool = strategyPool;
     this.contextManagerFactoryInterface = contextManagerFactoryInterface;
     this._diagnostics = new DiagnosisEvents();
+    this._eventDispatcher = new EventDispatcher();
   }
 
   async start() {
-    await this._diagnostics.start();
+    await this._eventDispatcher.start();
   }
 
   async stop() {
-    await this._diagnostics.stop();
+    await this._eventDispatcher.stop();
   }
 
   async getDiagnosticEvents() {
@@ -155,7 +153,7 @@ class Nexus {
 
 class DiagnosisEvents {
   constructor() {
-    this._events = [];
+    this._events = new Observable();
   }
 
   async start() {
@@ -166,7 +164,7 @@ class DiagnosisEvents {
     // Stop diagnostic events logic
   }
 
-  async getDiagnosticEvents() {
+  get eventStream() {
     return this._events;
   }
 }
@@ -182,8 +180,28 @@ class ContextDelegatingDecorator {
   }
 }
 
-class AbstractStrategy {
-  isSingleton() {
-    throw new Error('Method must be implemented.');
+class Observable {
+  next(value) {
+    // implement observable next function
   }
+}
+
+class Subject {
+  next(value) {
+    // implement subject next function
+  }
+}
+
+class EventDispatcher {
+  async start() {
+    // start event dispatching logic
+  }
+
+  async stop() {
+    // stop event dispatching logic
+  }
+}
+
+interface Observer {
+  async execute(contextManager): void;
 }
