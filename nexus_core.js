@@ -2,43 +2,43 @@ class SymbioticNexus {
   constructor(diagnosticServices = [], fiberManagers = []) {
     this.diagnosticServices = diagnosticServices;
     this.fiberManagers = fiberManagers;
-    this.reconciliationEngine = new ReconciliationEngineObserver(this.diagnosticServices);
-    this.fiberManager = new SymbioticFiberManager();
+    this.reconciliationObserver = new ReconciliationObserver(this);
+    this.fiberManagerFactory = new SymbioticFiberManagerFactory(this);
   }
 
   subscribe(fn) {
-    this.reconciliationEngine.addObserver(fn);
+    this.reconciliationObserver.addObserver(fn);
   }
 
   unsubscribe(fn) {
-    this.reconciliationEngine.removeObserver(fn);
+    this.reconciliationObserver.removeObserver(fn);
   }
 
   async addFiber(fiber) {
-    this.fiberManager.addFiber(fiber);
+    await this.fiberManagerFactory.createFiberManager(fiber);
   }
 
   async removeFiber(fiber) {
-    this.fiberManager.removeFiber(fiber);
+    await this.fiberManagerFactory.deleteFiberManager(fiber);
   }
 
   addDiagnosticService(diagnosticService) {
+    diagnosticService.data = { relatedInformation: [] };
     this.diagnosticServices.push(diagnosticService);
-    this.reconciliationEngine.addObserver(diagnosticService);
+    this.reconciliationObserver.addObserver(diagnosticService);
   }
 
   removeDiagnosticService(diagnosticService) {
     const index = this.diagnosticServices.indexOf(diagnosticService);
     if (index !== -1) {
       this.diagnosticServices.splice(index, 1);
-      this.reconciliationEngine.removeObserver(diagnosticService);
+      this.reconciliationObserver.removeObserver(diagnosticService);
     }
   }
 
   emit(diagnostic, ...args) {
-    const strategy = ReconfigurationStrategyFactory.createStrategy(diagnostic.strategyType);
-    diagnostic = strategy.beforeEmit(diagnostic);
-    return this.diagnosticServices.emit(diagnostic);
+    const strategy = this.createStrategy(diagnostic.strategyType);
+    return diagnostic = strategy.beforeEmit(diagnostic), this.diagnosticServices.emit(diagnostic);
   }
 
   clear() {
@@ -48,42 +48,20 @@ class SymbioticNexus {
   getDiagnostics() {
     return this.diagnosticServices.history.slice();
   }
-}
 
-class SymbioticDiagnosticService {
-  constructor(diagnosticServices = []) {
-    this.history = [];
-    this.historyMaxLength = 1000;
-    this.decorateFn = this.enhancePayload.bind(this);
-    this.diagnosticServices = diagnosticServices;
-  }
-
-  pushHistory(diagnostic) {
-    if (diagnostic) {
-      this.history.push(diagnostic);
-      if (this.history.length > this.historyMaxLength) {
-        this.history.pop();
-      }
+  createStrategy(strategyType) {
+    switch (strategyType) {
+      case 'decorator':
+        return new ReconfigurationDecoratorStrategy();
+      case 'filter':
+        return new ReconfigurationFilterStrategy();
+      default:
+        throw new Error('Invalid strategy type');
     }
   }
-
-  enhancePayload(payload) {
-    payload.relatedInformation = [...payload.relatedInformation];
-    return payload;
-  }
-
-  emit(payload) {
-    const observer = new ReconciliationEngineObserver(this.diagnosticServices);
-    observer.handleDiagnostic(payload);
-    return observer;
-  }
-
-  clear() {
-    this.history = [];
-  }
 }
 
-class ReconciliationEngineObserver {
+class ReconciliationObserver {
   constructor(diagnosticServices) {
     this.diagnosticServices = diagnosticServices;
   }
@@ -113,26 +91,44 @@ class ReconfigurationDecoratorStrategy {
     const decoratorPayload = {
       relatedInformation: diagnostic.relatedInformation || [],
     };
-    const mergedPayload = {
-      ...diagnostic,
-      ...decoratorPayload,
-    };
-    return mergedPayload;
+    return { ...diagnostic, ...decoratorPayload };
   }
 }
 
 class ReconfigurationFilterStrategy {
   beforeEmit(diagnostic) {
-    const filteredDiagnostic = {
-      filters: diagnostic.filters.filter(f => f.filterType === 'LANE'),
+    return {
+      filters: diagnostic.filters.filter(filter => filter.filterType === 'LANE'),
     };
-    return filteredDiagnostic;
+  }
+}
+
+class SymbioticFiberManagerFactory {
+  constructor(nexus) {
+    this.nexus = nexus;
+  }
+
+  async createFiberManager(fiber) {
+    const fiberManager = SymbioticFiberManager.createManager(fiber);
+    this.nexus.fiberManagers.push(fiberManager);
+  }
+
+  async deleteFiberManager(fiber) {
+    const index = this.nexus.fiberManagers.findIndex(manager => manager.fiber === fiber);
+    if (index !== -1) {
+      this.nexus.fiberManagers.splice(index, 1);
+    }
   }
 }
 
 class SymbioticFiberManager {
-  constructor() {
+  static createManager(fiber) {
+    return new SymbioticFiberManager(fiber);
+  }
+
+  constructor(fiber) {
     this.fibers = new Set();
+    this.addFiber(fiber);
   }
 
   addFiber(fiber) {
@@ -143,19 +139,3 @@ class SymbioticFiberManager {
     this.fibers.delete(fiber);
   }
 }
-
-class SymbioticDiagnosticPayload {
-  constructor(payload, ...args) {
-    this.payload = payload;
-    this.args = args;
-  }
-
-  get payload() {
-    return {
-      ...this.payload,
-      ...this.args.reduce((acc, arg) => ({ ...acc, [arg.key]: arg.value }), {}),
-    };
-  }
-}
-
-Note that unnecessary classes, functions, and members have been removed, and some methods have been optimized. The output is a cleaned and high-precision version of the original code.
