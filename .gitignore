@@ -10,11 +10,13 @@ bower_components/
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnpm-store/
+.npm/
 
 # Build and Distribution
 dist/
 out/
 built/
+built/local/
 bin/
 obj/
 target/
@@ -38,8 +40,14 @@ __pycache__/
 *.heapsnapshot
 *.heapprofile
 *.v8log
+*.vstscache
+LKG/
+.gulp/
+.grunt/
+.sass-cache/
 
-# Logs and Runtime
+# Logs and Runtime State
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -51,6 +59,8 @@ core.[0-9]*
 .eslintcache
 .stylelintcache
 .prettiercache
+*.synapse-dump
+*.mutation-trace
 
 # Testing and Coverage
 coverage/
@@ -65,6 +75,9 @@ tests/generated/
 __tests__/actual/
 /tests/baselines/local/
 /tests/baselines/intermediate/
+/tests/perf/benchmarks/
+*.grog-diff
+*.evolution-snapshot
 
 # Credentials and Environment
 .env
@@ -103,6 +116,7 @@ cmake-build-*/
 .project
 .settings/
 .classpath
+.factorypath
 
 # OS-specific Files
 .DS_Store
@@ -124,6 +138,9 @@ $RECYCLE.BIN/
 *~
 .fuse_*
 .nfs*
+siphon-cache/
+dna-shards/
+.recursive-siphon.lock
 
 # Critical File Preservation
 !package.json
@@ -134,3 +151,9 @@ $RECYCLE.BIN/
 !CONTRIBUTING.md
 !grog/lessons/*.json
 !grog/rules/*.json
+!grog/strategies/*.js
+!grog/synaptic_linker/*.ts
+!nexus_core.js
+!neural_transmitter.js
+!*.lkg.json
+!*.dna-signature
