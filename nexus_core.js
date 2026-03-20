@@ -2,7 +2,6 @@
  * Fiber-based reconciliation engine using bitmask priority lanes and multi-phase diagnostics.
  */
 
-/** @enum {number} */
 const Lane = {
   NoLanes:             0b0000000000000000000000000000000,
   SyncLane:            0b0000000000000000000000000000001,
@@ -15,7 +14,6 @@ const Lane = {
   OffscreenLane:       0b1000000000000000000000000000000,
 };
 
-/** @enum {number} */
 const WorkPriority = {
   ImmediatePriority: 1,
   UserBlockingPriority: 2,
@@ -24,7 +22,6 @@ const WorkPriority = {
   IdlePriority: 5,
 };
 
-/** @enum {number} */
 const FiberFlags = {
   NoFlags:         0b0000000000000000,
   Placement:       0b0000000000000010,
@@ -44,7 +41,6 @@ const FiberFlags = {
   Visibility:      0b1000000000000000,
 };
 
-/** @enum {number} */
 const SyntaxKind = {
   HostRoot: 0,
   FunctionComponent: 1,
@@ -64,7 +60,6 @@ const SyntaxKind = {
   Scope: 15,
 };
 
-/** @enum {number} */
 const DiagnosticCategory = {
   Warning: 0,
   Error: 1,
@@ -123,6 +118,30 @@ class CancellationToken {
   })();
 }
 
+class NexusSymbolTable {
+  #symbols = new Map();
+  #parent = null;
+
+  constructor(parent = null) {
+    this.#parent = parent;
+  }
+
+  declare(name, fiber) {
+    if (this.#symbols.has(name)) return false;
+    this.#symbols.set(name, fiber);
+    return true;
+  }
+
+  resolve(name) {
+    if (this.#symbols.has(name)) return this.#symbols.get(name);
+    return this.#parent ? this.#parent.resolve(name) : null;
+  }
+
+  clear() {
+    this.#symbols.clear();
+  }
+}
+
 class DiagnosticEmitter {
   #listeners = new Set();
   #history = [];
@@ -152,9 +171,7 @@ class DiagnosticEmitter {
     if (this.#history.length > 1000) this.#history.shift();
 
     for (const listener of this.#listeners) {
-      try {
-        listener(payload);
-      } catch (e) {}
+      try { listener(payload); } catch (e) {}
     }
   }
 
@@ -162,39 +179,17 @@ class DiagnosticEmitter {
     parentDiagnostic.relatedInformation.push({ message: relatedMessage, args });
   }
 
-  getDiagnostics() {
-    return [...this.#history];
-  }
-
-  clear() {
-    this.#history = [];
-  }
+  getDiagnostics() { return [...this.#history]; }
+  clear() { this.#history = []; }
 }
 
 class LaneManager {
-  static getHighestPriorityLane(lanes) {
-    return lanes & -lanes;
-  }
-
-  static includesLane(set, subset) {
-    return (set & subset) !== Lane.NoLanes;
-  }
-
-  static mergeLanes(a, b) {
-    return a | b;
-  } 
-
-  static removeLanes(set, subset) {
-    return set & ~subset;
-  }
-
-  static isSyncLane(lanes) {
-    return (lanes & Lane.SyncLane) !== Lane.NoLanes;
-  }
-
-  static pickArbitraryLane(lanes) {
-    return 1 << (31 - Math.clz32(lanes));
-  }
+  static getHighestPriorityLane(lanes) { return lanes & -lanes; }
+  static includesLane(set, subset) { return (set & subset) !== Lane.NoLanes; }
+  static mergeLanes(a, b) { return a | b; }
+  static removeLanes(set, subset) { return set & ~subset; }
+  static isSyncLane(lanes) { return (lanes & Lane.SyncLane) !== Lane.NoLanes; }
+  static pickArbitraryLane(lanes) { return 1 << (31 - Math.clz32(lanes)); }
 
   static getExpirationTime(lane, currentTime) {
     switch (lane) {
@@ -218,9 +213,7 @@ class NexusFiber {
     this.dependencies = null;
     this.updateQueue = null;
     this.stateNode = null;
-    this.source = null;
-    this.symbol = Symbol('NexusFiber');
-    this.localSymbolTable = new Map();
+    this.symbolTable = new NexusSymbolTable();
     this.scopeDepth = 0;
   }
 
@@ -256,7 +249,7 @@ class NexusFiber {
     this.lanes = Lane.NoLanes;
     this.childLanes = Lane.NoLanes;
     this.deletions = null;
-    this.localSymbolTable.clear();
+    this.symbolTable.clear();
   }
 }
 
@@ -277,53 +270,19 @@ class NexusObjectPool {
   acquire(...args) {
     if (this.#pool.length > 0) {
       const instance = this.#pool.pop();
+      if (instance.initialize) instance.initialize(...args);
       this.#diagnostics.emit(DiagnosticMessages.FIBER_REUSE, this.#name);
-      instance.initialize(...args);
       return instance;
     }
-    this.#diagnostics.emit(DiagnosticMessages.POOL_EXHAUSTED, this.#name);
     return new this.#ctor(...args);
   }
 
   release(instance) {
     if (this.#pool.length < this.#limit) {
-      if (typeof instance.cleanup === 'function') instance.cleanup();
+      if (instance.cleanup) instance.cleanup();
       this.#pool.push(instance);
-    }
-  }
-}
-
-class FiberFactory {
-  #pool;
-  #diagnostics;
-
-  constructor(diagnostics) {
-    this.#diagnostics = diagnostics;
-    this.#pool = new NexusObjectPool(NexusFiber, "NexusFiber", diagnostics);
-  }
-
-  createFiber(tag, pendingProps, key, mode) {
-    return this.#pool.acquire(key, tag, null, pendingProps);
-  }
-
-  createWorkInProgress(current, pendingProps) {
-    let workInProgress = current.alternate;
-    if (workInProgress === null) {
-      workInProgress = this.#pool.acquire(current.id, current.tag, current.type, pendingProps);
-      workInProgress.alternate = current;
-      current.alternate = workInProgress;
     } else {
-      workInProgress.pendingProps = pendingProps;
-      workInProgress.flags = FiberFlags.NoFlags;
+      this.#diagnostics.emit(DiagnosticMessages.POOL_EXHAUSTED, this.#name);
     }
-
-    workInProgress.lanes = current.lanes;
-    workInProgress.childLanes = current.childLanes;
-    workInProgress.memoizedProps = current.memoizedProps;
-    workInProgress.memoizedState = current.memoizedState;
-    workInProgress.updateQueue = current.updateQueue;
-    workInProgress.dependencies = current.dependencies;
-
-    return workInProgress;
   }
 }
