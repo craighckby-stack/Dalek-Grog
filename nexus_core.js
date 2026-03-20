@@ -6,29 +6,131 @@ const LIFECYCLE_STATES = Object.freeze({
   TERMINATING: 'TERMINATING',
   FAILED: 'FAILED',
   MAINTENANCE: 'MAINTENANCE',
-  DEGRADED: 'DEGRADED'
+  DEGRADED: 'DEGRADED',
+  RECOVERING: 'RECOVERING',
+  SHUTTING_DOWN: 'SHUTTING_DOWN',
+  EVOLVING: 'EVOLVING',
+  CIRCUIT_OPEN: 'CIRCUIT_OPEN',
+  HALF_OPEN: 'HALF_OPEN'
 });
 
 class NexusError extends Error {
-  constructor(message, code, context = {}) {
+  constructor(message, code, context = {}, retryable = false, retryAfter = 0) {
     super(message);
     this.name = 'NexusError';
     this.code = code;
-    this.context = context;
+    this.retryable = retryable;
+    this.retryAfter = retryAfter;
     this.timestamp = new Date().toISOString();
+    this.id = crypto.randomUUID();
+    this.context = {
+      ...context,
+      system: {
+        arch: process.arch,
+        platform: process.platform,
+        version: process.version,
+        memory: process.memoryUsage(),
+        uptime: process.uptime(),
+        pid: process.pid
+      }
+    };
+    this.stackTrace = this.stack ? this.stack.split('\n').map(line => line.trim()) : [];
+    Object.seal(this);
+  }
+
+  static from(error, code = 'INTERNAL_ERROR', retryable = false) {
+    if (error instanceof NexusError) return error;
+    return new NexusError(error.message, code, {
+      originalName: error.name,
+      originalMessage: error.message,
+      stack: error.stack
+    }, retryable);
+  }
+
+  toJSON() {
+    return {
+      id: this.id,
+      name: this.name,
+      message: this.message,
+      code: this.code,
+      context: this.context,
+      timestamp: this.timestamp,
+      retryable: this.retryable,
+      retryAfter: this.retryAfter,
+      stack: this.stackTrace
+    };
   }
 }
+
+class NexusTelemetry {
+  constructor(config = {}) {
+    this.spans = new Map();
+    this.exporters = [];
+    this.samplingRate = config.samplingRate ?? 1.0;
+    this.maxBufferSize = config.maxBufferSize ?? 1000;
+    this.buffer = [];
+  }
+
+  addExporter(exporter) {
+    if (typeof exporter?.export !== 'function') {
+      throw new NexusError('Invalid Telemetry Exporter', 'TELEMETRY_ERROR');
+    }
+    this.exporters.push(exporter);
+  }
+
+  recordSpan(span) {
+    if (Math.random() > this.samplingRate) return;
+    
+    this.spans.set(span.spanId, span);
+    this.buffer.push(span);
+
+    if (this.buffer.length >= this.maxBufferSize) {
+      this.flush();
+    }
+
+    this.exporters.forEach(e => {
+      try {
+        e.export(span);
+      } catch (err) {
+        console.error('Telemetry Export Failed', err);
+      }
+    });
+  }
+
+  flush() {
+    const data = [...this.buffer];
+    this.buffer = [];
+    return data;
+  }
+
+  getTrace(correlationId) {
+    return Array.from(this.spans.values()).filter(s => s.correlationId === correlationId);
+  }
+}
+
+const globalTelemetry = new NexusTelemetry();
 
 class NexusContext {
   constructor(correlationId = crypto.randomUUID(), parent = null) {
     this.correlationId = correlationId;
     this.parent = parent;
     this.startTime = performance.now();
-    this.metadata = new Map(parent ? parent.metadata : []);
-    this.logs = [];
     this.spanId = crypto.randomUUID().substring(0, 8);
+    this.metadata = new Map(parent ? parent.metadata : []);
+    this.attributes = new Map();
     this.breadcrumbs = parent ? [...parent.breadcrumbs] : [];
+    this.logs = [];
+    this.children = [];
+    this.resources = [];
     this.isAborted = false;
+    this.abortReason = null;
+    
+    if (parent) parent.children.push(this);
+  }
+
+  setAttribute(key, value) {
+    this.attributes.set(key, value);
+    return this;
   }
 
   set(key, value) {
@@ -37,7 +139,24 @@ class NexusContext {
   }
 
   get(key) {
-    return this.metadata.get(key);
+    return this.metadata.get(key) || this.attributes.get(key);
+  }
+
+  trackResource(cleanupFn) {
+    if (typeof cleanupFn !== 'function') {
+      throw new NexusError('Cleanup must be a function', 'RESOURCE_ERROR');
+    }
+    this.resources.push(cleanupFn);
+  }
+
+  async dispose() {
+    for (const cleanup of this.resources.reverse()) {
+      try {
+        await cleanup();
+      } catch (e) {
+        this.log(`Resource cleanup failed: ${e.message}`, 'error');
+      }
+    }
   }
 
   createChild(name) {
@@ -55,14 +174,19 @@ class NexusContext {
       path: this.breadcrumbs.join(' > '),
       level,
       message,
+      attributes: Object.fromEntries(this.attributes),
       ...data
     };
     this.logs.push(entry);
     
     const formatted = `[${entry.timestamp}] [${entry.level.toUpperCase()}] [${entry.correlationId}:${entry.spanId}] [${entry.path}] ${message}`;
-    if (level === 'error') console.error(formatted, data); 
-    else if (level === 'warn') console.warn(formatted, data);
-    else console.log(formatted);
+    
+    switch(level) {
+      case 'error': console.error(formatted, data); break;
+      case 'warn':  console.warn(formatted, data); break;
+      case 'debug': if (process.env.DEBUG) console.debug(formatted, data); break;
+      default:      console.log(formatted);
+    }
   }
 
   getDuration() {
@@ -70,191 +194,128 @@ class NexusContext {
   }
 
   serialize() {
-    return {
+    const serialized = {
       correlationId: this.correlationId,
-      metadata: Object.fromEntries(this.metadata),
       spanId: this.spanId,
-      path: this.breadcrumbs
+      path: this.breadcrumbs,
+      metadata: Object.fromEntries(this.metadata),
+      attributes: Object.fromEntries(this.attributes),
+      metrics: {
+        duration: this.getDuration(),
+        childCount: this.children.length,
+        resourceCount: this.resources.length
+      },
+      logs: this.logs
     };
+    globalTelemetry.recordSpan(serialized);
+    return serialized;
   }
 
-  abort() {
+  abort(reason = 'Manual abort') {
     this.isAborted = true;
-    this.log('Context execution aborted', 'warn');
+    this.abortReason = reason;
+    this.log(`Context aborted: ${reason}`, 'warn');
   }
 }
 
 class SchemaValidator {
-  static validate(schema, data) {
+  static validate(schema, data, path = 'root') {
     if (!schema) return true;
+    
     for (const [key, requirement] of Object.entries(schema)) {
-      if (requirement.required && (data[key] === undefined || data[key] === null)) {
-        throw new NexusError(`Missing required field: ${key}`, 'VALIDATION_ERROR');
+      const value = data[key];
+      const currentPath = `${path}.${key}`;
+
+      if (requirement.required && (value === undefined || value === null)) {
+        throw new NexusError(`Missing required field: ${currentPath}`, 'VALIDATION_ERROR', { path: currentPath });
       }
-      if (requirement.type && typeof data[key] !== requirement.type) {
-        throw new NexusError(`Invalid type for ${key}: expected ${requirement.type}`, 'TYPE_ERROR');
+
+      if (value !== undefined && value !== null) {
+        if (requirement.type) {
+          const actualType = Array.isArray(value) ? 'array' : typeof value;
+          if (actualType !== requirement.type) {
+            throw new NexusError(`Type mismatch at ${currentPath}: expected ${requirement.type}, got ${actualType}`, 'TYPE_ERROR');
+          }
+        }
+
+        if (requirement.type === 'object' && requirement.properties) {
+          this.validate(requirement.properties, value, currentPath);
+        }
+
+        if (requirement.type === 'array' && requirement.items && Array.isArray(value)) {
+          value.forEach((item, i) => {
+            this.validate({ item: requirement.items }, { item }, `${currentPath}[${i}]`);
+          });
+        }
+
+        if (requirement.enum && !requirement.enum.includes(value)) {
+          throw new NexusError(`Value ${value} at ${currentPath} not in enum`, 'VALIDATION_ERROR');
+        }
+
+        if (requirement.regex && typeof value === 'string' && !requirement.regex.test(value)) {
+           throw new NexusError(`Value at ${currentPath} fails pattern match`, 'VALIDATION_ERROR');
+        }
+
+        if (typeof requirement.validate === 'function' && !requirement.validate(value)) {
+          throw new NexusError(`Custom validation failed: ${currentPath}`, 'VALIDATION_ERROR');
+        }
       }
     }
     return true;
   }
 }
 
-class AbstractAction {
-  constructor(name, config = {}) {
-    this.name = name;
-    this.config = {
-      inputSchema: null,
-      outputSchema: null,
-      maxRetries: 0,
-      retryDelay: 100,
-      ...config
-    };
-    this.middlewares = [];
-    this.interceptors = {
-      before: [],
-      after: [],
-      onError: []
-    };
-  }
-
-  use(middleware) {
-    if (typeof middleware !== 'function') throw new Error('Middleware must be a function');
-    this.middlewares.push(middleware);
-    return this;
-  }
-
-  addInterceptor(phase, fn) {
-    if (this.interceptors[phase]) {
-      this.interceptors[phase].push(fn);
-    }
-    return this;
-  }
-
-  async execute(input, context) {
-    const executionCtx = context ? context.createChild(this.name) : new NexusContext();
-    executionCtx.log(`Starting execution: ${this.name}`, 'debug');
-
-    try {
-      SchemaValidator.validate(this.config.inputSchema, input);
-
-      for (const interceptor of this.interceptors.before) {
-        input = await interceptor(input, executionCtx) || input;
-      }
-
-      const pipeline = [...this.middlewares, this.run.bind(this)];
-      let index = 0;
-
-      const next = async (currentInput) => {
-        if (executionCtx.isAborted) throw new NexusError('Execution aborted', 'ABORTED');
-        if (index < pipeline.length) {
-          const fn = pipeline[index++];
-          return await fn(currentInput, executionCtx, next);
-        }
-        return currentInput;
-      };
-
-      let result = await this._executeWithRetry(input, executionCtx, next);
-
-      SchemaValidator.validate(this.config.outputSchema, result);
-
-      for (const interceptor of this.interceptors.after) {
-        result = await interceptor(result, executionCtx) || result;
-      }
-
-      executionCtx.log(`Action ${this.name} completed successfully`, 'info', { duration: executionCtx.getDuration().toFixed(2) });
-      return result;
-    } catch (error) {
-      executionCtx.log(`Action ${this.name} failed: ${error.message}`, 'error', { errorCode: error.code });
-      for (const interceptor of this.interceptors.onError) {
-        await interceptor(error, executionCtx);
-      }
-      throw error;
-    }
-  }
-
-  async _executeWithRetry(input, context, nextFn) {
-    let attempts = 0;
-    while (attempts <= this.config.maxRetries) {
-      try {
-        return await nextFn(input);
-      } catch (err) {
-        attempts++;
-        if (attempts > this.config.maxRetries) throw err;
-        const delay = this.config.retryDelay * Math.pow(2, attempts - 1);
-        context.log(`Retrying action ${this.name} (Attempt ${attempts}/${this.config.maxRetries}) after ${delay}ms`, 'warn');
-        await new Promise(r => setTimeout(r, delay));
-      }
-    }
-  }
-
-  async run(input, context) {
-    throw new Error(`Method "run" not implemented for action: ${this.name}`);
-  }
-}
-
-class StrategyModule extends AbstractAction {
-  async run(event, context) {
-    context.log(`Processing strategy module payload: ${this.name}`);
-    return {
-      status: 'processed',
-      module: this.name,
-      payload: event,
-      processedAt: Date.now()
-    };
-  }
-}
-
-const withTelemetry = (action) => {
-  action.addInterceptor('before', async (input, ctx) => {
-    ctx.set('telemetry_start', performance.now());
-  });
-
-  action.addInterceptor('after', async (result, ctx) => {
-    const start = ctx.get('telemetry_start');
-    const duration = performance.now() - start;
-    ctx.log(`[TELEMETRY_END] ${action.name}`, 'info', { 
-      duration_ms: duration.toFixed(3),
-      memory_usage: process.memoryUsage ? process.memoryUsage().heapUsed : 'N/A'
-    });
-  });
-
-  return action;
-};
-
-class EventBridge {
+class NexusRegistry {
   constructor() {
-    this.handlers = new Map();
-    this.history = [];
-    this.maxHistory = 1000;
-    this.deadLetterQueue = [];
-    this.retryConfig = { attempts: 3, backoff: 100 };
+    this.actions = new Map();
+    this.plugins = new Map();
+    this.observers = [];
+    this.services = new Map();
   }
 
-  subscribe(topic, handler, options = { priority: 0 }) {
-    if (!this.handlers.has(topic)) {
-      this.handlers.set(topic, []);
+  registerAction(action) {
+    this.actions.set(action.name, action);
+    this.notifyObservers('actionRegistered', { name: action.name });
+  }
+
+  registerService(name, service) {
+    this.services.set(name, service);
+    this.notifyObservers('serviceRegistered', { name });
+  }
+
+  getService(name) {
+    return this.services.get(name);
+  }
+
+  registerPlugin(name, plugin) {
+    if (this.plugins.has(name)) {
+      throw new NexusError(`Plugin ${name} already registered`, 'REGISTRY_ERROR');
     }
-    const subscribers = this.handlers.get(topic);
-    subscribers.push({ handler, priority: options.priority });
-    subscribers.sort((a, b) => b.priority - a.priority);
-
-    return () => this.unsubscribe(topic, handler);
+    this.plugins.set(name, plugin);
+    plugin.init(this);
+    this.notifyObservers('pluginInitialized', { name });
   }
 
-  unsubscribe(topic, handler) {
-    if (this.handlers.has(topic)) {
-      const filtered = this.handlers.get(topic).filter(sub => sub.handler !== handler);
-      this.handlers.set(topic, filtered);
+  subscribe(observer) {
+    if (typeof observer.update !== 'function') {
+      throw new NexusError('Observer requires update() method', 'REGISTRY_ERROR');
     }
+    this.observers.push(observer);
   }
 
-  async publish(topic, payload, context) {
-    const publishCtx = context ? context.createChild(`Bridge:${topic}`) : new NexusContext();
-    
-    this.history.push({ topic, timestamp: Date.now(), id: crypto.randomUUID() });
-    if (this.history.length > this.maxHistory) this.history.shift();
+  notifyObservers(event, data) {
+    this.observers.forEach(obs => {
+      try {
+        obs.update(event, data);
+      } catch (e) {
+        console.error(`Observer failure on event ${event}`, e);
+      }
+    });
+  }
 
-    const subscribers = this.handlers.get(topic) || [];
-    return Promise.all(subscribers.map(sub => sub.handler(payload, publishCtx)));
+  getAction(name) {
+    const action = this.actions.get(name);
+    if (!action) throw new NexusError(`Action ${name} not found`, 'NOT_FOUND');
+    return action;
   }
 }
