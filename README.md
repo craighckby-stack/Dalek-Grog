@@ -1,6 +1,9 @@
 # DALEK_GROG README
 ===========================================================
 
+Warning api limit for LLM will be extream recomend free tire only.
+
+
 ## Project Overview
 
 DALEK_GROG is a system that evolves code by integrating patterns from external repositories.
