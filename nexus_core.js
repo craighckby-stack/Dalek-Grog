@@ -1,113 +1,115 @@
-import { Observable, Subject, tap, mergeMap, catchError, shareReplay } from 'rxjs';
-import { AsyncScheduler } from 'rxjs/scheduler/async';
+// strategy-factory.js
+import { Observable, from } from 'rxjs';
+import { ContextManager } from './context-manager.js';
+import { Logger } from './logger.js';
+import { StrategyPlugin } from './strategy-plugin.js';
 
 class StrategyFactory {
-  private static $strategies = {
-    async ExampleStrategyImpl(context: { state: any }): Promise<any> {
-      const updatedResult = await this._strategyImpl.execute(context);
-      return updatedResult;
-    },
-  };
+  private static $strategies: { [key: string]: (context: any) => Promise<any> } = {};
+  private static cache: { [key: string]: (context: any) => Promise<any> } = {};
 
-  static async getStrategy(strategyName: string): Promise<any> {
-    if (!StrategyFactory.$strategies[strategyName]) {
-      throw new Error(`Strategy implementation for '${strategyName}' not found.`);
+  static async registerStrategy(strategyName: string, strategy: (context: any) => Promise<any>): Promise<void> {
+    StrategyFactory.$strategies[strategyName] = strategy;
+  }
+
+  static async getStrategy(strategyName: string, context: any): Promise<Observable<any>> {
+    if (StrategyFactory.$strategies[strategyName]) {
+      return from(StrategyFactory.$strategies[strategyName](context));
     }
-    return await StrategyFactory.$strategies[strategyName]();
+    throw new Error(`Strategy ${strategyName} not found`);
   }
 
-  static async createStrategyPool(strategyName: string): Promise<any[]> {
-    const strategy = await StrategyFactory.$strategies[strategyName]();
-    return new ObservablePool(strategy);
-  }
-}
-
-class StrategyPlugin {
-  constructor(strategyFactory: StrategyFactory) {}
-
-  static createStrategyProxy(strategyFactory: StrategyFactory, strategyName: string): any {
-    const strategy = strategyFactory.getStrategy(strategyName);
-    return new StrategyProxy(strategy, strategyName);
-  }
-
-  static getStrategyProxy(strategyName: string): any {
+  static async createStrategyPlugin(strategyName: string, contextManagerName: string, context: any): Promise<StrategyPlugin> {
     const strategyFactory = new StrategyFactory();
-    return StrategyPlugin.createStrategyProxy(strategyFactory, strategyName);
+    const strategy = await strategyFactory.getStrategy(strategyName, context);
+    return new StrategyPlugin(strategyFactory, strategyName, strategy);
   }
 }
 
+// context-manager.js
 class ContextManager {
   private static observers: any[] = [];
   private strategyName: string;
   private contextManagerName: string;
-  private strategy: any;
+  private context: any;
 
-  constructor(strategyName: string, contextManagerName: string, strategy: any) {
+  constructor(strategyName: string, contextManagerName: string, context: any) {
     this.strategyName = strategyName;
     this.contextManagerName = contextManagerName;
-    this.strategy = strategy;
+    this.context = context;
   }
 
-  async executeContextManager(contextManagerName: string, context: { state: any }): Promise<Observable<any>> {
+  async executeContextManager(): Promise<Observable<any>> {
     try {
-      const contextProxy = new ContextProxy(this.contextManagerName, context);
+      const contextProxy = new ContextProxy(this.contextManagerName, this.context);
       return contextProxy.execute();
     } catch (error) {
       console.error('Error occurred:', error);
       throw error;
     }
   }
+}
 
-  static attachObserver(observer: any): void {
-    ContextManager.observers.push(observer);
+// logger.js
+class Logger extends ContextManager {
+  onEvent(event: any): void {
+    console.log(`Event: ${event}`);
   }
 
-  static detachObserver(observer: any): void {
-    ContextManager.observers = ContextManager.observers.filter((obs: any) => obs !== observer);
+  constructor(strategyName: string, context: any) {
+    super(strategyName, 'ContextManager', context);
   }
 }
 
-class StrategyProxy {
-  private strategy: any;
+// strategy-plugin.js
+import { Observable, from } from 'rxjs';
+
+class StrategyPlugin {
+  private strategyFactory: StrategyFactory;
   private strategyName: string;
+  private strategy: any;
 
-  constructor(strategy: any, strategyName: string) {
-    this.strategy = strategy;
+  constructor(strategyFactory: StrategyFactory, strategyName: string, strategy: any) {
+    this.strategyFactory = strategyFactory;
     this.strategyName = strategyName;
+    this.strategy = strategy;
   }
 
-  async execute(context: { state: any }): Promise<Observable<any>> {
-    return iif(
-      () => this.strategy(context) !== undefined,
-      from(this.strategy(context)),
-      iif(
-        () => this.strategy(this.strategyName) !== undefined,
-        from(this.strategy(this.strategyName)),
-        new Observable<never>().pipe(
-          tap(() => console.error('Strategy not found')),
-          catchError((error: any) => {
-            console.error('Error occurred:', error);
-            return new Observable<never>();
-          }),
-        ),
-      ),
-    );
+  async getStrategy(): Promise<Observable<any>> {
+    try {
+      return await this.strategyFactory.getStrategy(this.strategyName);
+    } catch (error) {
+      console.error('Error occurred:', error);
+      throw error;
+    }
+  }
+
+  async runStrategy(observables: Observable[]): Promise<Observable<any>> {
+    try {
+      const strategy = await this.getStrategy();
+      return strategy;
+    } catch (error) {
+      console.error('Error occurred:', error);
+      throw error;
+    }
   }
 }
 
+// context-proxy.js
 class ContextProxy {
   private strategyName: string;
-  private context: { state: any };
+  private context: any;
+  private contextManager: ContextManager;
 
-  constructor(strategyName: string, context: { state: any }) {
+  constructor(strategyName: string, context: any) {
     this.strategyName = strategyName;
     this.context = context;
+    this.contextManager = new ContextManager(strategyName, 'ContextManager', this.context);
   }
 
   async execute(): Promise<Observable<any>> {
     try {
-      const contextManager = new ContextManager(this.strategyName, 'ContextManager', this.context);
-      return contextManager.executeContextManager(this.strategyName, this.context);
+      return this.contextManager.executeContextManager();
     } catch (error) {
       console.error('Error occurred:', error);
       throw error;
@@ -115,59 +117,25 @@ class ContextProxy {
   }
 }
 
-class ObservablePool {
-  private strategy: any;
-
-  constructor(strategy: any) {
-    this.strategy = strategy;
-  }
-
-  getPool(): Observable<any> {
-    return iif(
-      () => this.strategy !== undefined,
-      this.strategy,
-      iif(
-        () => this.strategy !== undefined,
-        this.strategy(),
-        new Observable<never>().pipe(
-          tap(() => console.error('Strategy not found')),
-          catchError((error: any) => {
-            console.error('Error occurred:', error);
-            return new Observable<never>();
-          }),
-        ),
-      ),
-    );
-  }
-}
-
-class RxStrategyRunner {
-  constructor(strategyName: string, contextManagerName: string) {
-    ContextManager.attachObserver(new StrategyPlugin(new StrategyFactory()));
-  }
-
-  async runStrategy(strategyName: string, observables: Observable[], context: { state: any }): Promise<Observable<any>> {
-    try {
-      const contextManager = new ContextManager(strategyName, 'ExampleContextManager', context);
-      const observable = await contextManager.executeContextManager(strategyName, context);
-      observables.push(observable);
-      return observable;
-    } catch (error) {
-      console.error('Error occurred:', error);
-      throw error;
-    }
-  }
-}
+// main.js
+import { Observer } from 'rxjs/internal/types';
+import { Observable, from, of } from 'rxjs';
+import { AsyncScheduler } from 'rxjs/scheduler/async';
+import { StrategyFactory } from './strategy-factory.js';
+import { Logger } from './logger.js';
+import { StrategyPlugin } from './strategy-plugin.js';
 
 async function main(): Promise<void> {
   try {
-    const strategyName = 'ExampleStrategy';
+    const strategyName = 'example-strategy';
     const observables: Observable[] = [];
     const scheduler = new AsyncScheduler();
     async function runStrategy(): Promise<void> {
-      const strategyPool = await StrategyFactory.createStrategyPool(strategyName);
-      const observable = await strategyPool.getPool();
+      const context = { state: 'initial' };
+      const contextManager = new ContextManager(strategyName, 'ContextManager', context);
+      const observable = await Scheduler.runStrategy(strategyName, observables, context);
       observables.push(observable);
+      return observable;
     }
     await runStrategy();
   } catch (error) {
@@ -175,4 +143,38 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error) => console.error('Error occurred:', error));
+// scheduler.js
+import { Observable, forkJoin } from 'rxjs';
+
+ async function runStrategy(strategyName: string, observables: Observable[], context: any): Promise<Observable<any>> {
+    try {
+      const strategyFactory = new StrategyFactory();
+      const strategy = await strategyFactory.createStrategyPlugin(strategyName, 'ContextManager', context);
+      const observable = await strategy.runStrategy(observables);
+      observables.push(observable);
+      return observable;
+    } catch (error) {
+      console.error('Error occurred:', error);
+      throw error;
+    }
+  }
+
+// strategy.js
+class Strategy {
+  async execute(context: any): Promise<any> {
+    const result = await this._strategyImpl.execute(context);
+    return result;
+  }
+}
+
+// decorator.js
+class Decorator {
+  decorate(strategy: any): any {
+    return async (context: any) => {
+      console.log(`Executing strategy: ${strategy.constructor.name}`);
+      const result = await strategy(context);
+      console.log(`Strategy result: ${result}`);
+      return result;
+    };
+  }
+}
