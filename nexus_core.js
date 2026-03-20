@@ -1,230 +1,160 @@
+import { Injectable } from '@angular/core';
 import { Observable, of, from } from 'rxjs';
 import { tap, catchError, map } from 'rxjs/operators';
-import { console } from 'node';
+import { Registry } from '@dialogflow/enterprise-cloud-sdk';
+import { EventBus, Event } from './event-bus';
 
 interface Strategy {
   name: string;
-  execute(): void;
+  execute: (config: object) => void;
+  executeAsync?: (config: object) => Promise<void>;
 }
 
-interface Registry {
-  getName(): string;
-  getStrategies(): Map<string, Strategy>;
-  registerStrategy(strategy: Strategy): void;
-  registerConfig(config: object): void;
-}
-
-interface ModuleRegistry {
-  getModules(): Promise<string[]>;
-  getModule(moduleName: string): Promise<{ name: string; register: (config: any) => void } | null>;
-  createStrategy(strategyModule: { name: string; register: (config: any) => void }, registryName: string): Promise<Strategy>;
-}
-
-interface StrategyFactory {
-  createStrategy(registryName: string): Promise<Strategy>;
-}
-
-class DependencyProvider {
-  private value: any;
-  private initialized: boolean;
-
-  constructor(value: any) {
-    this.value = value;
-    this.initialized = false;
-  }
-
-  get(): any {
-    if (!this.initialized) {
-      this.initialized = true;
-      return this.value;
-    }
-    return this.value;
-  }
-
-  set(value: any) {
-    this.value = value;
-  }
-}
-
-class DependencyContainer {
-  private providers: { [name: string]: DependencyProvider };
-
-  constructor(providers: { [name: string]: DependencyProvider }) {
-    this.providers = providers;
-  }
-
-  get<T>(name: string): T {
-    return this.providers[name].get();
-  }
-
-  set<T>(name: string, value: T) {
-    this.providers[name].set(value);
-  }
-}
-
-class Mediator {
-  private handlers: { [eventName: string]: (event: any) => void };
-
-  constructor(handlers: { [eventName: string]: (event: any) => void }) {
-    this.handlers = handlers;
-  }
-
-  notify(event: any) {
-    for (const handler of Object.values(this.handlers)) {
-      handler(event);
-    }
-  }
-
-  subscribe(eventName: string, handler: (event: any) => void) {
-    this.handlers[eventName] = handler;
-  }
-
-  unsubscribe(eventName: string) {
-    delete this.handlers[eventName];
-  }
-}
-
-class DomainEventPublisher {
-  private eventQueue: any[];
-  private mediator: Mediator;
-
-  constructor(mediator: Mediator) {
-    this.eventQueue = [];
-    this.mediator = mediator;
-  }
-
-  publishEvent(event: any) {
-    this.eventQueue.push(event);
-    this.mediator.notify(event);
-  }
-
-  publishAllEvents(events: any[]) {
-    for (const event of events) {
-      this.publishEvent(event);
-    }
-  }
-
-  subscribeEventHandler(eventName: string, handler: (event: any) => void) {
-    this.mediator.subscribe(eventName, handler);
-  }
-
-  unsubscribeEventHandler(eventName: string) {
-    this.mediator.unsubscribe(eventName);
-  }
-}
-
-class Registry implements Registry {
+class StrategyImpl implements Strategy {
   private name: string;
-  private strategies: Map<string, Strategy>;
-  private registryConfig: object;
 
-  constructor(name: string, registryConfig: object) {
+  constructor(name: string) {
+    this.name = name;
+  }
+
+  execute(config: object): void {
+    console.log(`Executing strategy: ${this.name} with config: ${JSON.stringify(config)}`);
+  }
+
+  async executeAsync(config: object): Promise<void> {
+    console.log(`Executing async strategy: ${this.name} with config: ${JSON.stringify(config)}`);
+  }
+}
+
+class StrategyModule {
+  private name: string;
+  private register: (config: object) => void;
+
+  constructor(name: string, register: (config: object) => void) {
+    this.name = name;
+    this.register = register;
+  }
+
+  async createStrategy(registryName: string, dependencyContainer: object): Promise<Strategy> {
+    const strategyModule = await dependencyContainer.get<ModuleRegistry>('ModuleRegistry').getModule(this.name);
+    return await strategyModule.createStrategy(strategyModule, registryName);
+  }
+
+  static createStrategyModule(name: string, register: (config: object) => void): StrategyModule {
+    return new StrategyModule(name, register);
+  }
+}
+
+class Repository {
+  private name: string;
+  private eventBus: EventBus;
+  private strategies: Map<string, Strategy>;
+  private moduleStrategies: Map<string, Strategy>;
+  private config: object;
+
+  constructor(name: string, config: object, eventBus: EventBus) {
     this.name = name;
     this.strategies = new Map();
-    this.registryConfig = registryConfig;
-  }
-
-  getName(): string {
-    return this.name;
-  }
-
-  getStrategies(): Map<string, Strategy> {
-    return this.strategies;
+    this.moduleStrategies = new Map();
+    this.config = config;
+    this.eventBus = eventBus;
   }
 
   registerStrategy(strategy: Strategy): void {
     this.strategies.set(strategy.name, strategy);
   }
 
-  registerConfig(config: object): void {
-    this.registryConfig = config;
-  }
-}
-
-class ModuleRegistry implements ModuleRegistry {
-  async getModules(): Promise<string[]> {
-    return ['module1', 'module2'];
+  registerModuleStrategy(strategyModule: Strategy): void {
+    this.moduleStrategies.set(strategyModule.name, strategyModule);
   }
 
-  async getModule(moduleName: string): Promise<{ name: string; register: (config: any) => void } | null> {
-    return { name: moduleName, register: () => {} };
+  getConfig(): object {
+    return this.config;
   }
 
-  async createStrategy(strategyModule: { name: string; register: (config: any) => void }, registryName: string): Promise<Strategy> {
-    return strategyModule.register(this.registryConfig);
-  }
-}
-
-class StrategyFactory implements StrategyFactory {
-  private registryProvider: DependencyProvider;
-
-  constructor(registryProvider: DependencyProvider) {
-    this.registryProvider = registryProvider;
+  setConfig(config: object): void {
+    this.config = config;
   }
 
-  async createStrategy(registryName: string): Promise<Strategy> {
-    const registry = await this.registryProvider.get<Registry>('Registry');
-    const strategyModule = await this.registryProvider.get<ModuleRegistry>('ModuleRegistry').getModule(registryName);
-    return await strategyModule.createStrategy(strategyModule, registryName);
-  }
-}
-
-class Qiskit {
-  async getModules(): Promise<string[]> {
-    return ['module1', 'module2'];
+  async getStrategies(): Promise<Map<string, Strategy>> {
+    return this.strategies;
   }
 
-  async getModule(moduleName: string): Promise<{ name: string; register: (config: any) => void } | null> {
-    return { name: moduleName, register: () => {} };
+  async getModuleStrategies(): Promise<Map<string, Strategy>> {
+    return this.moduleStrategies;
   }
 
-  async createStrategy(strategyModule: { name: string; register: (config: any) => void }, registryName: string): Promise<Strategy> {
-    return strategyModule.register({ config: registryName });
-  }
-}
-
-class DefaultStrategy implements Strategy {
-  name: string;
-  constructor(name: string) {
-    this.name = name;
-  }
-
-  execute(): void {
-    console.log('Default strategy executed');
+  async createStrategy(registryName: string, dependencyContainer: object): Promise<Strategy> {
+    const registry = await dependencyContainer.get<Registry>('Registry');
+    const strategyModule = await this.getModuleStrategies().get(registryName);
+    return await strategyModule.createStrategy(registryName, dependencyContainer);
   }
 }
 
 class Application {
-  private mediator: Mediator;
+  private eventBus: EventBus;
+  private dependencyContainer: DependencyProperty;
 
-  constructor(dependencyContainer: DependencyContainer) {
-    this.mediator = new Mediator({});
+  constructor() {
+    this.eventBus = new EventBus();
+    this.dependencyContainer = {
+      'Repository': () => new Repository('Default Repository', {}, this.eventBus),
+      'StrategyModule': () => new StrategyModule(),
+      'StrategyImpl': () => new StrategyImpl('Default Strategy'),
+      'EventBus': () => new EventBus(),
+      get(id: string): object {
+        return this[id]();
+      }
+    };
   }
 
-  init(): void {
-    const dependencyContainer = new DependencyContainer({
-      'DependencyContainer': () => new DependencyContainer({}),
-      'ModuleRegistry': () => new ModuleRegistry(new Qiskit()),
-      'Registry': () => new Registry('Default Registry', {}),
-      'StrategyFactory': () => new StrategyFactory(new DependencyProvider(new DependencyContainer({}))),
-      'Strategy': () => new DefaultStrategy('Default Strategy')
+  async init(): Promise<void> {
+    const eventBus = this.dependencyContainer['EventBus'];
+    const repository = this.dependencyContainer['Repository'];
+    const strategyModule = this.dependencyContainer['StrategyModule'];
+    const strategyImpl = this.dependencyContainer['StrategyImpl'];
+
+    repository.registerStrategy(strategyImpl);
+    repository.registerModuleStrategy(strategyModule);
+
+    // Subscribe to strategy execution
+    await repository.getStrategies().forEach(async (strategy) => {
+      eventBus.subscribe(strategy.name, async (event: Event) => {
+        strategy.execute(event);
+        if (strategy.executeAsync) {
+          await strategy.executeAsync(event);
+        }
+      });
     });
-
-    this.mediator.subscribe('events', (event) => {
-      console.log(`Received event: ${event}`);
-    });
-
-    const strategyFactoryProvider = new DependencyProvider(new StrategyFactory(new DependencyContainer({
-      'ModuleRegistry': () => new ModuleRegistry(new Qiskit())
-    })));
-    dependencyContainer.set('StrategyFactory', strategyFactoryProvider);
-    const strategyFactory = dependencyContainer.get<StrategyFactory>("StrategyFactory");
-
-    const registryProvider = new DependencyProvider(new Registry("Test Registry", {}));
-    const strategy = await strategyFactory.createStrategy("Test Strategy");
-    registryProvider.set('Registry', new Registry("Test Registry", { config: 'Test config' }));
-    const registry = registryProvider.get<Registry>("Registry");
-    registry.registerStrategy(strategy);
-    console.log('Successfully created and registered strategy:', strategy);
   }
+}
+
+class EventBus {
+  private listeners: Map<string, Function>;
+
+  constructor() {
+    this.listeners = new Map();
+  }
+
+  subscribe(type: string, listener: Function): void {
+    this.listeners.set(type, listener);
+  }
+
+  unsubscribe(type: string, listener: Function): void {
+    this.listeners.delete(type, listener);
+  }
+
+  async publish(type: string, event: Event): Promise<void> {
+    if (this.listeners.has(type)) {
+      const listener = this.listeners.get(type);
+      await listener(event);
+    } else {
+      throw new Error(`No listeners for event type: ${type}`);
+    }
+  }
+}
+
+interface Event {
+  type: string;
+  data: any;
 }
