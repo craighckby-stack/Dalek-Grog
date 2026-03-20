@@ -1,69 +1,30 @@
-# DALEK_GROG
+# DALEK_GROG README
 
 ## Project Overview
 
-DALEK_GROG is a system designed to evolve code by extracting patterns from external repositories.
-
-## Requirements
-
-* Node.js
-* npm
-
-## Installation
-
-npm install
-
-## File Processed
-
-The following files have been processed:
-* Manual (source)
-
-## Latest File
-
-The latest processed file is `nexus_core.js`.
-
-## Context Summary
-
-The system is currently in the "Initial State" context.
+DALEK_GROG is a system designed to evolve code by integrating patterns from external repositories.
 
 ## Siphoning Process
 
-DALEK_GROG employs a technical mechanism to select architectural origins (such as DeepMind and Google) and apply their patterns to local files. This process involves the following steps:
+The siphoning process involves the following steps:
 
-1. **Ingestion**: External repository patterns are ingested into the system.
-2. **Matching**: The ingested patterns are matched against local files based on their characteristics.
-3. **Application**: The matched patterns are applied to the local files to generate evolved code.
+1. **Architecture Origin Selection**: The system identifies potential architectural origins, such as DeepMind and Google, from a predefined repository.
+2. **Pattern Extraction**: The system extracts relevant patterns from the selected architectural origins.
+3. **Local File Interaction**: The system applies the extracted patterns to local files, integrating them into the evolved code.
+4. **Evolution Iteration**: The system repeatedly applies the siphoning process to the evolved code, refining the patterns and improving the quality of the evolved code.
 
 ## Chained Context
 
-DALEK_GROG uses a shared state/memory to ensure consistency across evolved files. This implementation enables the following features:
-
-1. **Consistency**: The shared state guarantees that changes made to one evolved file are reflected in all other files.
-2. **Efficiency**: The shared state reduces the computational overhead of maintaining separate memory spaces for each file.
+The chained context mechanism ensures consistency across evolved files by implementing a shared state/memory. This shared state allows the system to maintain a consistent internal representation of the code, ensuring that changes made to one file affect the entire system.
 
 ## Current Status
 
-- Files Processed: Manual
-- Latest File: nexus_core.js
-- DNA Signature: None
-- Context Summary: Initial State
-- Saturation Status: None
+- **Files Processed**: The system has processed a manual document.
+- **Latest File**: The latest file processed by the system is `nexus_core.js`.
+- **DNA Signature**: The system does not employ a DNA signature.
+- **Context Summary**: The system is currently in Initial State.
+- **Saturation Status**: No saturation status has been set.
 
-## Technical Details
+## Future Development
 
-To access the following technical details, navigate to the corresponding files in the project directory:
-
-* `siphoning.js`: Implementation of the siphoning process.
-* `chained_context.js`: Implementation of the chained context mechanism.
-
-## Troubleshooting
-
-For common issues and troubleshooting procedures, refer to the `Troubleshooting.md` file.
-
-## Versioning
-
-This project uses semantic versioning. The current version is not specified.
-
-## License
-
-This project is licensed under the MIT License.
+Future releases of DALEK_GROG will focus on enhancing the siphoning process, improving the efficiency of pattern extraction, and refining the chained context mechanism to ensure consistent and high-quality evolved code.
