@@ -1,3 +1,8 @@
+/**
+ * Fiber-based reconciliation engine using bitmask priority lanes and multi-phase diagnostics.
+ */
+
+/** @enum {number} */
 const Lane = {
   NoLanes:             0b0000000000000000000000000000000,
   SyncLane:            0b0000000000000000000000000000001,
@@ -10,6 +15,7 @@ const Lane = {
   OffscreenLane:       0b1000000000000000000000000000000,
 };
 
+/** @enum {number} */
 const WorkPriority = {
   ImmediatePriority: 1,
   UserBlockingPriority: 2,
@@ -18,6 +24,7 @@ const WorkPriority = {
   IdlePriority: 5,
 };
 
+/** @enum {number} */
 const FiberFlags = {
   NoFlags:         0b0000000000000000,
   Placement:       0b0000000000000010,
@@ -31,8 +38,13 @@ const FiberFlags = {
   Incomplete:      0b0000001000000000,
   ShouldCapture:   0b0000010000000000,
   ForceUpdate:     0b0000100000000000,
+  Inferred:        0b0001000000000000,
+  Synthesized:     0b0010000000000000,
+  Hydrating:       0b0100000000000000,
+  Visibility:      0b1000000000000000,
 };
 
+/** @enum {number} */
 const SyntaxKind = {
   HostRoot: 0,
   FunctionComponent: 1,
@@ -48,8 +60,11 @@ const SyntaxKind = {
   MemoComponent: 11,
   SimpleMemoComponent: 12,
   LazyComponent: 13,
+  Portal: 14,
+  Scope: 15,
 };
 
+/** @enum {number} */
 const DiagnosticCategory = {
   Warning: 0,
   Error: 1,
@@ -72,11 +87,18 @@ const DiagnosticMessages = {
   FIBER_REUSE: { code: 9002, category: DiagnosticCategory.Telemetry, message: "Fiber recycled from pool: {0}" },
   CIRCULAR_DEPENDENCY: { code: 9003, category: DiagnosticCategory.Error, message: "Circular dependency detected at Fiber: {0}" },
   SCHEDULER_OVERLOAD: { code: 9004, category: DiagnosticCategory.Warning, message: "Task queue depth exceeded threshold ({0}). High latency expected." },
+  HOST_IO_ERROR: { code: 9005, category: DiagnosticCategory.Error, message: "Host environment I/O error: {0}" },
+  SYMBOL_NOT_FOUND: { code: 9006, category: DiagnosticCategory.Error, message: "Symbol '{0}' could not be resolved in the current scope." },
 };
 
 class CancellationToken {
   #isCancelled = false;
   #reason = null;
+  #parentToken = null;
+
+  constructor(parentToken = null) {
+    this.#parentToken = parentToken;
+  }
 
   cancel(reason = "Operation cancelled") {
     this.#isCancelled = true;
@@ -84,16 +106,21 @@ class CancellationToken {
   }
 
   isCancellationRequested() {
-    return this.#isCancelled;
+    return this.#isCancelled || (this.#parentToken?.isCancellationRequested() ?? false);
   }
 
   throwIfCancelled() {
-    if (this.#isCancelled) {
-      const error = new Error(this.#reason);
+    if (this.isCancellationRequested()) {
+      const error = new Error(this.#reason || "OperationCanceledException");
       error.name = "OperationCanceledException";
       throw error;
     }
   }
+
+  static None = new (class extends CancellationToken {
+    isCancellationRequested() { return false; }
+    cancel() {}
+  })();
 }
 
 class DiagnosticEmitter {
@@ -131,6 +158,10 @@ class DiagnosticEmitter {
     }
   }
 
+  chainRelated(parentDiagnostic, relatedMessage, ...args) {
+    parentDiagnostic.relatedInformation.push({ message: relatedMessage, args });
+  }
+
   getDiagnostics() {
     return [...this.#history];
   }
@@ -151,7 +182,7 @@ class LaneManager {
 
   static mergeLanes(a, b) {
     return a | b;
-  }
+  } 
 
   static removeLanes(set, subset) {
     return set & ~subset;
@@ -166,9 +197,13 @@ class LaneManager {
   }
 
   static getExpirationTime(lane, currentTime) {
-    if (lane === Lane.SyncLane) return currentTime + 500;
-    if (lane === Lane.InputContinuousLane) return currentTime + 1000;
-    return currentTime + 5000;
+    switch (lane) {
+      case Lane.SyncLane: return currentTime + 500;
+      case Lane.InputContinuousLane: return currentTime + 1000;
+      case Lane.DefaultLane: return currentTime + 5000;
+      case Lane.IdleLane: return currentTime + 10000;
+      default: return currentTime + 5000;
+    }
   }
 }
 
@@ -184,7 +219,9 @@ class NexusFiber {
     this.updateQueue = null;
     this.stateNode = null;
     this.source = null;
-    this.symbol = null;
+    this.symbol = Symbol('NexusFiber');
+    this.localSymbolTable = new Map();
+    this.scopeDepth = 0;
   }
 
   initialize(id, tag, type, props) {
@@ -199,6 +236,9 @@ class NexusFiber {
     this.actualDuration = 0;
     this.actualStartTime = -1;
     this.treeBaseDuration = 0;
+    this.deletions = null;
+    this.index = 0;
+    this.key = id;
   }
 
   cleanup() {
@@ -215,7 +255,8 @@ class NexusFiber {
     this.flags = FiberFlags.NoFlags;
     this.lanes = Lane.NoLanes;
     this.childLanes = Lane.NoLanes;
-    this.symbol = null;
+    this.deletions = null;
+    this.localSymbolTable.clear();
   }
 }
 
@@ -258,13 +299,11 @@ class FiberFactory {
 
   constructor(diagnostics) {
     this.#diagnostics = diagnostics;
-    this.#pool = new NexusObjectPool(NexusFiber, "Fiber", diagnostics);
+    this.#pool = new NexusObjectPool(NexusFiber, "NexusFiber", diagnostics);
   }
 
   createFiber(tag, pendingProps, key, mode) {
-    const fiber = this.#pool.acquire(key, tag, null, pendingProps);
-    fiber.mode = mode;
-    return fiber;
+    return this.#pool.acquire(key, tag, null, pendingProps);
   }
 
   createWorkInProgress(current, pendingProps) {
@@ -279,75 +318,12 @@ class FiberFactory {
     }
 
     workInProgress.lanes = current.lanes;
-    workInProgress.child = current.child;
+    workInProgress.childLanes = current.childLanes;
     workInProgress.memoizedProps = current.memoizedProps;
     workInProgress.memoizedState = current.memoizedState;
     workInProgress.updateQueue = current.updateQueue;
-    workInProgress.sibling = current.sibling;
-    workInProgress.return = current.return;
+    workInProgress.dependencies = current.dependencies;
 
     return workInProgress;
-  }
-}
-
-class MinHeap {
-  #heap = [];
-
-  push(node) {
-    this.#heap.push(node);
-    this.#siftUp(this.#heap.length - 1);
-  }
-
-  peek() {
-    return this.#heap[0] || null;
-  }
-
-  pop() {
-    if (this.#heap.length === 0) return null;
-    const first = this.#heap[0];
-    const last = this.#heap.pop();
-    if (this.#heap.length > 0) {
-      this.#heap[0] = last;
-      this.#siftDown(0);
-    }
-    return first;
-  }
-
-  #siftUp(index) {
-    while (index > 0) {
-      const parentIndex = (index - 1) >> 1;
-      if (this.#compare(this.#heap[index], this.#heap[parentIndex]) < 0) {
-        this.#swap(index, parentIndex);
-        index = parentIndex;
-      } else break;
-    }
-  }
-
-  #siftDown(index) {
-    const length = this.#heap.length;
-    while (true) {
-      let left = (index << 1) + 1;
-      let right = left + 1;
-      let smallest = index;
-
-      if (left < length && this.#compare(this.#heap[left], this.#heap[smallest]) < 0) smallest = left;
-      if (right < length && this.#compare(this.#heap[right], this.#heap[smallest]) < 0) smallest = right;
-
-      if (smallest !== index) {
-        this.#swap(index, smallest);
-        index = smallest;
-      } else break;
-    }
-  }
-
-  #compare(a, b) {
-    const diff = a.sortIndex - b.sortIndex;
-    return diff !== 0 ? diff : a.id - b.id;
-  }
-
-  #swap(i, j) {
-    const temp = this.#heap[i];
-    this.#heap[i] = this.#heap[j];
-    this.#heap[j] = temp;
   }
 }
