@@ -1,140 +1,183 @@
-// strategic-factory.js
-import { Observable, from } from 'rxjs';
+// nexus_core.js
+import { Observable, of, from, forkJoin, throwError } from 'rxjs';
+import { tap, catchError, mergeMap } from 'rxjs/operators';
+import { console, process } from 'node';
+
+class MultiStrategicFactory {
+  static defaultFactory = new StrategicFactory('default');
+
+  static async getStrategy(strategyFactoryName: string, context: any): Promise<Observable<any>> {
+    const strategyFactory = this.getFactory(strategyFactoryName);
+    if (strategyFactory) {
+      return from(strategyFactory(context));
+    }
+    throw new Error(`Strategy factory ${strategyFactoryName} not found`);
+  }
+
+  static getFactory(strategyFactoryName: string): StrategicFactory {
+    if (strategyFactoryName === 'default') {
+      return this.defaultFactory;
+    }
+    if (require('qiskit')?.moduleRegistryModule) {
+      const { moduleRegistryModule } = require('qiskit');
+      const strategyFactories = moduleRegistryModule.getFactories();
+      for (const factory of strategyFactories) {
+        if (factory.name === strategyFactoryName) {
+          MultiStrategicFactory.registerFactory(factory);
+          return factory;
+        }
+      }
+    }
+    throw new Error(`Strategy factory ${strategyFactoryName} not found`);
+  }
+
+  static registerFactory(strategyFactory: StrategicFactory): void {
+    switch (strategyFactory.name) {
+      case 'default':
+        break;
+      default:
+        console.log(`Registering new strategy factory: ${strategyFactory.name}`);
+    }
+  }
+}
 
 class StrategicFactory {
-  private static $strategies: { [key: string]: (context: any) => Promise<any> } = {};
+  constructor(private name: string) {}
 
-  static async registerStrategy(strategyName: string, strategy: (context: any) => Promise<any>): Promise<void> {
-    StrategicFactory.$strategies[strategyName] = strategy;
+  execute(context: any): Promise<any> {
+    throw new Error('Not implemented');
+  }
+}
+
+class EnhancedStrategyRegistry {
+  #strategiesCache: { [key: string]: Strategy };
+
+  constructor(name: string) {
+    this.name = name;
+    this.#strategiesCache = {};
   }
 
-  static async getStrategy(strategyName: string, context: any): Promise<Observable<any>> {
-    if (StrategicFactory.$strategies[strategyName]) {
-      return from(StrategicFactory.$strategies[strategyName](context));
+  async getStrategy(strategyName: string): Promise<Strategy> {
+    if (this.#strategiesCache[strategyName]) {
+      return this.#strategiesCache[strategyName];
     }
-    throw new Error(`Strategy ${strategyName} not found`);
-  }
-}
-
-// strategic-factory-loader.js
-import { Observable, from } from 'rxjs';
-import { StrategicFactory } from './strategic-factory.js';
-import { StrategyContextManager } from './strategy-context-manager.js';
-import { StrategyPlugin } from './strategy-plugin.js';
-
-class StrategicFactoryLoader {
-  static async createStrategyPlugin(strategyName: string, contextManagerName: string, context: any): Promise<StrategyPlugin> {
-    const strategyFactory = new StrategicFactory();
-    const strategy = await strategyFactory.getStrategy(strategyName, context);
-    const contextManager = await StrategicFactoryLoader.getContextManager(contextManagerName, context);
-    return new StrategyPlugin(strategyFactory, strategyName, strategy, contextManager);
-  }
-
-  static async getContextManager(contextManagerName: string, context: any): Promise<StrategyContextManager> {
-    if (StrategicFactoryLoader.contextManagers[contextManagerName]) {
-      return StrategicFactoryLoader.contextManagers[contextManagerName];
+    try {
+      const strategy = await this.loadStrategy(strategyName);
+      this.#strategiesCache[strategyName] = strategy;
+      return strategy;
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error('Error loading strategy:', error);
+      } else {
+        console.error('Unknown error occurred:', error);
+      }
+      throw error;
     }
-    const contextManager = new StrategyContextManager(contextManagerName, context);
-    StrategicFactoryLoader.contextManagers[contextManagerName] = contextManager;
-    return contextManager;
   }
 
-  static contextManagers: { [key: string]: StrategyContextManager } = {};
-}
-
-// strategy-context-manager.js
-class StrategyContextManager {
-  private strategyName: string;
-  private contextManagerName: string;
-  private context: any;
-
-  constructor(strategyName: string, contextManagerName: string, context: any) {
-    this.strategyName = strategyName;
-    this.contextManagerName = contextManagerName;
-    this.context = context;
-  }
-
-  async observeChanges(): Promise<Observable<any>> {
-    return new Observable(observer => observer.next(this.context));
+  private async loadStrategy(strategyName: string): Promise<Strategy> {
+    const { registryModule } = require('qiskit');
+    const strategyModule = registryModule.getModule(strategyName);
+    if (strategyModule) {
+      const strategy = registryModule.createStrategy(strategyModule, this.name);
+      return strategy;
+    }
+    throw new Error(`Strategy ${strategyName} not found in registry ${this.name}`);
   }
 }
-
-// strategy-plugin.js
-import { Observable, from } from 'rxjs';
 
 class StrategyPlugin {
-  private strategyFactory: StrategicFactory;
-  private strategyName: string;
-  private strategy: any;
-  private contextManager: StrategyContextManager;
-
-  constructor(strategyFactory: StrategicFactory, strategyName: string, strategy: any, contextManager: StrategyContextManager) {
-    this.strategyFactory = strategyFactory;
-    this.strategyName = strategyName;
-    this.strategy = strategy;
-    this.contextManager = contextManager;
-  }
+  constructor(strategyFactory: StrategicFactory, private context: any) {}
 
   async getStrategy(): Promise<Observable<any>> {
-    return this.strategyFactory.getStrategy(this.strategyName);
-  }
-
-  async runStrategy(observables: Observable[]): Promise<Observable<any>> {
-    const strategy = await this.getStrategy();
-    this.contextManager.observeChanges().subscribe();
-    return strategy;
+    const strategy = await MultiStrategicFactory.getStrategy('default', this.context);
+    return from(strategy.execute(this.context));
   }
 }
 
-// selector.js
-class Selector {
-  async select(strategyName: string, contextManagerName: string, context: any): Promise<StrategyPlugin> {
-    const strategyPlugin = await StrategicFactoryLoader.createStrategyPlugin(strategyName, contextManagerName, context);
-    return strategyPlugin;
+class EnhancedRegistryLoader {
+  constructor(private registryConfig: { [key: string]: any }) {}
+
+  async loadRegistry(registryName: string): Promise<EnhancedStrategyRegistry> {
+    const { registryConfigModule } = require('qiskit');
+    const registryConfig = await registryConfigModule.loadConfig(registryName);
+    if (!registryConfig) {
+      throw new Error(`Registry config for ${registryName} not found`);
+    }
+    const registry = new EnhancedStrategyRegistry(registryName, registryConfig);
+    await registry.initStrategies();
+    return registry;
+  }
+
+  private async initStrategies(): Promise<void> {
+    const { moduleRegistryModule } = require('qiskit');
+    const strategyModules = await moduleRegistryModule.getModules();
+    for (const module of strategyModules) {
+      try {
+        await this.loadStrategyModule(module.name);
+      } catch (error) {
+        console.error('Error loading strategy module:', error);
+      }
+    }
+  }
+
+  private async loadStrategyModule(moduleName: string): Promise<void> {
+    const { registryModule } = require('qiskit');
+    const module = await registryModule.getModule(moduleName);
+    if (!module) {
+      throw new Error(`Module ${moduleName} not found`);
+    }
+    await module.register(this.registryConfig);
   }
 }
 
-// strategy.js
-abstract class Strategy {
-  abstract execute(context: any): Promise<any>;
-}
+class EnhancedExecutor {
+  async executeStrategies(strategyNames: string[], context: any): Promise<any> {
+    try {
+      const strategyPlugins: Promise<StrategyPlugin>[] = [];
+      for (const strategyName of strategyNames) {
+        const registryLoader = new EnhancedRegistryLoader({});
+        const registry = await registryLoader.loadRegistry(strategyName);
+        const strategyPlugin = new StrategyPlugin(new StrategicFactory(''), context);
+        const strategy = await registry.getStrategy(strategyName);
+        strategyPlugin.strategy = strategy;
+        strategyPlugins.push(strategyPlugin.getStrategy());
+      }
 
-// strategy-registry.js
-class StrategyRegistry {
-  static $strategies: { [key: string]: Strategy } = {};
-
-  static async registerStrategy(strategyName: string, strategy: Strategy): Promise<void> {
-    StrategyRegistry.$strategies[strategyName] = strategy;
+      return forkJoin(strategyPlugins, (results) => results).pipe(
+        tap((result) => console.log(`Strategy execution result: ${result}`)),
+        catchError((error) => {
+          console.error('Error occurred:', error);
+          return throwError(error);
+        }),
+        mergeMap(async (result) => {
+          const mergedResult = {};
+          for (const strategyName in result) {
+            mergedResult[strategyName] = await this.mergeResults(result[strategyName]);
+          }
+          return mergedResult;
+        })
+      );
+    } catch (error) {
+      console.error('Error occurred:', error);
+    }
   }
 
-  static async getStrategy(strategyName: string): Promise<Strategy> {
-    return StrategyRegistry.$strategies[strategyName];
+  private async mergeResults(results: any): Promise<any> {
+    return results;
   }
 }
 
-// scheduler.js
-import { Observable, forkJoin } from 'rxjs';
-import { Selector } from './selector.js';
-
-async function runStrategy(strategyName: string, observables: any[], context: any): Promise<any> {
-  try {
-    const strategyPlugin = await Selector.select(strategyName, 'ContextManager', context);
-    const strategy = await strategyPlugin.getStrategy();
-    observables.push(strategy);
-    return forkJoin(observables);
-  } catch (error) {
-    console.error('Error occurred:', error);
-  }
-}
-
-// main.js
 async function main(): Promise<void> {
   try {
-    const strategyName = 'example-strategy';
-    const observables: any[] = [];
     const context = { state: 'initial' };
-    await runStrategy(strategyName, observables, context);
+
+    const enhancedExecutor = new EnhancedExecutor();
+    const strategyNames = ['example-strategy'];
+    await enhancedExecutor.executeStrategies(strategyNames, context);
   } catch (error) {
     console.error('Error occurred:', error);
   }
 }
+
+process.on('processStartup', async () => {});
