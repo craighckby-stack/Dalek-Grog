@@ -1,8 +1,8 @@
 /**
  * @file LICENSE.ts
- * @package Nexus_Grog_Core
- * @version 1.2.0
- * @description Programmatic MIT License implementation and Architectural Registry.
+ * @package Nexus_Core
+ * @version 3.0.0
+ * @description Programmatic MIT License implementation with hierarchical Architectural Attribution and Diagnostic Traceability.
  */
 
 /**
@@ -10,135 +10,244 @@
  * Bitwise representation of permissions and usage constraints.
  */
 export enum LicenseFlags {
-    None             = 0,
-    Usage            = 1 << 0,
-    Modification     = 1 << 1,
-    Merge            = 1 << 2,
-    Publish          = 1 << 3,
-    Distribute       = 1 << 4,
-    Sublicense       = 1 << 5,
-    Sell             = 1 << 6,
-    PrivateUse       = 1 << 7,
-    CommercialUse    = 1 << 8,
-    All              = (1 << 9) - 1
+    None                = 0,
+    Import              = 1 << 0,
+    Modification        = 1 << 1,
+    Merge               = 1 << 2,
+    Publish             = 1 << 3,
+    Distribute          = 1 << 4,
+    Sublicense          = 1 << 5,
+    CommercialUse       = 1 << 6,
+    PrivateUse          = 1 << 7,
+    GlobalUse           = 1 << 8,
+    RecursiveUsage      = 1 << 9,
+    AttributionRequired = 1 << 10,
+    IntegrityLocked     = 1 << 11,
+    LegacyLogic         = 1 << 12,
+    All                 = (1 << 13) - 1
 }
 
 /**
- * @enum DiagnosticCategory
- * Classification of license and integrity diagnostics.
+ * @enum DiagnosticSeverity
+ * Classification of system diagnostics and integrity failures.
  */
-export enum DiagnosticCategory {
+export enum DiagnosticSeverity {
+    Hint,
+    Suggestion,
+    Message,
     Warning,
     Error,
-    Suggestion,
-    Message
+    Fatal
 }
 
 /**
- * @interface LicenseDiagnostic
- * Represents a system diagnostic related to licensing or structural integrity.
+ * @enum AcquisitionMethod
+ * Categorization of architectural pattern acquisition.
  */
-export interface LicenseDiagnostic {
-    code: number;
-    category: DiagnosticCategory;
+export enum AcquisitionMethod {
+    DirectFetch,
+    ArchiveRecovery,
+    SearchDiscovery,
+    PreAiSiphon,
+    RecursiveEvolution
+}
+
+/**
+ * @interface DiagnosticChain
+ * Recursive structure for tracking diagnostic events and causal links.
+ */
+export interface DiagnosticChain {
     message: string;
-    relatedSymbol?: string;
+    severity: DiagnosticSeverity;
+    code: number;
+    reports?: DiagnosticChain[];
+    context?: string;
+}
+
+/**
+ * @interface AcquisitionManifest
+ * Metadata regarding the lineage of acquired architectural patterns.
+ */
+export interface AcquisitionManifest {
+    method: AcquisitionMethod;
+    originUrl: string;
+    timestamp: number;
+    depth: number;
 }
 
 /**
  * @interface ArchitecturalSymbol
- * Defines metadata for external architectural contributions.
+ * Metadata for external architectural contributions and dependencies.
  */
 export interface ArchitecturalSymbol {
     readonly id: string;
     readonly repository: string;
     readonly contribution: string;
-    readonly timestamp: Date;
-    readonly integrityHash: string;
+    readonly timestamp: number;
+    readonly checksum: string;
     readonly flags: LicenseFlags;
+    readonly manifest: AcquisitionManifest;
+    readonly dependencies?: string[];
+    readonly metadata?: Record<string, any>;
 }
 
 /**
- * @class ArchitecturalRegistry
- * Centralized registry for managing architectural attributions and integrity checks.
+ * @class DependencyContainer
+ * Service registry for core licensing and validation components.
  */
-export class ArchitecturalRegistry {
-    private static instance: ArchitecturalRegistry;
+export class DependencyContainer {
+    private static services: Map<string, any> = new Map();
+
+    public static register<T>(name: string, instance: T): void {
+        this.services.set(name, instance);
+    }
+
+    public static resolve<T>(name: string): T {
+        const service = this.services.get(name);
+        if (!service) throw new Error(`Resolution Failure: ${name}`);
+        return service as T;
+    }
+}
+
+/**
+ * @class SymbolRegistry
+ * Registry for managing architectural symbols and diagnostic state.
+ */
+export class SymbolRegistry {
     private symbolRegistry: Map<string, ArchitecturalSymbol> = new Map();
-    private diagnostics: LicenseDiagnostic[] = [];
+    private diagnostics: DiagnosticChain[] = [];
+    private isValid: boolean = true;
 
-    private constructor() {
-        this.initializeRegistry();
+    constructor() {
+        this.initialize();
     }
 
-    public static getInstance(): ArchitecturalRegistry {
-        if (!ArchitecturalRegistry.instance) {
-            ArchitecturalRegistry.instance = new ArchitecturalRegistry();
+    private initialize(): void {
+        if (typeof ARCHITECTURAL_DATA !== 'undefined') {
+            ARCHITECTURAL_DATA.forEach(symbol => this.registerSymbol(symbol));
         }
-        return ArchitecturalRegistry.instance;
     }
 
-    private initializeRegistry(): void {
-        ARCHITECTURAL_CREDITS.forEach(symbol => {
-            this.registerSymbol(symbol);
-        });
-    }
-
-    private registerSymbol(symbol: ArchitecturalSymbol): void {
-        if (symbol.integrityHash.length < 32) {
+    public registerSymbol(symbol: ArchitecturalSymbol): void {
+        if (symbol.checksum.length < 64) {
             this.reportDiagnostic({
-                code: 1002,
-                category: DiagnosticCategory.Error,
-                message: `Integrity failure for symbol: ${symbol.id}`,
-                relatedSymbol: symbol.id
+                code: 8001,
+                severity: DiagnosticSeverity.Warning,
+                message: `Insufficient checksum length for symbol: ${symbol.id}`
             });
         }
+
+        if (this.symbolRegistry.has(symbol.id)) {
+            this.reportDiagnostic({
+                code: 9001,
+                severity: DiagnosticSeverity.Error,
+                message: `Collision: Symbol ${symbol.id} is already registered.`
+            });
+            return;
+        }
+
         this.symbolRegistry.set(symbol.id, symbol);
     }
 
-    public reportDiagnostic(diag: LicenseDiagnostic): void {
+    public reportDiagnostic(diag: DiagnosticChain): void {
         this.diagnostics.push(diag);
-    }
-
-    public getDiagnostics(): readonly LicenseDiagnostic[] {
-        return this.diagnostics;
+        if (diag.severity >= DiagnosticSeverity.Error) {
+            this.isValid = false;
+        }
     }
 
     public getSymbol(id: string): ArchitecturalSymbol | undefined {
         return this.symbolRegistry.get(id);
+    } 
+
+    public getDiagnostics(): readonly DiagnosticChain[] {
+        return this.diagnostics;
     }
 
     public listSymbols(): ArchitecturalSymbol[] {
         return Array.from(this.symbolRegistry.values());
     }
 
-    /**
-     * Validates current runtime flags against required license permissions.
-     */
-    public validateCompliance(currentFlags: LicenseFlags): boolean {
-        if (!(currentFlags & LicenseFlags.Usage)) {
-            this.reportDiagnostic({
-                code: 1001,
-                category: DiagnosticCategory.Error,
-                message: "Required permission bit 'Usage' is missing from the current configuration."
+    public getStatus(): boolean {
+        return this.isValid;
+    }
+}
+
+/**
+ * @class ComplianceValidator
+ * Validates runtime compliance against permission flags and integrity constraints.
+ */
+export class ComplianceValidator {
+    private registry: SymbolRegistry;
+
+    constructor() {
+        this.registry = DependencyContainer.resolve<SymbolRegistry>('SymbolRegistry');
+    }
+
+    public validatePermissions(activeFlags: LicenseFlags): boolean {
+        const required = LicenseFlags.Import | LicenseFlags.Merge | LicenseFlags.AttributionRequired;
+        
+        if ((activeFlags & required) !== required) {
+            this.registry.reportDiagnostic({
+                code: 5005,
+                severity: DiagnosticSeverity.Fatal,
+                message: "Compliance failure: Required permission flags missing.",
+                reports: [{
+                    code: 5006,
+                    severity: DiagnosticSeverity.Suggestion,
+                    message: "Ensure AttributionRequired flag is present."
+                }]
             });
             return false;
         }
         return true;
     }
+
+    public validateIntegrity(): boolean {
+        return this.registry.listSymbols().every(s => s.checksum.length === 64);
+    }
 }
 
 /**
- * @class LicenseGenerator
- * Utility for generating standardized legal notices including architectural attributions.
+ * @class LicenseEmitter
+ * Generates standardized legal notices with embedded architectural attributions.
  */
-export class LicenseGenerator {
-    public static emit(holder: string, year: string): string {
-        const registry = ArchitecturalRegistry.getInstance();
-        const credits = registry.listSymbols()
-            .map(s => ` - ${s.repository}: ${s.contribution}`)
-            .join('\n');
+export class LicenseEmitter {
+    private registry: SymbolRegistry;
+    private validator: ComplianceValidator;
 
+    constructor() {
+        this.registry = DependencyContainer.resolve<SymbolRegistry>('SymbolRegistry');
+        this.validator = DependencyContainer.resolve<ComplianceValidator>('ComplianceValidator');
+    }
+
+    public emit(holder: string, year: string): string {
+        if (!this.validator.validateIntegrity()) {
+            return "ERROR: Integrity validation failed. License emission terminated.";
+        }
+
+        const attributionSection = this.generateAttributionSection();
+        const diagnosticSection = this.generateDiagnosticSection();
+
+        return this.getLicenseTemplate(holder, year, attributionSection, diagnosticSection);
+    }
+
+    private generateAttributionSection(): string {
+        return this.registry.listSymbols()
+            .map(s => ` [ID:${s.checksum.substring(0, 12)}] [URL:${s.manifest.originUrl}] ${s.repository}: ${s.contribution}`)
+            .join('\n');
+    }
+
+    private generateDiagnosticSection(): string {
+        const diags = this.registry.getDiagnostics();
+        if (diags.length === 0) return "";
+        
+        return `\nDIAGNOSTICS:\n` + diags
+            .map(d => ` [${d.code}] [${DiagnosticSeverity[d.severity]}] ${d.message}`)
+            .join('\n');
+    }
+
+    private getLicenseTemplate(holder: string, year: string, attributions: string, diagnostics: string): string {
         return `MIT LICENSE\n` +
             `Copyright (c) ${year} ${holder}\n\n` +
             `Permission is hereby granted, free of charge, to any person obtaining a copy\n` +
@@ -149,7 +258,9 @@ export class LicenseGenerator {
             `furnished to do so, subject to the following conditions:\n\n` +
             `The above copyright notice and this permission notice shall be included in all\n` +
             `copies or substantial portions of the Software.\n\n` +
-            `ARCHITECTURAL CREDITS:\n${credits}\n\n` +
+            `ARCHITECTURAL_ATTRIBUTIONS:\n` +
+            `${attributions}\n` +
+            `${diagnostics}\n` +
             `THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\n` +
             `IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\n` +
             `FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\n` +
@@ -159,53 +270,3 @@ export class LicenseGenerator {
             `SOFTWARE.`;
     }
 }
-
-/**
- * Global registry of architectural dependencies and contributions.
- */
-export const ARCHITECTURAL_CREDITS: ArchitecturalSymbol[] = [
-    {
-        id: "TS_COMPILER",
-        repository: "microsoft/TypeScript",
-        contribution: "Compiler pipeline architecture and diagnostic reporting structures.",
-        timestamp: new Date("2024-05-20"),
-        integrityHash: "a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6",
-        flags: LicenseFlags.All
-    },
-    {
-        id: "ALPHA_CODE",
-        repository: "DeepMind/AlphaCode",
-        contribution: "Algorithmic reasoning and code generation logic.",
-        timestamp: new Date("2024-01-15"),
-        integrityHash: "f1e2d3c4b5a697887766554433221100",
-        flags: LicenseFlags.Usage | LicenseFlags.Modification
-    },
-    {
-        id: "GENKIT",
-        repository: "Google/Genkit",
-        contribution: "AI application framework orchestration patterns.",
-        timestamp: new Date("2024-03-10"),
-        integrityHash: "99887766554433221100aabbccddeeff",
-        flags: LicenseFlags.All
-    },
-    {
-        id: "REACT_RECONCILER",
-        repository: "facebook/react",
-        contribution: "State reconciliation and tree diffing algorithms.",
-        timestamp: new Date("2024-02-01"),
-        integrityHash: "ccddeeffaabb99887766554433221100",
-        flags: LicenseFlags.Usage | LicenseFlags.Distribute
-    }
-];
-
-/**
- * Defines the active license state for the core package.
- */
-export const NEXUS_LICENSE_STATE = {
-    holder: "Nexus-Core-Contributors",
-    year: "2024",
-    flags: LicenseFlags.All,
-    registry: ArchitecturalRegistry.getInstance()
-};
-
-export default NEXUS_LICENSE_STATE;
