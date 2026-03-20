@@ -1,25 +1,22 @@
 +++ npx-nexus-core.js +++
 class ApplicationFactory {
-  constructor() {
-    this.eventBus = new EventBus();
-    this.container = new DependencyContainer();
+  constructor(eventBus, dependencyContainer) {
+    this.eventBus = eventBus;
+    this.dependencyContainer = dependencyContainer;
   }
 
   async createApplication() {
-    const strategyImpl = await this.container.get('StrategyImpl', () => new StrategyImpl('Default Strategy'));
-    const strategyModule = await this.container.get('StrategyModule', () => new StrategyModule('Default Strategy Module'));
+    const strategyImpl = await this.dependencyContainer.get('StrategyImpl');
+    const strategyModule = await this.dependencyContainer.get('StrategyModule');
     const eventPublisher = new EventPublisher(this.eventBus);
 
-    await strategyImpl.executeAsync({}); // Removed unnecessary await keyword
-    await strategyModule.executeAsync({}); // Removed unnecessary await keyword
+    await strategyImpl.executeAsync({});
+    await strategyModule.executeAsync({});
 
-    await new StrategyRegistry().register('default', strategyImpl);
-    await new StrategyRegistry().register('defaultModule', strategyModule);
+    await new StrategyRegistry(this.dependencyContainer).register('default', strategyImpl);
+    await new StrategyRegistry(this.dependencyContainer).register('defaultModule', strategyModule);
 
     eventPublisher.publish('default', {});
-    this.eventBus.subscribe('default', async _ => {
-      // Handle event
-    });
 
     const application = new Application(this.eventBus);
     await application.init();
@@ -29,25 +26,25 @@ class ApplicationFactory {
 }
 
 class RepositoryFactory {
-  constructor(eventBus) {
+  constructor(eventBus, dependencyContainer) {
     this.eventBus = eventBus;
-    this.container = new DependencyContainer();
+    this.dependencyContainer = dependencyContainer;
   }
 
   async createRepository(type) {
-    const repositoryClass = await this.container.get(`Repository-${type}`, () => new Repository(type));
+    const repositoryClass = await this.dependencyContainer.get(`Repository-${type}`);
     return repositoryClass;
   }
 }
 
 class StrategyModuleFactory {
-  constructor(eventBus) {
+  constructor(eventBus, dependencyContainer) {
     this.eventBus = eventBus;
-    this.container = new DependencyContainer();
+    this.dependencyContainer = dependencyContainer;
   }
 
   async createStrategyModule(config) {
-    const strategyModuleClass = await this.container.get(`StrategyModule-${config.module}`, () => new StrategyModule(config.module));
+    const strategyModuleClass = await this.dependencyContainer.get(`StrategyModule-${config.module}`);
     return strategyModuleClass;
   }
 }
@@ -58,24 +55,7 @@ class EventPublisher {
   }
 
   publish(type, event) {
-    this.eventBus.publish(type, event);
-  }
-}
-
-class Repository {
-  constructor(name, config, eventBus) {
-    this.strategies = new Map();
-    this.moduleStrategies = new Map();
-    this.config = config;
-    this.eventBus = eventBus;
-  }
-
-  registerStrategy(strategy) {
-    this.strategies.set(strategy.name, strategy);
-  }
-
-  registerModuleStrategy(strategyModule) {
-    this.moduleStrategies.set(strategyModule.name, strategyModule);
+    this.eventBus.publishEvent(type, event);
   }
 }
 
@@ -92,7 +72,7 @@ class EventBus {
     this.listeners.delete(type, listener);
   }
 
-  publish(type, event) {
+  publishEvent(type, event) {
     const listener = this.listeners.get(type);
     listener(event);
   }
@@ -105,13 +85,8 @@ class Application {
   }
 
   async init() {
-    const repository = await this.dependencyContainer.get('Repository', () => new Repository('Default Repository'));
-
-    await this.eventBus.subscribe('default', _ => {
-      // Handle event
-    });
-
-    const strategies = await repository.getStrategies();
+    const repository = await this.dependencyContainer.get('Repository');
+    const strategies = await new StrategyRegistry(this.dependencyContainer).getStrategies();
     strategies.forEach(async strategy => {
       await this.eventBus.subscribe(strategy.name, async event => {
         await strategy.executeAsync(event);
@@ -140,14 +115,120 @@ class StrategyModule {
   }
 }
 
-abstract class DependencyContainer {
-  async get(type, factory = () => {}) {
-    return factory();
+class DependencyContainer {
+  async get(type) {
+    return await new FactoryManager(this).get(type);
+  }
+
+  getFactory(type) {
+    switch (type) {
+      case 'Repository-Default':
+        return new RepositoryFactory(this.eventBus, this);
+      case 'Repository-DefaultRepository':
+        return new RepositoryFactory(this.eventBus, this);
+      case 'StrategyModule-Default Strategy':
+        return new StrategyModuleFactory(this.eventBus, this);
+      case 'StrategyModule-Default Strategy Module':
+        return new StrategyModuleFactory(this.eventBus, this);
+      case 'StrategyImpl':
+        return new StrategyImplFactory(this);
+      case 'StrategyModule':
+        return new StrategyModuleFactory(this.eventBus, this);
+      case 'Repository':
+        return new RepositoryFactory(this.eventBus, this);
+      case 'Repository-DefaultRepository':
+        return new RepositoryFactory(this.eventBus, this);
+      case 'StrategyRegistry':
+        return new StrategyRegistryFactory(this);
+      default:
+        throw new Error(`Unknown type: ${type}`);
+    }
+  }
+}
+
+class FactoryManager {
+  constructor(dependencyContainer) {
+    this.dependencyContainer = dependencyContainer;
+  }
+
+  async get(type) {
+    const factory = this.dependencyContainer.getFactory(type);
+    return await factory.create();
+  }
+}
+
+class StrategyImplFactory {
+  constructor(dependencyContainer) {
+    this.dependencyContainer = dependencyContainer;
+  }
+
+  async create() {
+    return new StrategyImpl('Default Strategy');
+  }
+}
+
+class StrategyModuleFactory {
+  constructor(eventBus, dependencyContainer) {
+    this.eventBus = eventBus;
+    this.dependencyContainer = dependencyContainer;
+  }
+
+  async create() {
+    return new StrategyModule('Default Strategy Module');
+  }
+}
+
+class StrategyModuleFactory {
+  constructor(eventBus) {
+    this.eventBus = eventBus;
+  }
+
+  async create() {
+    return new StrategyModule();
   }
 }
 
 class StrategyRegistry {
+  constructor(dependencyContainer) {
+    this.dependencyContainer = dependencyContainer;
+  }
+
   async register(type, strategy) {
     // implementation not provided, removed to maintain abstract class
+  }
+
+  async getStrategies() {
+    const strategies = [
+      new StrategyImpl('Default Strategy'),
+      new StrategyModule('Default Strategy Module'),
+    ];
+    return strategies;
+  }
+}
+
+class StrategyRegistryFactory {
+  constructor(dependencyContainer) {
+    this.dependencyContainer = dependencyContainer;
+  }
+
+  async create() {
+    return new StrategyRegistry(this.dependencyContainer);
+  }
+}
+
+class RepositoryFactory {
+  constructor(eventBus, dependencyContainer) {
+    this.eventBus = eventBus;
+    this.dependencyContainer = dependencyContainer;
+  }
+
+  async createRepository(type) {
+    return new Repository(type);
+  }
+}
+
+class Database {
+  async getStrategies() {
+    return [];
   }
 }
