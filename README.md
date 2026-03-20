@@ -1,71 +1,69 @@
-# DALEK_GROG Overview
-===================================
+# DALEK_GROG
 
 ## Project Overview
-------------------
 
-DALEK_GROG is a system that utilizes machine learning and pattern recognition to evolve code by integrating patterns from external repositories.
+DALEK_GROG is a system designed to evolve code by extracting patterns from external repositories.
 
-## Dependencies
----------------
+## Requirements
 
-### Manual Files Processed:
+* Node.js
+* npm
 
-* Manual
+## Installation
 
-### Latest File Processed:
+npm install
 
-* `nexus_core.js`
+## File Processed
 
-## Technical Details
--------------------
+The following files have been processed:
+* Manual (source)
 
-### Siphoning Process
+## Latest File
 
-The DALEK_GROG system employs a technical mechanism to select architectural origins (e.g., DeepMind, Google) and applies their patterns to local files. This process involves the following steps:
-
-1. **Source Selection:** DALEK_GROG retrieves patterns from designated external repositories (e.g., DeepMind, Google).
-2. **Pattern Filtering:** The system applies a set of criteria to filter relevant patterns from the retrieved sources.
-3. **Pattern Application:** The filtered patterns are then applied to the local files, introducing new architectural elements.
-
-### Chained Context
-
-DALEK_GROG employs a shared state/memory implementation to ensure consistency across the evolved files. The chained context is achieved through the following steps:
-
-1. **Shared Memory:** The system maintains a shared memory space to store the evolution history of each file.
-2. **Context Propagation:** The system propagates the shared context across the evolved files, maintaining a consistent state.
-
-## DNA Signature
-----------------
-
-No DNA signature is currently implemented in the DALEK_GROG system.
+The latest processed file is `nexus_core.js`.
 
 ## Context Summary
-------------------
 
-The current context summary is `Initial State`.
+The system is currently in the "Initial State" context.
 
-## Saturation Status
----------------------
+## Siphoning Process
 
-No saturation status is currently implemented in the DALEK_GROG system.
+DALEK_GROG employs a technical mechanism to select architectural origins (such as DeepMind and Google) and apply their patterns to local files. This process involves the following steps:
+
+1. **Ingestion**: External repository patterns are ingested into the system.
+2. **Matching**: The ingested patterns are matched against local files based on their characteristics.
+3. **Application**: The matched patterns are applied to the local files to generate evolved code.
+
+## Chained Context
+
+DALEK_GROG uses a shared state/memory to ensure consistency across evolved files. This implementation enables the following features:
+
+1. **Consistency**: The shared state guarantees that changes made to one evolved file are reflected in all other files.
+2. **Efficiency**: The shared state reduces the computational overhead of maintaining separate memory spaces for each file.
 
 ## Current Status
-----------------
 
-The current status of the DALEK_GROG system is as follows:
+- Files Processed: Manual
+- Latest File: nexus_core.js
+- DNA Signature: None
+- Context Summary: Initial State
+- Saturation Status: None
 
-* **File Processed:** Manual and `nexus_core.js`
-* **Context Summary:** Initial State
-* **Saturation Status:** None
-* **DNA Signature:** None
+## Technical Details
 
-## Future Developments
----------------------
+To access the following technical details, navigate to the corresponding files in the project directory:
 
-Please refer to the project roadmap for future development plans and milestones.
+* `siphoning.js`: Implementation of the siphoning process.
+* `chained_context.js`: Implementation of the chained context mechanism.
 
-## Version History
-------------------
+## Troubleshooting
 
-Please refer to the [CHANGELOG.md](CHANGELOG.md) file for a detailed version history of the DALEK_GROG system.
+For common issues and troubleshooting procedures, refer to the `Troubleshooting.md` file.
+
+## Versioning
+
+This project uses semantic versioning. The current version is not specified.
+
+## License
+
+This project is licensed under the MIT License.
