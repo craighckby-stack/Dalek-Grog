@@ -1,207 +1,130 @@
-class ContextManagerFactory {
-  constructor(strategyManager, contextManagerFactoryInterface, cacheSize = 10) {
-    this.strategyManager = strategyManager;
-    this.contextManagerFactoryInterface = contextManagerFactoryInterface;
-    this._contextManagerCaches = {};
-    this._cacheSize = cacheSize;
-    this._cache = new Observable();
-  }
+import { Observable, Subject, from } from 'rxjs';
+import { map, filter, catchError } from 'rxjs/operators';
 
-  async getContextManager(strategyName, contextManagerName) {
-    if (!this._contextManagerCaches[`${strategyName}_${contextManagerName}`]) {
-      await this._cacheContextManager(strategyName, contextManagerName);
-    }
-    return this._contextManagerCaches[`${strategyName}_${contextManagerName}`];
-  }
+interface StrategyContext {
+  state: any;
+}
 
-  async _cacheContextManager(strategyName, contextManagerName) {
-    this._contextManagerCaches[`${strategyName}_${contextManagerName}`] = await this.contextManagerFactoryInterface.getContextManager(strategyName, contextManagerName);
-    if (Object.keys(this._contextManagerCaches).length > this._cacheSize) {
-      this._contextManagerCaches = {};
-      await this._cache.next(this._cacheSize);
+interface Strategy {
+  execute(context: StrategyContext): Promise<any>;
+}
+
+class StrategiesFactoryImpl {
+  private strategies = {
+    ExampleStrategy: class ExampleStrategyImpl implements Strategy {
+      async execute(strategyContext: StrategyContext): Promise<any> {
+        const updatedResult = await this._strategyImpl.execute(strategyContext);
+        return updatedResult;
+      }
     }
+  };
+
+  async createStrategy(strategyName: string): Promise<Strategy> {
+    const strategyImpl = this.strategies[strategyName];
+    if (!strategyImpl) {
+      throw new Error(`Strategy implementation for '${strategyName}' not found.`);
+    }
+    return new strategyImpl();
   }
 }
 
-class ContextManagerPool {
-  constructor(strategyManager, contextManagerFactoryInterface, cacheSize) {
-    this.contextManagerFactoryInterface = contextManagerFactoryInterface;
-    this._cacheSize = cacheSize;
-    this._strategyManager = strategyManager;
-    this._cache = new Observable();
-    this.contextManagers = {};
+class ContextManagerFactoryImpl {
+  async createContextManager(strategyName: string, contextManagerName: string): Promise<ContextManager> {
+    const strategy = await this.getStrategy(strategyName);
+    return new ContextManager(strategyName, contextManagerName, strategy);
   }
 
-  async getContextManager(strategyName, contextManagerName) {
-    const strategy = await this._strategyManager.getStrategy(strategyName);
-    if (!this.contextManagers[`${strategyName}_${contextManagerName}`]) {
-      await this._cacheContextManager(strategyName, contextManagerName, strategy);
+  async getStrategy(strategyName: string): Promise<Strategy> {
+    const strategyImpl = this.strategies[strategyName];
+    if (!strategyImpl) {
+      throw new Error(`Strategy implementation for '${strategyName}' not found.`);
     }
-    return this.contextManagers[`${strategyName}_${contextManagerName}`];
-  }
-
-  async _cacheContextManager(strategyName, contextManagerName, strategy) {
-    const contextManager = await this.createContextManager(strategyName, contextManagerName, strategy);
-    this.contextManagers[`${strategyName}_${contextManagerName}`] = contextManager;
-    await this._cache.next(this.contextManagers);
-  }
-
-  async createContextManager(strategyName, contextManagerName, strategy) {
-    const contextManager = new ContextManager(strategyName, contextManagerName);
-    await contextManager.init();
-    return contextManager;
+    return new strategyImpl();
   }
 }
 
-class ContextManager {
-  constructor(strategyName, contextManagerName) {}
+class ContextManager implements Strategy {
+  private strategyName: string;
+  private contextManagerName: string;
+  private subject: Subject;
 
-  async executeContextManager(contextManagerName) {
-    const observer = new ContextManagerObserver();
-    this.attachObserver(observer);
-    // Implement context manager logic
-    // Detach the observer after execution
-    this.detachObserver(observer);
-    return undefined;
+  constructor(strategyName: string, contextManagerName: string, strategy: Strategy) {
+    this.strategyName = strategyName;
+    this.contextManagerName = contextManagerName;
+    this.strategy = strategy;
   }
 
-  attachObserver(observer) {
-    this.observers.push(observer);
+  get strategy(): Strategy {
+    return this._strategy;
   }
 
-  detachObserver(observer) {
-    const index = this.observers.indexOf(observer);
-    if (index !== -1) {
-      this.observers.splice(index, 1);
+  async executeContextManager(contextManagerName: string): Promise<Subject> {
+    const observable = new Observable((observer) => {
+      const subject = new Subject();
+      this.subject = subject;
+      try {
+        const result = await this.strategy.execute({ state: {} });
+        subject.next(result);
+      } catch (error) {
+        subject.error(error);
+      }
+      return () => subject.unsubscribe();
+    });
+    return observable;
+  }
+
+  detachObserver(observer: any): void {
+    if (this.observers && this.observers.length > 0) {
+      this.observers = this.observers.filter((obs: any) => obs !== observer);
     }
   }
 
-  get observers() {
+  get observers(): any[] {
     return this.observers;
   }
-}
 
-class ContextManagerObserver implements Observer {
-  async execute(contextManager) {
-    // Handle the context manager event
-    this.subject.next(contextManager);
-  }
-
-  constructor() {
-    this.subject = new Subject();
+  attachObserver(observer: any): void {
+    if (this.observers) {
+      this.observers.push(observer);
+    }
   }
 }
 
-class ReconfigurationStrategy {
-  async execute(strategyContext) {
-    const { state } = strategyContext;
-    const reconfiguredState = await this.reconfigureState(state);
-    return reconfiguredState;
+class RxStrategyRunner {
+  constructor(observables: Observable[]) {}
+
+  async runStrategy(strategyName: string, observables: Observable[]): Promise<Subject> {
+    const strategy = await this.getStrategy(strategyName);
+    const contextManager = await this.getContextManager(strategyName, 'ExampleContextManager');
+    const subject = new Subject();
+    observables.push(subject);
+    try {
+      const result = await contextManager.executeContextManager(strategyName);
+      return subject;
+    } catch (error) {
+      return subject.error(error);
+    }
   }
 
-  async reconfigureState(state) {
-    const decorator = new ReconfigurationDecorator(this);
-    const decoratedStrategy = new StrategyDecorator(decorator, this);
-    return await decoratedStrategy.execute({ state });
-  }
-}
-
-class StrategyDecorator {
-  constructor(strategy, decorator) {
-    this.strategy = strategy;
-    this.decorator = decorator;
+  private async getStrategy(strategyName: string): Promise<Strategy> {
+    const strategyFactory = new StrategiesFactoryImpl();
+    return strategyFactory.createStrategy(strategyName);
   }
 
-  async execute(strategyContext) {
-    await this.decorator.execute(strategyContext);
-    await this.strategy.execute(strategyContext);
-  }
-}
-
-class ReconfigurationDecorator {
-  constructor(strategy) {
-    this.strategy = strategy;
-  }
-
-  async execute(strategyContext) {
-    // Customization logic
+  private async getContextManager(strategyName: string, contextManagerName: string): Promise<ContextManager> {
+    const contextManagerFactory = new ContextManagerFactoryImpl();
+    return contextManagerFactory.createContextManager(strategyName, contextManagerName);
   }
 }
 
-class Nexus {
-  constructor(strategyManager, contextManagerPool, strategyPool, contextManagerFactoryInterface) {
-    this.strategyManager = strategyManager;
-    this.contextManagerPool = contextManagerPool;
-    this.strategyPool = strategyPool;
-    this.contextManagerFactoryInterface = contextManagerFactoryInterface;
-    this._diagnostics = new DiagnosisEvents();
-    this._eventDispatcher = new EventDispatcher();
-  }
-
-  async start() {
-    await this._eventDispatcher.start();
-  }
-
-  async stop() {
-    await this._eventDispatcher.stop();
-  }
-
-  async getDiagnosticEvents() {
-    return await this._diagnostics.getDiagnosticEvents();
+async function main(): Promise<void> {
+  try {
+    const strategyName = 'ExampleStrategy';
+    const observables = [new Subject()];
+    const subject = await new RxStrategyRunner(observables).runStrategy(strategyName, observables);
+  } catch (error) {
+    console.error('Error occurred:', error);
   }
 }
 
-class DiagnosisEvents {
-  constructor() {
-    this._events = new Observable();
-  }
-
-  async start() {
-    // Start diagnostic events logic
-  }
-
-  async stop() {
-    // Stop diagnostic events logic
-  }
-
-  get eventStream() {
-    return this._events;
-  }
-}
-
-class ContextDelegatingDecorator {
-  constructor(strategyManager) {
-    this.strategyManager = strategyManager;
-  }
-
-  async handleDiagnostic(diagnostic) {
-    const contextManager = await this.contextManagerPool.getContextManager('reconfiguration', 'diagnostic');
-    await contextManager.executeContextManager('diagnostic');
-  }
-}
-
-class Observable {
-  next(value) {
-    // implement observable next function
-  }
-}
-
-class Subject {
-  next(value) {
-    // implement subject next function
-  }
-}
-
-class EventDispatcher {
-  async start() {
-    // start event dispatching logic
-  }
-
-  async stop() {
-    // stop event dispatching logic
-  }
-}
-
-interface Observer {
-  async execute(contextManager): void;
-}
+main().catch((error) => console.error('Error occurred:', error));
