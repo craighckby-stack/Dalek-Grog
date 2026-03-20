@@ -1,79 +1,53 @@
-class SymbioticNexus {
-  constructor(diagnosticServices = [], fiberManagers = []) {
-    this.diagnosticServices = diagnosticServices;
-    this.fiberManagers = fiberManagers;
-    this.reconciliationObserver = new ReconciliationObserver(this);
-    this.fiberManagerFactory = new SymbioticFiberManagerFactory(this);
+// nexus_core.js
+import { EventDispatcher } from './EventDispatcher';
+import { Observable } from './Observable';
+import { Subject } from './Subject';
+import { ReconfigurationStrategy } from './ReconfigurationStrategy';
+import { ReconfigurationDecoratorStrategy } from './ReconfigurationDecoratorStrategy';
+import { ReconfigurationFilterStrategy } from './ReconfigurationFilterStrategy';
+import { SymbioticFiberManagerFactory } from './SymbioticFiberManagerFactory';
+import { SymbioticFiberManager } from './SymbioticFiberManager';
+import { SymbioticFiberManagerPool } from './SymbioticFiberManagerPool';
+
+import { SubjectWrapper } from './Dependencies';
+
+class DiagnosticServices extends EventDispatcher {
+  constructor(nexus) {
+    super();
+    this.observers = [];
+    this.diagnosticServices = [];
+    this.nexus = nexus;
+    this._diagnosticSubject = new SubjectWrapper();
   }
 
-  subscribe(fn) {
-    this.reconciliationObserver.addObserver(fn);
+  subscribe(diagnosticService) {
+    this.observers.push(diagnosticService);
+    this._diagnosticSubject.subscribe(diagnosticService.handleDiagnostic.bind(diagnosticService));
   }
 
-  unsubscribe(fn) {
-    this.reconciliationObserver.removeObserver(fn);
-  }
-
-  async addFiber(fiber) {
-    await this.fiberManagerFactory.createFiberManager(fiber);
-  }
-
-  async removeFiber(fiber) {
-    await this.fiberManagerFactory.deleteFiberManager(fiber);
-  }
-
-  addDiagnosticService(diagnosticService) {
-    diagnosticService.data = { relatedInformation: [] };
-    this.diagnosticServices.push(diagnosticService);
-    this.reconciliationObserver.addObserver(diagnosticService);
-  }
-
-  removeDiagnosticService(diagnosticService) {
-    const index = this.diagnosticServices.indexOf(diagnosticService);
+  unsubscribe(diagnosticService) {
+    const index = this.observers.indexOf(diagnosticService);
     if (index !== -1) {
-      this.diagnosticServices.splice(index, 1);
-      this.reconciliationObserver.removeObserver(diagnosticService);
+      this.observers.splice(index, 1);
+      this._diagnosticSubject.unsubscribe(diagnosticService.handleDiagnostic.bind(diagnosticService));
     }
   }
 
   emit(diagnostic, ...args) {
-    const strategy = this.createStrategy(diagnostic.strategyType);
-    return diagnostic = strategy.beforeEmit(diagnostic), this.diagnosticServices.emit(diagnostic);
+    this._diagnosticSubject.emit(JSON.stringify(diagnostic));
   }
 
-  clear() {
-    this.diagnosticServices.clear();
+  getAllDiagnostics() {
+    return [...this.diagnosticServices];
   }
 
-  getDiagnostics() {
-    return this.diagnosticServices.history.slice();
-  }
-
-  createStrategy(strategyType) {
-    switch (strategyType) {
-      case 'decorator':
-        return new ReconfigurationDecoratorStrategy();
-      case 'filter':
-        return new ReconfigurationFilterStrategy();
-      default:
-        throw new Error('Invalid strategy type');
-    }
+  async getDiagnosticEvents() {
+    const events$ = this._diagnosticSubject.subject.pipe(map((event) => JSON.parse(event)));
+    return events$;
   }
 }
 
-class ReconciliationObserver {
-  constructor(diagnosticServices) {
-    this.diagnosticServices = diagnosticServices;
-  }
-
-  handleDiagnostic(diagnostic) {
-    const strategy = ReconfigurationStrategyFactory.createStrategy(diagnostic.strategyType);
-    diagnostic = strategy.beforeEmit(diagnostic);
-    this.diagnosticServices.reconcile(diagnostic);
-  }
-}
-
-class ReconfigurationStrategyFactory {
+class DiagnosticStrategyFactory {
   static createStrategy(strategyType) {
     switch (strategyType) {
       case 'decorator':
@@ -86,31 +60,59 @@ class ReconfigurationStrategyFactory {
   }
 }
 
-class ReconfigurationDecoratorStrategy {
-  beforeEmit(diagnostic) {
-    const decoratorPayload = {
-      relatedInformation: diagnostic.relatedInformation || [],
-    };
-    return { ...diagnostic, ...decoratorPayload };
+class DiagnosticDispatcher extends EventDispatcher {
+  constructor(nexus) {
+    super();
+    this.nexus = nexus;
+  }
+
+  addObserver(diagnosticService) {
+    this.nexus.diagnosticServices.subscribe(diagnosticService);
+  }
+
+  removeObserver(diagnosticService) {
+    this.nexus.diagnosticServices.unsubscribe(diagnosticService);
   }
 }
 
-class ReconfigurationFilterStrategy {
-  beforeEmit(diagnostic) {
-    return {
-      filters: diagnostic.filters.filter(filter => filter.filterType === 'LANE'),
-    };
+class ReconciliationObserver extends Observable {
+  constructor(diagnosticServices) {
+    super();
+    this.diagnosticServices = diagnosticServices;
+  }
+
+  handleDiagnostic(diagnostic) {
+    this.diagnosticServices.reconcile(diagnostic);
+  }
+
+  addObserver(fn) {
+    this.observers.push(fn);
+  }
+
+  removeObserver(fn) {
+    const index = this.observers.indexOf(fn);
+    if (index !== -1) {
+      this.observers.splice(index, 1);
+    }
   }
 }
 
 class SymbioticFiberManagerFactory {
-  constructor(nexus) {
+  constructor(nexus, fiberManagerPool) {
     this.nexus = nexus;
+    this.fiberManagerPool = fiberManagerPool;
   }
 
   async createFiberManager(fiber) {
+    const existingFiberManager = this.fiberManagerPool.getFiberManager(fiber);
+    if (existingFiberManager) {
+      return existingFiberManager;
+    }
     const fiberManager = SymbioticFiberManager.createManager(fiber);
+    await fiberManager.addFibers();
+    this.fiberManagerPool.addFiberManager(fiber, fiberManager);
     this.nexus.fiberManagers.push(fiberManager);
+    return fiberManager;
   }
 
   async deleteFiberManager(fiber) {
@@ -123,12 +125,20 @@ class SymbioticFiberManagerFactory {
 
 class SymbioticFiberManager {
   static createManager(fiber) {
+    if (SymbioticFiberManagerPool.hasFiberManager(fiber)) {
+      return SymbioticFiberManagerPool.getFiberManager(fiber);
+    }
     return new SymbioticFiberManager(fiber);
   }
 
   constructor(fiber) {
     this.fibers = new Set();
-    this.addFiber(fiber);
+    this.pendingFibers = new Set();
+  }
+
+  async addFibers() {
+    await Promise.all(this.pendingFibers);
+    this.fibers.forEach(fiber => this.addFiber(fiber));
   }
 
   addFiber(fiber) {
@@ -138,4 +148,80 @@ class SymbioticFiberManager {
   removeFiber(fiber) {
     this.fibers.delete(fiber);
   }
+
+  getFibers() {
+    return Array.from(this.fibers);
+  }
 }
+
+class SymbioticFiberManagerPool {
+  constructor() {
+    this.fibersToManagers = new Map();
+  }
+
+  hasFiberManager(fiber) {
+    return this.fibersToManagers.has(fiber);
+  }
+
+  getFiberManager(fiber) {
+    return this.fibersToManagers.get(fiber);
+  }
+
+  addFiberManager(fiber, fiberManager) {
+    this.fibersToManagers.set(fiber, fiberManager);
+  }
+}
+
+class SubjectWrapper extends Subject {
+  constructor(defaultData = null) {
+    super(defaultData);
+    this.observers = [];
+  }
+
+  subscribe(fn) {
+    this.observers.push(fn);
+  }
+
+  unsubscribe(fn) {
+    const index = this.observers.indexOf(fn);
+    if (index !== -1) {
+      this.observers.splice(index, 1);
+    }
+  }
+
+  emit(event) {
+    this.next(event);
+  }
+}
+
+export { DiagnosticServices, DiagnosticStrategyFactory, DiagnosticDispatcher, ReconciliationObserver, SymbioticFiberManagerFactory, SymbioticFiberManager, SymbioticFiberManagerPool };
+
+export {
+  SubjectWrapper,
+};
+
+class Nexus extends EventDispatcher {
+  constructor() {
+    super();
+    this.fiberManagers = [];
+    this._diagnosticServices = new DiagnosticServices(this);
+  }
+
+  getDiagnosticServices() {
+    return this._diagnosticServices;
+  }
+
+  getFiberManagers() {
+    return this.fiberManagers;
+  }
+
+  async createFiberManager(fiber) {
+    return await this.SymbioticFiberManagerFactory.createFiberManager(fiber);
+  }
+
+  async deleteFiberManager(fiber) {
+    await this.SymbioticFiberManagerFactory.deleteFiberManager(fiber);
+  }
+}
+
+export { Nexus };
