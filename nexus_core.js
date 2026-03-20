@@ -1,69 +1,89 @@
+**Refined Code:**
+
 // nexus_core.js
-import { Observable, of, from, forkJoin, throwError } from 'rxjs';
-import { tap, catchError, mergeMap, shareReplay } from 'rxjs/operators';
-import { console, process } from 'node';
+import { Observable, of, from, mergeAll, shareReplay } from 'rxjs';
+import { tap, catchError, mergeMap, map } from 'rxjs/operators';
+import { console } from 'node';
+import {
+  Strategy,
+  EnhancedStrategyRegistry,
+  EnhancedRegistryLoader,
+  StrategyPlugin,
+  StrategyFactory,
+  StrategyObserver,
+  StrategyDecorator,
+  StrategicExecutor,
+} from './strategic-design-patterns';
 
-class ModuleRegistry {
-  constructor() {
-    this.modules = {};
+// Define a Strategy interface for strategy implementations
+interface Strategy {
+  name: string;
+  execute(context: any): any;
+}
+
+// Define an asynchronous factory for strategy creation
+class StrategyFactory {
+  constructor(strategyRegistry) {
+    this.strategyRegistry = strategyRegistry;
   }
 
-  registerModule(moduleName, module) {
-    this.modules[moduleName] = module;
-  }
-
-  getModule(moduleName) {
-    return this.modules[moduleName] || null;
-  }
-
-  getModules() {
-    return Object.values(this.modules);
-  }
-
-  async loadModules() {
-    return Promise.all(this.getModules().map((module) => module.load()));
+  async createStrategy(strategyName) {
+    return await this.strategyRegistry.getStrategy(strategyName);
   }
 }
 
-class StrategicFactory {
-  constructor(name) {}
-
-  registerStrategy(strategy) {
-    this.strategies[name] = strategy;
+// Define a StrategyObserver for asynchronous strategy execution
+class StrategyObserver {
+  constructor(context, strategyPlugin) {
+    this.context = context;
+    this.strategyPlugin = strategyPlugin;
   }
 
-  getStrategy(strategyName) {
-    return this.strategies[strategyName];
-  }
-
-  getStrategies() {
-    return Object.values(this.strategies);
-  }
-}
-
-class StrategyPlugin extends Observable {
-  constructor(strategyFactory, context) {
-    super((observer) => {
-      this.context = context;
-      this.strategyFactory = strategyFactory;
-      this.observer = observer;
-      this.strategyFactory.getStrategy(strategyName)
-      .subscribe({
-        next: (strategy) => {
-          this.observer.next(strategy.execute(this.context));
-        },
-        error: (error) => {
-          this.observer.error(error);
-        }
-      });
-    });
-  }
-
-  static createPlugin(strategyFactory, context, strategyName) {
-    return new StrategyPlugin(strategyFactory, context);
+  executeStrategy(strategy) {
+    return strategy.execute(this.context).pipe(
+      tap((result) => console.log(`Strategy execution result: ${result}`)),
+      catchError((error) => {
+        console.error('Error occurred:', error);
+        return of(error);
+      }),
+      shareReplay(1)
+    );
   }
 }
 
+// Define a StrategyDecorator for strategy decoration
+class StrategyDecorator {
+  constructor(strategy) {
+    this.strategy = strategy;
+  }
+
+  decorateStrategy(strategy) {
+    return of(strategy).pipe(map((decoratedStrategy) => this.decorate(decoratedStrategy)));
+  }
+
+  decorate(strategy) {
+    // Implement strategy decoration logic here
+  }
+}
+
+// Define a StrategyPlugin for strategy execution using Decorator pattern
+class StrategyPlugin extends StrategyDecorator {
+  constructor(strategyFactory, context, strategyObserver) {
+    super();
+    this.strategyFactory = strategyFactory;
+    this.context = context;
+    this.strategyObserver = strategyObserver;
+  }
+
+  executeStrategy(strategy) {
+    const decoratedStrategy = this.decorateStrategy(strategy);
+    return decoratedStrategy.pipe(
+      mergeMap((decoratedStrategy) => this.strategyObserver.executeStrategy(decoratedStrategy))
+    );
+  }
+}
+
+// Define an EnhancedRegistryLoader for loading registry configurations using asynchronous factory pattern
 class EnhancedRegistryLoader {
   constructor(registryConfig) {
     this.registryConfig = registryConfig;
@@ -103,6 +123,7 @@ class EnhancedRegistryLoader {
   }
 }
 
+// Define an EnhancedStrategyRegistry for managing strategy configurations
 class EnhancedStrategyRegistry {
   constructor(name, registryConfig) {
     this.name = name;
@@ -161,55 +182,38 @@ class EnhancedStrategyRegistry {
   }
 }
 
+// Define a StrategicExecutor for loading and executing strategies using StrategyObserver
 class StrategicExecutor {
-  constructor(context) {
+  constructor(context, registryLoader) {
     this.context = context;
-    this.strategicPlugins = [];
-
-    this.registryLoader = new EnhancedRegistryLoader({});
+    this.registryLoader = registryLoader;
   }
 
-  async loadRegistry(registryName) {
+  async loadRegistry(registryName: string) {
     return this.registryLoader.loadRegistry(registryName);
   }
 
-  async executeStrategies(strategyNames) {
+  async executeStrategies(strategyNames: string[]) {
     try {
       const registryPromises = [];
       for (const strategyName of strategyNames) {
         const registry = await this.loadRegistry(strategyName);
-        const strategyFactory = registry.getStrategy(strategyName);
-        const strategyPlugin = await StrategyPlugin.createPlugin(strategyFactory, this.context, strategyName);
+        const strategyFactory = new StrategyFactory(registry);
+        const strategyPlugin = new StrategyPlugin(strategyFactory, this.context, new StrategyObserver(this.context, {}));
         registryPromises.push(strategyPlugin);
       }
 
-      const strategyResults = await forkJoin(registryPromises).pipe(
-        tap((registry) => console.log(`Strategy execution result: ${registry}`)),
-        catchError((error) => {
-          console.error('Error occurred:', error);
-          return throwError(error);
-        }),
-        mergeMap(async (registry) => {
-          const mergedResult = {};
-          for (const strategyName in registry.strategies) {
-            mergedResult[strategyName] = await this.mergeResults(registry.strategies[strategyName]);
-          }
-          return mergedResult;
-        }),
+      const combinedPromises = mergeAll(registryPromises);
+      return combinedPromises.pipe(
         shareReplay(1)
-      ).toPromise();
-
-      return strategyResults;
+      );
     } catch (error) {
       console.error('Error occurred:', error);
     }
   }
-
-  async mergeResults(strategyResult) {
-    return strategyResult;
-  }
-
-  static createExecutor(context) {
-    return new StrategicExecutor(context);
-  }
 }
+
+// Define a static factory method for creating StrategicExecutor instance
+StrategicExecutor.createExecutor = function (context, registryLoader) {
+  return new StrategicExecutor(context, registryLoader);
+};
