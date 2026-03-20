@@ -1,4 +1,5 @@
 const { Observable } = require('rxjs');
+const { console } = require('console');
 
 class NexusDiagnosticService {
   constructor() {
@@ -9,6 +10,7 @@ class NexusDiagnosticService {
       diagnosticService: new NexusDiagnosticServiceFactory(),
       lane: new NexusDiagnosticServiceLaneFactory()
     };
+    this.reconciliationEngine = new ReconciliationEngine();
   }
 
   subscribe(fn) {
@@ -35,6 +37,7 @@ class NexusDiagnosticService {
     const observable = new Observable((observer) => {
       this.factories.diagnosticService.createDiagnosticService().handlePayload(payload).subscribe((result) => {
         observer.next(result);
+        console.log(`Handled payload: ${result}`);
       }, (error) => {
         observer.error(error);
       });
@@ -99,16 +102,6 @@ class EnhancedDiagnosticEmitter {
   }
 }
 
-class NexusDiagnosticServiceFactory {
-  constructor() {
-    this.diagnosticServiceFactory = new NexusDiagnosticServiceImplementationFactory();
-  }
-
-  createDiagnosticService() {
-    return this.diagnosticServiceFactory.createDiagnosticService();
-  }
-}
-
 class NexusDiagnosticServiceLaneFactory {
   constructor() {
     this.laneSet = 0;
@@ -123,54 +116,30 @@ class NexusDiagnosticServiceLaneFactory {
 class NexusDiagnosticServiceLane {
   constructor(laneSet) {
     this.laneSet = laneSet;
-    this.expirationTime = NexusDiagnosticServiceLane.getExpirationTime(laneSet);
+    const interval = this.getRandomExpirationTimeInterval();
+    this.expirationTime = performance.now() + interval;
   }
 
   static getExpirationTime(laneSet) {
-    switch (laneSet) {
-      case 1:
-        return performance.now() + 500;
-      case 2:
-        return performance.now() + 1000;
-      case 4:
-        return performance.now() + 5000;
-      default:
-        return performance.now() + 5000;
+    const interval = this.getRandomExpirationTimeInterval();
+    return performance.now() + interval;
+  }
+
+  static getRandomExpirationTimeInterval() {
+    const interval = Math.floor(Math.random() * 2);
+    if (interval === 0) {
+      return 500;
+    } else {
+      return 1000;
     }
   }
 }
 
-class NexusDiagnosticServiceImplementation {
-  constructor() {
-  }
-
-  handlePayload(payload) {
-    return new Observable((observer) => {
-      observer.next(`Handled payload: ${payload.code}`);
-    });
-  }
-
-  handleLanes(payload) {
-    return new Observable((observer) => {
-      observer.next(`Handled lanes payload: ${payload}`);
-    });
-  }
-}
-
-abstract class AbstractObserver {
+class DiagnosticObserver {
   constructor(diagnosticsService) {
     this.diagnosticService = diagnosticsService;
-  }
-
-  abstract handleDiagnositcs(diagnostic);
-
-  abstract handleLanes(diagnostic);
-}
-
-class DiagnosticObserver extends AbstractObserver {
-  constructor(diagnosticsService) {
-    super(diagnosticsService);
     this.observers = [];
+    this.laneSet = null;
   }
 
   addObserver(diagnostic) {
@@ -181,33 +150,6 @@ class DiagnosticObserver extends AbstractObserver {
     this.observers = this.observers.filter(o => o !== diagnostic);
   }
 
-  handleDiagnostics(diagnostic) {
-    return new Observable((observer) => {
-      this.diagnosticService.emit(diagnostic).subscribe((result) => {
-        observer.next(result);
-      }, (error) => {
-        observer.error(error);
-      });
-    });
-  }
-
-  handleLanes(diagnostic) {
-    return new Observable((observer) => {
-      this.diagnosticService.emit(diagnostic).subscribe((result) => {
-        observer.next(result);
-      }, (error) => {
-        observer.error(error);
-      });
-    });
-  }
-}
-
-class LaneObserver extends DiagnosticObserver {
-  constructor(diagnosticsService, laneSet) {
-    super(diagnosticsService);
-    this.laneSet = laneSet;
-  }
-
   handleDiagnostic(diagnostic) {
     const laneDiagnostic = diagnostic.filters.filter(f => f.filterType === 'LANE');
     if (laneDiagnostic.length > 0) {
@@ -216,12 +158,36 @@ class LaneObserver extends DiagnosticObserver {
       return this.handleDiagnostics(diagnostic);
     }
   }
+
+  handleDiagnostics(diagnostic) {
+    const observable = new Observable((observer) => {
+      this.diagnosticService.handlePayload(diagnostic).subscribe((result) => {
+        observer.next(result);
+      }, (error) => {
+        observer.error(error);
+      });
+    });
+    return observable;
+  }
+
+  handleLanes(diagnostic) {
+    const observable = new Observable((observer) => {
+      this.diagnosticService.emit(diagnostic).subscribe((result) => {
+        observer.next(result);
+      }, (error) => {
+        observer.error(error);
+      });
+    });
+    return observable;
+  }
 }
 
 class ReconciliationEngine {
   constructor() {
     this.reconciliationFibers = new Set();
     this.observers = [];
+    this.laneObserveMapping = new Map();
+    this.diagnosticsService = null;
   }
 
   addObserver(obs) {
@@ -239,10 +205,8 @@ class ReconciliationEngine {
     });
 
     this.observers.forEach((obs) => {
-      if (obs instanceof LaneObserver) {
+      if (obs instanceof DiagnosticObserver) {
         obs.handleDiagnostic({ filters: [{ filterType: 'LANE' }] });
-      } else {
-        obs.handleDiagnostics(fiberUpdates);
       }
     });
   }
@@ -254,19 +218,19 @@ class ReconciliationEngine {
   removeFiber(fiber) {
     this.reconciliationFibers.delete(fiber);
   }
-}
 
-const diagnosticMessages = {
-  FIBER_UPDATED: {
-    code: 9011,
-    category: 1,
-    message: "Fiber updated with new update queue"
+  setDiagnosticsService(diagnosticsService) {
+    this.diagnosticsService = diagnosticsService;
   }
-};
+}
 
 class Fiber {
   constructor() {
     this.updateQueue = [];
+  }
+
+  mutate() {
+    // Mutate the fiber
   }
 }
 
@@ -278,11 +242,13 @@ class NexusAlphaCode {
   }
 
   observe(diagnostic) {
-    this.reconciliationEngine.addObserver(diagnostic);
+    const observer = new DiagnosticObserver(this.diagnosticService);
+    observer.addObserver(diagnostic);
+    this.reconciliationEngine.addObserver(observer);
   }
 
   unobserve(diagnostic) {
-    this.reconciliationEngine.removeObserver(diagnostic);
+    this.reconciliationEngine.observers = this.reconciliationEngine.observers.filter(o => o.diagnosticService !== this.diagnosticService);
   }
 
   emit(diagnostic, ...args) {
@@ -296,6 +262,45 @@ class NexusAlphaCode {
   handlePayload(payload) {
     return this.diagnosticService.handlePayload(payload);
   }
+
+  getDiagnostics() {
+    return this.diagnosticService.getDiagnostics();
+  }
 }
 
 const nexusAlphaCode = new NexusAlphaCode();
+
+const diagnosticMessages = {
+  FIBER_UPDATED: {
+    code: 9011,
+    category: 1,
+    message: "Fiber updated with new update queue"
+  }
+};
+
+class AlphaCodePipeline {
+  constructor(nexusAlphaCode) {
+    this.nexusAlphaCode = nexusAlphaCode;
+    this.pipelineFibers = new Set();
+  }
+
+  addFiber(fiber) {
+    this.pipelineFibers.add(fiber);
+  }
+
+  removeFiber(fiber) {
+    this.pipelineFibers.delete(fiber);
+  }
+
+  emit(diagnostic, ...args) {
+    return this.nexusAlphaCode.emit(diagnostic, ...args);
+  }
+
+  handlePayload(payload) {
+    return this.nexusAlphaCode.handlePayload(payload);
+  }
+}
+
+const alphaCodePipeline = new AlphaCodePipeline(nexusAlphaCode);
+
+alphaCodePipeline.emit(diagnosticMessages.FIBER_UPDATED);
