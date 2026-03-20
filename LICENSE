@@ -1,7 +1,7 @@
 /**
  * @file LICENSE.ts
  * @package Nexus_Core
- * @version 3.0.0
+ * @version 3.1.0
  * @description Programmatic MIT License implementation with hierarchical Architectural Attribution and Diagnostic Traceability.
  */
 
@@ -92,6 +92,44 @@ export interface ArchitecturalSymbol {
 }
 
 /**
+ * @interface BootstrapConfig
+ * Configuration surface for the license system bootstrap sequence.
+ */
+export interface BootstrapConfig {
+    /** Copyright holder name */
+    holder: string;
+    /** Copyright year */
+    year: string;
+    /** Initial architectural symbols to seed the registry with */
+    symbols?: ArchitecturalSymbol[];
+    /** Permission flags to validate at boot. Defaults to full MIT set. */
+    activeFlags?: LicenseFlags;
+    /** If true, a failed compliance check throws rather than returning a result object */
+    strictMode?: boolean;
+}
+
+/**
+ * @interface BootstrapResult
+ * Outcome of a completed bootstrap sequence.
+ */
+export interface BootstrapResult {
+    success: boolean;
+    license: string | null;
+    diagnostics: readonly DiagnosticChain[];
+    symbolCount: number;
+    /** Resolved service references for downstream consumers */
+    services: {
+        registry: SymbolRegistry;
+        validator: ComplianceValidator;
+        emitter: LicenseEmitter;
+    };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Core classes (unchanged from v3.0.0)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
  * @class DependencyContainer
  * Service registry for core licensing and validation components.
  */
@@ -107,25 +145,26 @@ export class DependencyContainer {
         if (!service) throw new Error(`Resolution Failure: ${name}`);
         return service as T;
     }
+
+    /** Tear down all registered services. Use between test runs or hot-reloads. */
+    public static reset(): void {
+        this.services.clear();
+    }
 }
 
 /**
  * @class SymbolRegistry
  * Registry for managing architectural symbols and diagnostic state.
+ * Fixed: initial data now passed via constructor rather than referencing
+ * an undeclared global ARCHITECTURAL_DATA.
  */
 export class SymbolRegistry {
     private symbolRegistry: Map<string, ArchitecturalSymbol> = new Map();
     private diagnostics: DiagnosticChain[] = [];
     private isValid: boolean = true;
 
-    constructor() {
-        this.initialize();
-    }
-
-    private initialize(): void {
-        if (typeof ARCHITECTURAL_DATA !== 'undefined') {
-            ARCHITECTURAL_DATA.forEach(symbol => this.registerSymbol(symbol));
-        }
+    constructor(initialSymbols: ArchitecturalSymbol[] = []) {
+        initialSymbols.forEach(symbol => this.registerSymbol(symbol));
     }
 
     public registerSymbol(symbol: ArchitecturalSymbol): void {
@@ -158,7 +197,7 @@ export class SymbolRegistry {
 
     public getSymbol(id: string): ArchitecturalSymbol | undefined {
         return this.symbolRegistry.get(id);
-    } 
+    }
 
     public getDiagnostics(): readonly DiagnosticChain[] {
         return this.diagnostics;
@@ -186,7 +225,7 @@ export class ComplianceValidator {
 
     public validatePermissions(activeFlags: LicenseFlags): boolean {
         const required = LicenseFlags.Import | LicenseFlags.Merge | LicenseFlags.AttributionRequired;
-        
+
         if ((activeFlags & required) !== required) {
             this.registry.reportDiagnostic({
                 code: 5005,
@@ -227,7 +266,7 @@ export class LicenseEmitter {
         }
 
         const attributionSection = this.generateAttributionSection();
-        const diagnosticSection = this.generateDiagnosticSection();
+        const diagnosticSection  = this.generateDiagnosticSection();
 
         return this.getLicenseTemplate(holder, year, attributionSection, diagnosticSection);
     }
@@ -241,7 +280,7 @@ export class LicenseEmitter {
     private generateDiagnosticSection(): string {
         const diags = this.registry.getDiagnostics();
         if (diags.length === 0) return "";
-        
+
         return `\nDIAGNOSTICS:\n` + diags
             .map(d => ` [${d.code}] [${DiagnosticSeverity[d.severity]}] ${d.message}`)
             .join('\n');
@@ -269,4 +308,117 @@ export class LicenseEmitter {
             `OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\n` +
             `SOFTWARE.`;
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Bootstrap
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * @function bootstrapLicenseSystem
+ *
+ * Wires the full license subsystem in the correct dependency order:
+ *
+ *   1. Reset any stale container state (safe for hot-reload / test isolation)
+ *   2. Instantiate SymbolRegistry with seed symbols from config
+ *   3. Register SymbolRegistry into DependencyContainer
+ *   4. Instantiate ComplianceValidator (resolves SymbolRegistry internally)
+ *   5. Register ComplianceValidator into DependencyContainer
+ *   6. Instantiate LicenseEmitter (resolves both above internally)
+ *   7. Register LicenseEmitter into DependencyContainer
+ *   8. Run compliance check against provided activeFlags
+ *   9. Emit the license and return a BootstrapResult
+ *
+ * @param config - Bootstrap configuration surface
+ * @returns BootstrapResult with emitted license, diagnostics, and live service refs
+ *
+ * @example
+ * // Minimal — no symbols yet, defaults to full MIT flags
+ * const result = bootstrapLicenseSystem({ holder: 'Craig Hckby', year: '2025' });
+ *
+ * @example
+ * // With GROG siphoned symbols injected at runtime
+ * const result = bootstrapLicenseSystem({
+ *   holder: 'Craig Hckby',
+ *   year:   '2025',
+ *   symbols: grogBrain.getSiphonedSymbols(),
+ *   activeFlags: LicenseFlags.All,
+ *   strictMode: true
+ * });
+ * if (result.success) console.log(result.license);
+ */
+export function bootstrapLicenseSystem(config: BootstrapConfig): BootstrapResult {
+    const {
+        holder,
+        year,
+        symbols      = [],
+        activeFlags  = LicenseFlags.Import | LicenseFlags.Merge | LicenseFlags.AttributionRequired,
+        strictMode   = false
+    } = config;
+
+    // ── Step 1: Clean slate ────────────────────────────────────────────────
+    DependencyContainer.reset();
+
+    // ── Step 2 & 3: SymbolRegistry ─────────────────────────────────────────
+    const registry = new SymbolRegistry(symbols);
+    DependencyContainer.register<SymbolRegistry>('SymbolRegistry', registry);
+
+    // ── Step 4 & 5: ComplianceValidator (needs SymbolRegistry in container) ─
+    const validator = new ComplianceValidator();
+    DependencyContainer.register<ComplianceValidator>('ComplianceValidator', validator);
+
+    // ── Step 6 & 7: LicenseEmitter (needs both above in container) ─────────
+    const emitter = new LicenseEmitter();
+    DependencyContainer.register<LicenseEmitter>('LicenseEmitter', emitter);
+
+    // ── Step 8: Compliance check ───────────────────────────────────────────
+    const compliant = validator.validatePermissions(activeFlags);
+
+    if (!compliant && strictMode) {
+        throw new Error(
+            `[LICENSE BOOTSTRAP] Strict mode: compliance check failed. ` +
+            `Active flags: 0b${activeFlags.toString(2)}. ` +
+            `Diagnostics: ${JSON.stringify(registry.getDiagnostics(), null, 2)}`
+        );
+    }
+
+    // ── Step 9: Emit ───────────────────────────────────────────────────────
+    const license = compliant ? emitter.emit(holder, year) : null;
+
+    return {
+        success:     compliant && registry.getStatus(),
+        license,
+        diagnostics: registry.getDiagnostics(),
+        symbolCount: registry.listSymbols().length,
+        services: { registry, validator, emitter }
+    };
+}
+
+/**
+ * @function addSiphonedSymbol
+ * Convenience helper for GROG to inject a newly siphoned architectural symbol
+ * into a live registry post-bootstrap without requiring a full re-bootstrap.
+ *
+ * @param symbol - The siphoned ArchitecturalSymbol to register
+ *
+ * @example
+ * // After GROG siphons a new pattern from DeepMind/AlphaCode:
+ * addSiphonedSymbol({
+ *   id:           'deepmind-alphacode-001',
+ *   repository:   'DeepMind/AlphaCode',
+ *   contribution: 'Competitive programming pattern synthesis',
+ *   timestamp:    Date.now(),
+ *   checksum:     '<64-char-sha256>',
+ *   flags:        LicenseFlags.Import | LicenseFlags.AttributionRequired,
+ *   manifest: {
+ *     method:    AcquisitionMethod.PreAiSiphon,
+ *     originUrl: 'https://github.com/deepmind/alphacode',
+ *     timestamp: Date.now(),
+ *     depth:     1
+ *   }
+ * });
+ */
+export function addSiphonedSymbol(symbol: ArchitecturalSymbol): void {
+    const registry = DependencyContainer.resolve<SymbolRegistry>('SymbolRegistry');
+    registry.registerSymbol(symbol);
 }
