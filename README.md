@@ -1,58 +1,71 @@
-# DALEK_GROG System
+# DALEK_GROG Overview
+===================================
 
 ## Project Overview
+------------------
 
-DALEK_GROG is a system designed to evolve code by integrating patterns from external repositories. It serves as a platform that leverages patterns from established sources (e.g., DeepMind, Google) to enhance local files.
+DALEK_GROG is a system that utilizes machine learning and pattern recognition to evolve code by integrating patterns from external repositories.
 
-## SIPHONING PROCESS
+## Dependencies
+---------------
 
-### Overview
+### Manual Files Processed:
 
-The SIphonING process involves selecting architectural patterns from verified sources (hereafter referred to as 'Origins') and applying their structures to local files (denoted as 'Reservoirs') in a controlled manner.
+* Manual
 
-### Origin Identification
+### Latest File Processed:
 
-1. Identified Origins: The system currently utilizes the following Origins:
-   - DeepMind
-   - Google
+* `nexus_core.js`
 
-### Pattern Adoption
+## Technical Details
+-------------------
 
-1. Pattern Retrieval: The system retrieves relevant patterns from designated Origins based on criteria (yet unspecified).
-2. Pattern Application: The system applies selected patterns onto the Reservoirs, introducing new architectural structures.
+### Siphoning Process
 
-## CHAINED CONTEXT
+The DALEK_GROG system employs a technical mechanism to select architectural origins (e.g., DeepMind, Google) and applies their patterns to local files. This process involves the following steps:
 
-### Overview
+1. **Source Selection:** DALEK_GROG retrieves patterns from designated external repositories (e.g., DeepMind, Google).
+2. **Pattern Filtering:** The system applies a set of criteria to filter relevant patterns from the retrieved sources.
+3. **Pattern Application:** The filtered patterns are then applied to the local files, introducing new architectural elements.
 
-The Chained Context mechanism provides a shared state/memory for consistency across the evolved files. It enforces synchrony and enables real-time updates throughout the system.
+### Chained Context
 
-### Shared State Implementation
+DALEK_GROG employs a shared state/memory implementation to ensure consistency across the evolved files. The chained context is achieved through the following steps:
 
-The Chained Context adopts an [In-Memory Data Grid](https://en.wikipedia.org/wiki/In-memory_data_grid) structure, ensuring immediate propagation of data changes throughout the system.
+1. **Shared Memory:** The system maintains a shared memory space to store the evolution history of each file.
+2. **Context Propagation:** The system propagates the shared context across the evolved files, maintaining a consistent state.
 
-## CURRENT STATUS
+## DNA Signature
+----------------
 
-### Files Processed
+No DNA signature is currently implemented in the DALEK_GROG system.
 
-- 1 manual file is currently being processed by the system.
+## Context Summary
+------------------
 
-### LATEST FILE PROCESSED
+The current context summary is `Initial State`.
 
-- The latest file processed by the system is: `nexus_core.js`.
+## Saturation Status
+---------------------
 
-### DNA SIGNATURE
+No saturation status is currently implemented in the DALEK_GROG system.
 
-- No DNA signature is associated with the system.
+## Current Status
+----------------
 
-### CONTEXT SUMMARY
+The current status of the DALEK_GROG system is as follows:
 
-- The system currently operates in the **Initial State** context.
-
-### SATURATION STATUS
-
-- The current saturation status is **None**, indicating the system is prepared to handle additional data and patterns.
+* **File Processed:** Manual and `nexus_core.js`
+* **Context Summary:** Initial State
+* **Saturation Status:** None
+* **DNA Signature:** None
 
 ## Future Developments
+---------------------
 
-As the DALEK_GROG system evolves, further improvements and modifications will be documented and reflected in this README.
+Please refer to the project roadmap for future development plans and milestones.
+
+## Version History
+------------------
+
+Please refer to the [CHANGELOG.md](CHANGELOG.md) file for a detailed version history of the DALEK_GROG system.
