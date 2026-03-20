@@ -1,58 +1,58 @@
-# DALEK_GROG
+# DALEK_GROG System
+
 ## Project Overview
 
-DALEK_GROG is a system that evolves code by integrating patterns from external repositories.
+DALEK_GROG is a system designed to evolve code by integrating patterns from external repositories. It serves as a platform that leverages patterns from established sources (e.g., DeepMind, Google) to enhance local files.
 
-## Dependencies
+## SIPHONING PROCESS
 
-* `nexus_core.js`: Main module for DALEK_GROG, responsible for integrating patterns and evolving files.
+### Overview
 
-## Files Processed
+The SIphonING process involves selecting architectural patterns from verified sources (hereafter referred to as 'Origins') and applying their structures to local files (denoted as 'Reservoirs') in a controlled manner.
 
-* Manual: External repository from which patterns are retrieved and applied.
+### Origin Identification
 
-## Latest File
+1. Identified Origins: The system currently utilizes the following Origins:
+   - DeepMind
+   - Google
 
-* `nexus_core.js`: The most recent file processed by DALEK_GROG.
+### Pattern Adoption
 
-## DNA Signature
+1. Pattern Retrieval: The system retrieves relevant patterns from designated Origins based on criteria (yet unspecified).
+2. Pattern Application: The system applies selected patterns onto the Reservoirs, introducing new architectural structures.
 
-* None: No DNA signature or unique identifier has been set for DALEK_GROG.
+## CHAINED CONTEXT
 
-## Context Summary
+### Overview
 
-* Initial State: DALEK_GROG is currently operating in its initial state, without any evolved files or chained context.
+The Chained Context mechanism provides a shared state/memory for consistency across the evolved files. It enforces synchrony and enables real-time updates throughout the system.
 
-## Saturation Status
+### Shared State Implementation
 
-* None: No saturation status or indication of maximum capacity has been reached.
+The Chained Context adopts an [In-Memory Data Grid](https://en.wikipedia.org/wiki/In-memory_data_grid) structure, ensuring immediate propagation of data changes throughout the system.
 
-## Siphoning Process
+## CURRENT STATUS
 
-The DALEK_GROG siphoning process involves the following technical steps:
+### Files Processed
 
-### 1. Pattern Acquisition
+- 1 manual file is currently being processed by the system.
 
-* External repositories, such as DeepMind and Google, are queried for architectural patterns.
-* Patterns are retrieved and stored for further processing.
+### LATEST FILE PROCESSED
 
-### 2. Pattern Filtering
+- The latest file processed by the system is: `nexus_core.js`.
 
-* Patterns are filtered and preprocessed to ensure compatibility with local files.
-* Relevant patterns are selected and applied to evolve files.
+### DNA SIGNATURE
 
-### 3. Pattern Integration
+- No DNA signature is associated with the system.
 
-* Patterns are applied to local files, modifying their code to match the acquired patterns.
-* Modified files are stored as evolved files.
+### CONTEXT SUMMARY
 
-## Chained Context
+- The system currently operates in the **Initial State** context.
 
-The DALEK_GROG chained context implementation involves the following:
+### SATURATION STATUS
 
-* A shared state/memory is established to maintain consistency across evolved files.
-* Chained context ensures that evolution is performed in a sequence, without repetition or redundancy.
+- The current saturation status is **None**, indicating the system is prepared to handle additional data and patterns.
 
-## Current Status
+## Future Developments
 
-As of the current execution, DALEK_GROG has processed the `Manual` external repository, with the `nexus_core.js` file being the latest processed file. DALEK_GROG is currently operating in its initial state, without any evolved files or chained context.
+As the DALEK_GROG system evolves, further improvements and modifications will be documented and reflected in this README.
