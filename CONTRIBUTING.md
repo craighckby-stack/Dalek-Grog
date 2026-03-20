@@ -1,85 +1,87 @@
-# DALEK_CAAN Contribution Protocol
+DALEK_CAAN CONTRIBUTION AND EVOLUTION PROTOCOL
 
-## 1. Architectural Framework
-DALEK_CAAN utilizes a decoupled, factory-driven architecture. System logic is implemented as modular patterns integrated via a Dependency Injection (DI) system. Logic acquisition follows a multi-pass pipeline to transform external patterns into executable internal modules.
+1. ARCHITECTURAL FRAMEWORK
+DALEK_CAAN utilizes a decoupled, factory-driven architecture. System logic is implemented as modular Mutation_Protocols integrated via a Dependency Injection (DI) system. Logic acquisition follows a multi-pass pipeline to transform external source patterns into executable internal modules.
 
-### 1.1 Ingestion Pipeline
-1. DNA_Scanning: External pattern identification and tokenization.
-2. Logic_Parsing: Construction of an Abstract Strategy Tree (AST) from tokens.
-3. Synaptic_Binding: Module registration and dependency resolution via the Synaptic_Linker (DI).
-4. Structural_Safety_Validation: Verification against historical failure logs (Cognitive_Scar_Tissue).
-5. Mutation_Emission: Code injection into the primary orchestration engine.
+1.1 Ingestion and Mutation Pipeline
+1. DNA_Scanning: Lexical analysis and tokenization of external source code.
+2. Logic_Synthesizer: Construction of an Abstract Strategy Tree (AST) from tokens.
+3. Synaptic_Binding: Symbol resolution and module registration via the Synaptic_Linker (DI).
+4. Structural_Safety_Validator: Architectural integrity verification against the Cognitive_Scar_Tissue failure registry.
+5. Logic_Transformer: Refactoring of siphoned code to adhere to factory-only instantiation and internal standards.
+6. Mutation_Emitter: Production code injection and payload optimization.
+7. Synaptic_Baseline: Final state verification against historical architectural snapshots.
 
-## 2. Internal Lexicon
-Contributors must use internal terminology to pass the Structural_Safety_Validator.
+2. INTERNAL LEXICON
 
-| Standard Term | Internal Term | Functional Role |
-| :--- | :--- | :--- |
-| Core Application | Nexus_Grog_Core | Central orchestration engine |
-| Implementation | Mutation_Protocol | Modular logic unit |
-| Scanner/Lexer | DNA_Scanner | External source tokenization |
-| Parser | Logic_Synthesizer | AST construction |
-| DI / Symbol Table | Synaptic_Linker | Dependency resolution and binding |
-| Type Checker | Structural_Safety_Validator | Architectural integrity verification |
-| Emitter | Mutation_Emitter | Production code injection |
-| Failure Log | Cognitive_Scar_Tissue | Diagnostic history of system errors |
-| Unit Test Snapshot | Synaptic_Baseline | Expected architectural state post-mutation |
-| DI Container | Synaptic_Registry | Factory-driven storage for registered protocols |
-| Event Bus | Neural_Transmitter | Asynchronous system-wide triggers |
+Standard Term | Internal Term | Functional Role
+Core Engine | Nexus_Grog_Core | Central orchestration and runtime engine
+Implementation | Mutation_Protocol | Modular logic unit
+Lexer/Scanner | DNA_Scanner | External source tokenization
+Parser | Logic_Synthesizer | AST construction
+DI / Symbol Table | Synaptic_Linker | Dependency resolution and binding
+Type Checker | Structural_Safety_Validator | Architectural integrity verification
+Emitter | Mutation_Emitter | Production code injection
+Failure Log | Cognitive_Scar_Tissue | Diagnostic history of system errors
+Unit Test Snapshot | Synaptic_Baseline | Expected architectural state post-mutation
+Factory / Registry | Archive_Synthesizer | Module and object instantiation interface
+Event Bus | Neural_Transmitter | Asynchronous system-wide triggers
+Refactoring | DNA_Purification | Removal of non-functional logic and redundancy
 
-## 3. Contribution Pipeline
+3. ENGINEERING STANDARDS
 
-### Phase I: Identification
-Identify the external logic source and provide mechanistic justification.
-- Requirement: Provide source references (URLs or repository paths).
-- Constraint: Prioritize pre-2022 documentation to minimize LLM-generated architectural patterns.
+3.1 Type Integrity
+- Use of 'any' is prohibited. Use 'unknown' with explicit type guards or 'never' for exhaustive checks.
+- All ingested data structures must be 'readonly' to prevent side effects.
+- Interface definitions must be exhaustive; implicit property access is prohibited.
+- Switch statements on Mutation_Protocol types must include an exhaustive default check (e.g., assertNever).
 
-### Phase II: Implementation
-- Modularization: Protocols exceeding 500 lines must be fragmented into DNA_Fragments.
-- Interface Isolation: Protocols must define strict interfaces. Direct internal access between protocols is prohibited.
+3.2 Modular Isolation
+- Direct internal access between Mutation_Protocols is prohibited.
+- Cross-module communication must utilize the Neural_Transmitter (Event Bus) using constant-enum event IDs.
 
-### Phase III: Integration
-- Registration: Register modules via the Synaptic_Linker.
-- Decoupling: Use the Neural_Transmitter (EventBus) for cross-module communication.
+3.3 Factory-Only Instantiation
+- Direct instantiation via the 'new' keyword is prohibited. All objects must be requested via the Archive_Synthesizer or Synaptic_Linker.
+- Example: const protocol = Synaptic_Linker.resolve<Mutation_Protocol>(PROTOCOLS.SIPHON_STRATEGY);
 
-### Phase IV: Validation
-- Regression Testing: Cross-reference mutations against Cognitive_Scar_Tissue to prevent re-introducing documented bugs.
-- Type Integrity: Use of 'any' is prohibited. Use 'unknown' with type guards.
+3.4 Diagnostic Integrity
+- Errors must be objects mapped to Cognitive_Scar_Tissue IDs (SCAR_ID) to prevent recurring architectural failures.
+- Example: throw new Neural_Diagnostic(SCAR_ID.API_RATE_LIMIT, { retry: 60 });
 
-### Phase V: Emission
-- Optimization: Implement logic to minimize API consumption and payload length.
-- Attribution: Include the DNA Provenance Block in the file header.
+4. CONTRIBUTION PIPELINE
 
-## 4. Engineering Standards
+Phase I: Identification
+- Provide source references (URLs or repository paths).
+- Prioritize logic originating between 2015-2021 to ensure high mechanistic density.
 
-### 4.1 Diagnostic Integrity
-Errors must be objects mapped to Cognitive_Scar_Tissue IDs.
-Example: throw new Neural_Diagnostic(SCAR_ID.API_RATE_LIMIT, { retry: 60 });
+Phase II: Implementation
+- Logic fragments exceeding 150 lines must be segmented into DNA_Fragments to maintain validator efficiency.
+- Remove non-functional logic branches to minimize API consumption and payload length.
 
-### 4.2 Factory-Only Instantiation
-Direct instantiation via the 'new' keyword is prohibited. All objects must be requested via the Archive_Synthesizer.
+Phase III: Validation (Synaptic Baselines)
+Each mutation requires a Synaptic_Baseline documentation file containing:
+1. Pre-Mutation State: SHA-256 hash of the target logic.
+2. Mutation Logic: Technical rationale for the architectural change.
+3. Post-Mutation State: Expected output of the Mutation_Emitter.
+4. Scar Correlation: Reference to the specific Cognitive_Scar_Tissue entry addressed.
 
-### 4.3 Efficiency Protocols
-- Chunking: Segment large data payloads.
-- Memoization: Cache siphoned patterns in the Synaptic_Registry.
-- Compression: Remove non-functional logic before injection into the Core.
-
-## 5. Metadata and Attribution
+5. METADATA AND ATTRIBUTION
 All Mutation_Protocol files must include the following header:
 
 /**
  * ARCHITECTURAL_DNA_SOURCE: [Owner/Repo]
  * SIPHON_METHOD: [SIPHON_WEB | GOOGLE_DORK | PRE_AI_LOGIC_DNA]
  * INTEGRITY_HASH: [SHA-256]
- * COGNITIVE_SCAR_TISSUE_REF: [Failure Log ID]
+ * COGNITIVE_SCAR_TISSUE_REF: [SCAR_ID]
  * EVOLUTIONARY_ROUND: [Integer]
+ * LEXICAL_ALIGNMENT: DALEK_GROG_V3
  */
 
-## 6. Testing: Synaptic Baselines
-Each mutation requires a Synaptic_Baseline file containing:
-1. Pre-Mutation State: The state of the file prior to modification.
-2. Post-Mutation State: The state after logic injection.
-3. Justification: Technical rationale for the architectural superiority of the new logic.
+6. COGNITIVE SCAR TISSUE (DIAGNOSTIC REGISTRY)
+The Structural_Safety_Validator references the grog/lessons/DEATH_REGISTRY.json to block mutations mirroring previous failures.
+- SCAR_ID.API_LIMIT: Triggered by verbosity exceeding token limits.
+- SCAR_ID.DECAY: Triggered by redundant or non-functional logic.
+- SCAR_ID.LEXICAL_DRIFT: Triggered by non-standard terminology.
 
-## 7. Licensing
-This project is licensed under the MIT License. Contributions are subject to recursive integration and modification within the core engine.
+7. LICENSING
+This project is licensed under the MIT License. Contributions are subject to recursive integration and modification within the Nexus_Grog_Core.
