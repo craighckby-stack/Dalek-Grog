@@ -1,43 +1,77 @@
 # DALEK_GROG README
+===========================================================
 
 ## Project Overview
-DALEK_GROG is a system designed to evolve code by integrating patterns from external repositories.
 
-## Technical Details
+DALEK_GROG is a system that evolves code by integrating patterns from external repositories.
 
-### Nexus Core
-The `nexus_core.js` file serves as the core module of DALEK_GROG. It utilizes a fiber-based reconciliation engine with a bitmask priority lane system and multi-phase diagnostics.
+## Files Processed
 
-/**
- * Fiber-based reconciliation engine using bitmask priority lanes and multi-phase diagnostics.
- */
+* Manual: The system uses manual processes to retrieve patterns from external repositories.
 
-const Lane = {
-  NoLanes:             0b0000000000000000000000000000000,
-  SyncLane:            0b0000000000000000000000000000001,
-  InputContinuousLane: 0b0000000000000000000000000000010,
-  DefaultLane:         0b0000000000000000000000000000100,
-  TransitionLanes:     0b0000000011111111111111111111000,
-  RetryLane:           0b0000000100000000000000000000000,
-  SelectiveLane:       0b00000010
-};
+## Technical Documentation
 
 ### Siphoning Process
-The siphoning process involves selecting architectural origins, such as DeepMind and Google, and applying their patterns to local files. This process is implemented by:
 
-1. Identification of external repository sources.
-2. Retrieval of relevant patterns from these sources.
-3. Integration of the retrieved patterns into local files based on a predetermined strategy.
+The siphoning process involves selecting architectural origins (e.g., DeepMind, Google) and applying their patterns to local files. This is achieved through the following technical mechanisms:
+
+* External repository monitoring: DALEK_GROG continuously monitors external repositories for new patterns and updates.
+* Pattern extraction: The system extracts relevant patterns from the monitored repositories.
+* Pattern application: The extracted patterns are applied to local files using a series of algorithms.
 
 ### Chained Context
-The implementation of a shared state or memory, known as chained context, ensures consistency across evolved files. This is achieved through the use of a distributed data structure that maintains the order and dependencies of processed files.
+
+The chained context implementation ensures consistency across evolved files by maintaining a shared state/memory. This is achieved through the following technical mechanisms:
+
+* Fiber creation: Each fiber (e.g., `NexusFiber`) is created with a unique ID and a reference to its parent fiber (if applicable).
+* Propagation of changes: When a fiber is updated, the changes are propagated to its parent fiber and child fibers, ensuring consistency across the chained context.
+* Memorization: Each fiber maintains a memoized representation of its state, allowing for efficient retrieval and update of fiber properties.
+
+### Implementation Details
+
+#### Fiber Class
+
+* `NexusFiber` is a class that represents a fiber in the chained context.
+* `constructor`: Initializes a new fiber with a unique ID, parent token, pending props, and memoized props.
+* `initialize`: Initializes the fiber by assigning a new ID, pending props, and memoized props.
+
+class NexusFiber {
+  #fiberId;
+  #pendingProps;
+  #memoizedProps;
+  #alternateFiber;
+  #parentToken;
+
+  constructor(fiberId, parentToken, pendingProps, memoizedProps) {
+    this.#fiberId = fiberId;
+    this.#parentToken = parentToken;
+    this.#pendingProps = pendingProps;
+    this.#memoizedProps = memoizedProps;
+  }
+
+  initialize() {
+    this.#fiberId = FiberRegistry.getInstance().getNextFreeFiberId();
+    this.#pendingProps = this.#pendingProps || {};
+    this.#memoizedProps = this.#memoizedProps || {};
+  }
+}
 
 ### Current Status
 
-* **Files Processed**: Manual
-* **Latest File**: `nexus_core.js`
-* **DNA Signature**: Active (`DNA` is a placeholder and may be changed to represent the actual status)
-* **Saturation Status**: None (percentage value to indicate how saturated the code has become)
+* Files processed: `.env.example`
+* Latest file: `.env.example`
+* DNA signature: `Active`
+* Saturation status: `Active`
+* Context summary: A chained context has been established using the `NexusFiber` class, ensuring consistency across evolved files.
 
-## Documentation
-This project follows standard professional guidelines for documentation. Further information is available on request.
+### Example Use Cases
+
+* Evolving a local file by applying patterns from external repositories.
+* Monitoring external repositories for new patterns and updates.
+* Propagating changes across the chained context to maintain consistency.
+
+### Future Development
+
+* Enhancing the siphoning process to include additional architectural origins.
+* Improving the performance of the pattern application algorithms.
+* Integrating additional tools for monitoring and updating external repositories.
