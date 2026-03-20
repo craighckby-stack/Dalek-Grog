@@ -1,80 +1,41 @@
 # DALEK_GROG README
-===========================================================
-
-Warning api limit for LLM will be extream recomend free tire only.
-
 
 ## Project Overview
 
-DALEK_GROG is a system that evolves code by integrating patterns from external repositories.
+DALEK_GROG is a system that evolves code by integrating patterns from external repositories. It utilizes a combination of machine learning and pattern recognition to adapt source code to meet specific requirements.
 
-## Files Processed
+## Siphoning Process
 
-* Manual: The system uses manual processes to retrieve patterns from external repositories.
+The siphoning process in DALEK_GROG involves the following steps:
 
-## Technical Documentation
+1. **Pattern Retrieval**: DALEK_GROG retrieves architectural patterns from external repositories such as DeepMind and Google.
+2. **Local File Analysis**: The system analyzes local files to identify areas that can be improved upon.
+3. **Pattern Application**: The retrieved patterns are applied to the identified areas, with modifications made as necessary to ensure compatibility.
 
-### Siphoning Process
+### Technical Mechanism
 
-The siphoning process involves selecting architectural origins (e.g., DeepMind, Google) and applying their patterns to local files. This is achieved through the following technical mechanisms:
+The technical mechanism behind the siphoning process uses the following steps:
 
-* External repository monitoring: DALEK_GROG continuously monitors external repositories for new patterns and updates.
-* Pattern extraction: The system extracts relevant patterns from the monitored repositories.
-* Pattern application: The extracted patterns are applied to local files using a series of algorithms.
+1. **GET API Requests**: DALEK_GROG sends GET API requests to the external repositories to retrieve relevant patterns.
+2. **Pattern Parsing**: The retrieved patterns are then parsed into a format that can be easily integrated into the local files.
+3. **Code Generation**: The parsed patterns are then used to generate new code for the local files, ensuring consistency throughout the system.
 
-### Chained Context
+## Chained Context
 
-The chained context implementation ensures consistency across evolved files by maintaining a shared state/memory. This is achieved through the following technical mechanisms:
+The chained context in DALEK_GROG ensures consistency across the evolved files by implementing a shared state/memory. This is achieved through the use of a **Global Context Object**.
 
-* Fiber creation: Each fiber (e.g., `NexusFiber`) is created with a unique ID and a reference to its parent fiber (if applicable).
-* Propagation of changes: When a fiber is updated, the changes are propagated to its parent fiber and child fibers, ensuring consistency across the chained context.
-* Memorization: Each fiber maintains a memoized representation of its state, allowing for efficient retrieval and update of fiber properties.
+### Global Context Object
 
-### Implementation Details
+The Global Context Object is a singular state container that stores all relevant information necessary for pattern recognition and application. This object ensures that changes made to the evolved files are reflected across the entire system, ensuring consistency at all times.
 
-#### Fiber Class
+## Current Status
 
-* `NexusFiber` is a class that represents a fiber in the chained context.
-* `constructor`: Initializes a new fiber with a unique ID, parent token, pending props, and memoized props.
-* `initialize`: Initializes the fiber by assigning a new ID, pending props, and memoized props.
+* **Latest File**: `nexus_core.js`
+* **Files Processed**: `Manual`
+* **DNA Signature**: **None**
+* **Context Summary**: **Initial State**
+* **Saturation Status**: **None**
 
-class NexusFiber {
-  #fiberId;
-  #pendingProps;
-  #memoizedProps;
-  #alternateFiber;
-  #parentToken;
+### Progress Report
 
-  constructor(fiberId, parentToken, pendingProps, memoizedProps) {
-    this.#fiberId = fiberId;
-    this.#parentToken = parentToken;
-    this.#pendingProps = pendingProps;
-    this.#memoizedProps = memoizedProps;
-  }
-
-  initialize() {
-    this.#fiberId = FiberRegistry.getInstance().getNextFreeFiberId();
-    this.#pendingProps = this.#pendingProps || {};
-    this.#memoizedProps = this.#memoizedProps || {};
-  }
-}
-
-### Current Status
-
-* Files processed: `.env.example`
-* Latest file: `.env.example`
-* DNA signature: `Active`
-* Saturation status: `Active`
-* Context summary: A chained context has been established using the `NexusFiber` class, ensuring consistency across evolved files.
-
-### Example Use Cases
-
-* Evolving a local file by applying patterns from external repositories.
-* Monitoring external repositories for new patterns and updates.
-* Propagating changes across the chained context to maintain consistency.
-
-### Future Development
-
-* Enhancing the siphoning process to include additional architectural origins.
-* Improving the performance of the pattern application algorithms.
-* Integrating additional tools for monitoring and updating external repositories.
+DALEK_GROG has completed processing manual files, with the latest file being `nexus_core.js`. No DNA signature has been applied, and the system is currently in its initial state. Further processing is required to achieve optimal performance and consistency.
