@@ -1,41 +1,58 @@
-# DALEK_GROG README
-
+# DALEK_GROG
 ## Project Overview
 
-DALEK_GROG is a system that evolves code by integrating patterns from external repositories. It utilizes a combination of machine learning and pattern recognition to adapt source code to meet specific requirements.
+DALEK_GROG is a system that evolves code by integrating patterns from external repositories.
+
+## Dependencies
+
+* `nexus_core.js`: Main module for DALEK_GROG, responsible for integrating patterns and evolving files.
+
+## Files Processed
+
+* Manual: External repository from which patterns are retrieved and applied.
+
+## Latest File
+
+* `nexus_core.js`: The most recent file processed by DALEK_GROG.
+
+## DNA Signature
+
+* None: No DNA signature or unique identifier has been set for DALEK_GROG.
+
+## Context Summary
+
+* Initial State: DALEK_GROG is currently operating in its initial state, without any evolved files or chained context.
+
+## Saturation Status
+
+* None: No saturation status or indication of maximum capacity has been reached.
 
 ## Siphoning Process
 
-The siphoning process in DALEK_GROG involves the following steps:
+The DALEK_GROG siphoning process involves the following technical steps:
 
-1. **Pattern Retrieval**: DALEK_GROG retrieves architectural patterns from external repositories such as DeepMind and Google.
-2. **Local File Analysis**: The system analyzes local files to identify areas that can be improved upon.
-3. **Pattern Application**: The retrieved patterns are applied to the identified areas, with modifications made as necessary to ensure compatibility.
+### 1. Pattern Acquisition
 
-### Technical Mechanism
+* External repositories, such as DeepMind and Google, are queried for architectural patterns.
+* Patterns are retrieved and stored for further processing.
 
-The technical mechanism behind the siphoning process uses the following steps:
+### 2. Pattern Filtering
 
-1. **GET API Requests**: DALEK_GROG sends GET API requests to the external repositories to retrieve relevant patterns.
-2. **Pattern Parsing**: The retrieved patterns are then parsed into a format that can be easily integrated into the local files.
-3. **Code Generation**: The parsed patterns are then used to generate new code for the local files, ensuring consistency throughout the system.
+* Patterns are filtered and preprocessed to ensure compatibility with local files.
+* Relevant patterns are selected and applied to evolve files.
+
+### 3. Pattern Integration
+
+* Patterns are applied to local files, modifying their code to match the acquired patterns.
+* Modified files are stored as evolved files.
 
 ## Chained Context
 
-The chained context in DALEK_GROG ensures consistency across the evolved files by implementing a shared state/memory. This is achieved through the use of a **Global Context Object**.
+The DALEK_GROG chained context implementation involves the following:
 
-### Global Context Object
-
-The Global Context Object is a singular state container that stores all relevant information necessary for pattern recognition and application. This object ensures that changes made to the evolved files are reflected across the entire system, ensuring consistency at all times.
+* A shared state/memory is established to maintain consistency across evolved files.
+* Chained context ensures that evolution is performed in a sequence, without repetition or redundancy.
 
 ## Current Status
 
-* **Latest File**: `nexus_core.js`
-* **Files Processed**: `Manual`
-* **DNA Signature**: **None**
-* **Context Summary**: **Initial State**
-* **Saturation Status**: **None**
-
-### Progress Report
-
-DALEK_GROG has completed processing manual files, with the latest file being `nexus_core.js`. No DNA signature has been applied, and the system is currently in its initial state. Further processing is required to achieve optimal performance and consistency.
+As of the current execution, DALEK_GROG has processed the `Manual` external repository, with the `nexus_core.js` file being the latest processed file. DALEK_GROG is currently operating in its initial state, without any evolved files or chained context.
