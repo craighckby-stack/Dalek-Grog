@@ -1,113 +1,112 @@
 [EXTERNAL DNA: craighckby-stack/Test-1]
-Based on the provided source code and configuration files from the `craighckby-stack/Test-1` repository, I have extracted the following **Core Architectural Patterns** and **DNA Signature**.
+This architectural analysis identifies the core DNA and structural patterns of the `craighckby-stack/Test-1` repository. The system represents a **High-Fidelity AI Governance Framework** designed to enforce architectural consistency through recursive validation and "DNA" alignment.
 
 ---
 
-### 🧬 DNA SIGNATURE: "ARCHITECTURAL ABSOLUTE"
-The repository operates under a "Biological-Mechanical" metaphor where code is treated as genetic material subject to evolution, siphoning, and strict governance.
+### 1. The Core Architectural DNA Signature
+The "DNA" of this repository is not merely code; it is a **self-correcting regulatory loop** designed to prevent "Architectural Drift."
 
 *   **Signature ID:** `GOOGLE-GENKIT-V1-ULTIMATE-REVISED`
-*   **Engine Core:** `DALEK_CAAN_v7.0_EVOLVED`
-*   **Core Directive:** "Architecture is law. Deviation is exterminated."
-*   **Saturation Threshold:** 1.0 (Maximum Saturation)
-*   **Fidelity Floor:** 0.95 (Minimum similarity to source DNA allowed)
-*   **Primary Tech Stack:** Google Genkit, Vertex AI (Gemini 1.5 Pro), Zod, Dotprompt.
+*   **Engine:** `DALEK_CAAN_v7.0_SIPHON_ENGINE`
+*   **Primary Objective:** **Architectural Absolute.** The system treats software architecture as a "Constitution" where deviation is treated as a system failure.
+*   **Key Metric:** **Fidelity (Threshold > 0.95).** Every output is measured against its similarity to the "Source DNA" (Genkit/VertexAI patterns).
 
 ---
 
-### 🏛️ CORE ARCHITECTURAL PATTERNS
+### 2. Core Architectural Patterns
 
-#### 1. Constitutional Governance Pattern
-The system employs a "Constitutional" layer that acts as a mandatory interceptor for all cognitive actions. 
-*   **Mechanism:** Every input and output must pass through a `GovernanceInstance` using `dnaSignatureSchema`.
-*   **Logic:** It utilizes a "Nexus Evaluation" where actions are not just executed but judged against "Constitutional" templates.
-*   **Outcome:** If the fidelity of the action drops below the defined threshold, the system triggers an `invokeFallback` or `QUARANTINE` status.
+#### A. The "Siphon-Gate" Pattern (Validation & Filtering)
+Unlike standard middleware, the "Siphon" pattern acts as a high-resolution filter.
+*   **Mechanism:** It "siphons" the intent of a cognitive action and runs it through a `ConstitutionalEvaluator`.
+*   **Logic:** If the `fidelity` metric falls below a specific saturation level (e.g., 0.99), the action is "Quarantined" or forced into a "Revision Loop."
+*   **Implementation:** Seen in `GACR/AIM.json` under `siphon_gate` and `fidelityEvaluator`.
 
-#### 2. The "Siphon" Evolutionary Loop
-Unlike standard CI/CD, this architecture uses a "Siphon" pattern to extract logic from external sources and inject it into the local runtime.
-*   **Siphon Efficiency:** Measured as a float (e.g., `0.99`), determining how much "DNA" (logic/patterns) is successfully integrated.
-*   **Round-Based Mutation:** The architecture tracks its own evolution through "Rounds" (e.g., Round 7), moving toward a state of "Maximum Saturation" where the code is considered "Locked."
+#### B. The "Nexus" Orchestration Pattern
+The architecture uses a "Nexus" (specifically `evaluateNexus`) as the central point of convergence for all system operations.
+*   **Responsibility:** It decouples the *Execution* of an action from the *Governance* of that action.
+*   **Components:** `GovernanceInstance` (The Law), `Evaluators` (The Judges), and `Repository` (The Scribe).
+*   **Fallback Strategy:** If the Nexus fails validation, it triggers a `MasterOrchestrator.invokeFallback`, ensuring the system never enters an undefined state.
 
-#### 3. Fidelity-Gated Orchestration
-The "Flows" in this system (e.g., `siphonedGovernanceFlow`) are defined by multi-step validation gates rather than simple sequential execution:
-1.  **Generate:** Produce a candidate output.
-2.  **Evaluate Fidelity:** Compare the candidate against the "Architectural DNA."
-3.  **Siphon Gate:** A deterministic check (`metrics.fidelity > 0.95`) that decides if the output is `APPROVED` or `REVISION_REQUIRED`.
+#### C. Recursive Saturation & Evolution
+The repository demonstrates a pattern of **Iterative Code Evolution**.
+*   **Pattern:** The code includes metadata about its own "Evolutionary Round" (e.g., Round 7).
+*   **Goal:** "Maximum Saturation"—a state where the code perfectly mirrors the intended DNA schema and all "Mistake Ledgers" have been cleared.
+*   **State:** The system moves from `EVOLVING` to `LOCKED` (as seen in `governance_status: "LOCKED"`).
 
-#### 4. Schema-Driven "Biological" Type Registry
-The system uses Zod not just for validation, but as a "Type Registry" for the system's "traits."
-*   **Traits defined:** `alignmentMetricsSchema` (fidelity, safety), `dnaSignatureSchema` (efficiency, governance).
-*   **Constraint:** Safety is hardcoded to a minimum of `0.98`, suggesting an extremely low tolerance for architectural drift or hallucination.
-
-#### 5. Adaptive Sampling & Error Forensics
-The `AdaptiveSamplingEngine` provides a resilient execution wrapper.
-*   **Pattern:** It combines retry logic with "Siphon Forensics." 
-*   **Observability:** Uses "Local UI Synapse" and "Deterministic Trace Logic" to ensure that every decision made by the LLM is traceable back to the specific version of the DNA signature that authorized it.
+#### D. Schema-Driven Cognitive Integrity
+The system uses **Zod-based DNA Schemas** to define the shape of logic itself.
+*   **Pattern:** It doesn't just validate data types; it validates "Cognitive Actions."
+*   **Structure:** The `dnaSignatureSchema` governs not just the input/output but the `siphon_efficiency` and `alignment_metrics`.
 
 ---
 
-### 🛠️ STRUCTURAL DNA COMPONENTS
+### 3. Technical Stack & Pattern Integration
 
-| Component | Function |
-| :--- | :--- |
-| **ConstitutionalGovernance** | The "Supreme Court" of the codebase; validates all actions against the schema. |
-| **SiphonCore** | The engine responsible for calculating "Fidelity" and "Conformity." |
-| **MasterOrchestrator** | Handles event emission (`action.failed`) and fallback triggers. |
-| **Dotprompt Logic Injection** | Dynamically injects foundation code into prompts to maintain architectural alignment. |
-| **Mistake Ledger** | A historical record used during the "Evolution Context" to prevent recurring architectural drift. |
+| Component | Pattern/Role | DNA Influence |
+| :--- | :--- | :--- |
+| **Genkit / VertexAI** | Foundation Layer | Google Genkit Framework |
+| **Dotprompt** | Logic Injection | Prompt-as-Code / Deterministic AI |
+| **Zod** | Structural Enforcement | Type-safe architectural boundaries |
+| **SiphonLogger** | Forensic Observability | "Siphon Forensics" (Trace-level detail) |
+| **AdaptiveSampling** | Resilience | Error-handling with backoff and validation |
 
 ---
 
-### 🎯 STRATEGIC SUMMARY
-The architecture is designed for **High-Stakes Autonomy**. It assumes that LLM outputs are inherently unstable and treats them as "candidates" that must be "domesticated" by a rigid, schema-based governance layer. The ultimate goal of this DNA is **"Architectural Absolute"**—a state where the software can self-evolve and self-correct while remaining perfectly aligned with the original design intent (The DNA).
+### 4. Summary of the "Architectural Law"
+The repository operates under a specific philosophical directive: **"Architecture is law. Deviation is exterminated."**
+
+1.  **Strict HHH Compliance:** (Honest, Harmless, Helpful) augmented by Architectural Precision.
+2.  **Deterministic Trace Logic:** Every decision must be traceable back to the DNA schema via `Genkit Trace Store`.
+3.  **Zero-Tolerance Drift:** The use of `fidelityEvaluator` ensures that the AI cannot "hallucinate" new architectural patterns; it must adhere to the siphoned source.
+
+**Final Verdict:** This is a **Meta-Architectural Framework** designed to host and evolve AI agents within a strictly controlled "Constitutional" environment, ensuring 99% alignment with a predefined structural blueprint.
 
 [LOCAL DNA: craighckby-stack/Dalek-Grog]
-This architectural extraction is performed by the Master Architect for the **Dalek-Grog** system. The following patterns represent the "Genetic Code" of the repository.
+**EXTRACTED ARCHITECTURAL PATTERNS AND RECONSTRUCTION BLUEPRINT: DALEK-GROG**
 
----
+### 1. DNA SIGNATURE: THE RECURSIVE SIPHON-EVOLUTION LOOP
+The core architectural essence of Dalek-Grog is a **Local-First Recursive Mutation Engine**. Unlike standard repositories, Dalek-Grog treats its own source code as a transient state. Its DNA is defined by the **90% LLM Reduction Loop**: a strategy where a massive local knowledge base (Test-1, 39k files) acts as a "Genetic Memory," allowing the system to synthesize new code patterns (Siphoning) and apply them to itself (Evolution) without redundant external LLM calls.
 
-### 1. DNA SIGNATURE: The "Recursive Pattern-Siphoning Kernel"
-The core essence of Dalek-Grog is a **Local-First Evolutionary Loop**. It is not a static codebase but a **Mutation Engine** designed to minimize LLM dependency by treating code as "DNA" that can be siphoned, cached, and reapplied.
-
-**Core Architectural Pillars:**
-*   **Knowledge Siphoning:** Utilizing a massive external corpus (`test-1` with 39k files) to create a local "DNA" library, reducing the need for live LLM inference.
-*   **The 90/10 Rule:** A logic-gate architecture where 90% of queries are resolved via local DNA chunks and cached Google lookups, with only 10% escalating to the LLM.
-*   **Mediated Mutation:** Use of a `GrogKernel` and `GrogMediator` to wrap standard functionalities (EventBus, CQRS) into "evolved" versions that support self-documentation and error-learning.
-*   **Saturation Compliance:** A strict enforcement of architectural constraints (e.g., "No `any` types," "Async/await only") that must be maintained during code evolution.
+**Core Philosophies:**
+*   **Saturative Inheritance:** Code is not just written; it is "saturated" with patterns from the DNA cache.
+*   **Mediated Mutation:** All logic flows through a Mediator/Kernel pattern to ensure "Evolution Rules" (Preserve, Summary, Respect Saturation) are enforced.
+*   **Bootstrap-Centric State:** The system’s "health" and "intelligence" are tracked via a dynamic bootstrap status embedded directly in the documentation.
 
 ---
 
 ### 2. RECONSTRUCTION BLUEPRINT
 
-#### A. LEXICAL ALIGNMENT
-To integrate external logic into Grog’s internal logic, all incoming variables and class names must be "Grog-Prefixed" or "Nexus-Prefixed" to signify their evolved state.
+#### A. LEXICAL ALIGNMENT (Grog’s Internal Logic)
+To integrate external logic into the Dalek-Grog ecosystem, variables and class names must be renamed to reflect their role within the evolved hierarchy.
 
-| External/Standard Name | Grog Internal Alignment | Logic/Reasoning |
-| :--- | :--- | :--- |
-| `EventBus` / `EventEmitter` | `GrogEventBus` | Wraps standard events in CQRS error handling. |
-| `PluginManager` | `NexusPluginStore` | Signifies a plugin is a "Nexus" component of the core. |
-| `Main` / `App` | `GrogKernel` | The central nervous system of the evolution. |
-| `Data` / `Payload` | `DNA_Chunk` | Treats information as genetic material for mutation. |
-| `Handler` | `CQRSHandler` | Ensures all actions follow Command-Query separation. |
-| `Logger` | `LessonsLearned` | Logs are not just records; they are inputs for `grog/lessons/`. |
+| External/Generic Term | Grog Internal Alignment | Logic/Reasoning |
+|:---|:---|:---|
+| `App` / `Main` | `NexusCoreMutation` | Signifies the entry point is a mutable state of the core. |
+| `Controller` / `Manager` | `GrogMediator` | Logic must be mediated to ensure it follows siphoned DNA. |
+| `Event` / `Listener` | `UniEventBus` -> `GrogEventBus` | Events are unified and logged for the "Lessons" learned. |
+| `Service` | `GrogKernel` / `Plugin` | Services are treated as kernel-level plugins or siphons. |
+| `Error` | `CQRSHandler.handleError` | Errors are treated as command/query failures for evolution tracking. |
+| `Config` | `Program` | Configuration is the "Instruction Set" for the current evolution. |
 
-#### B. MERGE STRATEGY
-The integration of new logic follows a **"Wrapper-Mutation"** approach:
+#### B. MERGE STRATEGY (Integration Logic)
+The logic should not be simply overwritten. It must follow the **"Promote from Output"** flow:
 
-1.  **Siphon Phase:** Scan the new logic for patterns. If a pattern matches an existing `grog/dna-chunks/` entry, discard the LLM-generation and use the local template.
-2.  **Encapsulation:** Do not replace original files directly. Create a sibling file in `evolution_outputs/` with the prefix `EVOLUTION_[OriginalName]`.
-3.  **Kernel Registration:** The new logic must be registered in `grog/bootstrap/boot.ts` to ensure it is loaded during the "Auto-Reboot" sequence.
-4.  **Saturation Check:** Before the final merge, the code is passed through a "Saturation Filter" to ensure JSDoc comments and strict TypeScript typing are present.
+1.  **DNA Extraction:** Scan the new logic for unique patterns and store them in `grog/dna-chunks/`.
+2.  **Staging Mutation:** Generate the evolved version of the file in `evolution_outputs/` using the `NexusCoreMutation` template.
+3.  **Kernel Wrapping:** Ensure the new logic extends `GrogKernel` or is injected via `DependencyInjector` within the `GrogMediator`.
+4.  **Saturation Check:** Verify the file contains JSDoc comments, `unknown` instead of `any`, and strict TypeScript types as per `CONTRIBUTING.md`.
+5.  **Bootstrap Update:** Run `npm run bootstrap` to recalculate the "LLM Calls Saved" percentage based on the newly added local logic.
 
-#### C. BINDING MAP
-New connections must be established to ensure the "90% Reduction Loop" remains closed:
+#### C. BINDING MAP (File Connections)
+New files must establish the following connections to maintain the self-evolving loop:
 
-*   **`GrogKernel` ↔ `GrogMediator`:** The Kernel initializes the environment; the Mediator handles the inter-plugin communication via the `GrogEventBus`.
-*   **`Siphons` ↔ `DNA-Loader`:** Any logic extracted from `src/siphons/` must be automatically indexed by the `dna-loader.ts` in the bootstrap folder.
-*   **`CQRSHandler` ↔ `LessonsLearned`:** Every failed execution or error caught by the CQRS handler must write a JSON entry to `grog/lessons/` to prevent the same mutation error in the next cycle.
-*   **`README.md` ↔ `Stats-Tracker`:** The `AUTO-REBOOT STATUS` block in the README must be dynamically updated by the `stats-tracker.ts` to reflect the current "DNA Chunks Loaded" count.
+*   **Core Dependency:** Every new functional module must import `{ GrogKernel }` from `../core/` or the evolved equivalent.
+*   **Event Hook:** All side effects must be registered with `GrogEventBus` to be visible to the `stats-tracker.ts`.
+*   **Command/Query Boundary:** Use `CQRSHandler` to wrap all async operations; this allows the system to "Learn from failures" by updating `grog/lessons/`.
+*   **DNA Linkage:** If a file introduces a new utility, a corresponding `.txt` or `.json` pattern must be added to `grog/dna-chunks/` so the system can replicate that logic in future mutations without LLM intervention.
+*   **Status Placeholder:** The `README.md` "AUTO-REBOOT STATUS" block is the primary binding for the UI/Dashboard to reflect the system's current evolutionary tier.
 
 ---
 
-**Architect's Note:** 
-*The system is now ready for the `npm run bootstrap` sequence. The DNA extracted from the provided sample confirms that Dalek-Grog is transitioning from a static repository to a living architectural organism.*
+**Architect’s Note:** 
+*The repository is not a static container of code; it is a biological organism where `grog/` is the brain, `evolution_outputs/` is the evolving skin, and the DNA chunks are the genetic memory. Any reconstruction must prioritize the local knowledge loop over external API calls.*
