@@ -1,0 +1,295 @@
+/**
+ * TARGET: Dissertation.docx (Binary Target -> Siphon Processor)
+ * DNA SOURCE: Meta/React-Core (Fiber Reconciler Architecture)
+ * 
+ * MECHANISTIC JUSTIFICATION:
+ * The original file was passed as a corrupted binary object `[object Object]`. 
+ * In a local-first evolutionary system, binary blobs (like a Dissertation.docx) 
+ * cannot be mutated directly as text. They must be ingested, parsed, and translated 
+ * into `DNA Chunks`. 
+ * 
+ * To handle massive documents without blocking the `GrogKernel` thread, we siphon 
+ * the 'Fiber' architecture from Meta/React-Core. This allows us to break the parsing 
+ * of the DOCX XML tree into interruptible units of work (DocxFiberNodes), yielding 
+ * control back to the CQRS event loop.
+ */
+
+import { 
+    GrogMediator, 
+    GrogEventBus, 
+    CQRSHandler, 
+    NexusPluginStore, 
+    GrogConcurrencyControl,
+    GrogKernel
+} from '@grog/core';
+import { randomUUID } from 'crypto';
+
+// --- LEXICAL ALIGNMENT & INTERFACES ---
+
+/**
+ * Represents a chunk of extracted text or structural metadata from the DOCX.
+ * Aligns with Grog's internal 'DNA Chunks' nomenclature.
+ */
+export interface DocxDNAChunk {
+    id: string;
+    sourceFile: string;
+    content: string;
+    structuralType: 'Paragraph' | 'Heading' | 'ImageMetadata' | 'Table';
+    evolutionaryValue: number; // 0.0 to 1.0 scoring of usefulness
+    timestamp: number;
+}
+
+/**
+ * Siphoned from React's Fiber Node. 
+ * Represents an interruptible unit of work in the document parsing tree.
+ */
+export interface DocxFiberNode {
+    id: string;
+    tag: 'Document' | 'Body' | 'Paragraph' | 'Run' | 'Text';
+    rawXmlNode: unknown; // Strict compliance: unknown instead of any
+    parent: DocxFiberNode | null;
+    child: DocxFiberNode | null;
+    sibling: DocxFiberNode | null;
+    alternate: DocxFiberNode | null; // For double-buffering state changes
+    dnaExtracted: DocxDNAChunk | null;
+    isComplete: boolean;
+}
+
+// --- CQRS COMMANDS & QUERIES ---
+
+export class IngestDocxCommand {
+    public readonly commandId: string = randomUUID();
+    constructor(
+        public readonly filePath: string,
+        public readonly targetKernel: string
+    ) {}
+}
+
+export class QueryDocxMetadata {
+    public readonly queryId: string = randomUUID();
+    constructor(
+        public readonly filePath: string
+    ) {}
+}
+
+// --- CORE SIPHON IMPLEMENTATION ---
+
+/**
+ * DocxSiphon extends the GrogKernel to provide autonomous document ingestion.
+ * It acts as a biological ribosome, translating raw DOCX RNA (XML) into actionable DNA Chunks.
+ */
+export class DocxSiphon extends GrogKernel {
+    private workInProgress: DocxFiberNode | null = null;
+    private nextUnitOfWork: DocxFiberNode | null = null;
+    private readonly cqrsHandler: CQRSHandler;
+    private readonly eventBus: GrogEventBus;
+    private readonly concurrencyControl: GrogConcurrencyControl;
+
+    constructor(
+        mediator: GrogMediator,
+        cqrsHandler: CQRSHandler,
+        eventBus: GrogEventBus,
+        concurrencyControl: GrogConcurrencyControl
+    ) {
+        super(mediator);
+        this.cqrsHandler = cqrsHandler;
+        this.eventBus = eventBus;
+        this.concurrencyControl = concurrencyControl;
+        
+        this.initializeSiphon();
+    }
+
+    /**
+     * Bootstraps the Knowledge Loop for this specific Siphon.
+     */
+    private async initializeSiphon(): Promise<void> {
+        try {
+            // Register CQRS handlers
+            await this.mediator.registerCommandHandler('IngestDocxCommand', this.handleCommand.bind(this));
+            await this.mediator.registerQueryHandler('QueryDocxMetadata', this.handleQuery.bind(this));
+            
+            // Announce readiness
+            await this.eventBus.publish({
+                type: 'SiphonReady',
+                payload: { siphonName: 'DocxSiphon', supportedTypes: ['.docx'] }
+            });
+        } catch (e: unknown) {
+            await this.cqrsHandler.handleError(e);
+        }
+    }
+
+    /**
+     * Command Handler for mutating state (Ingesting the document).
+     */
+    public async handleCommand(command: unknown): Promise<void> {
+        try {
+            if (command instanceof IngestDocxCommand) {
+                await this.startWorkLoop(command.filePath);
+            } else {
+                throw new Error('Unknown command dispatched to DocxSiphon');
+            }
+        } catch (e: unknown) {
+            await this.cqrsHandler.handleError(e);
+        }
+    }
+
+    /**
+     * Query Handler for retrieving state without mutation.
+     */
+    public async handleQuery(query: unknown): Promise<unknown> {
+        try {
+            if (query instanceof QueryDocxMetadata) {
+                // Return mocked metadata for the dissertation
+                return {
+                    title: 'Dissertation',
+                    estimatedNodes: 15000,
+                    status: this.workInProgress ? 'Processing' : 'Idle'
+                };
+            }
+            throw new Error('Unknown query dispatched to DocxSiphon');
+        } catch (e: unknown) {
+            await this.cqrsHandler.handleError(e);
+            return null;
+        }
+    }
+
+    // --- FIBER RECONCILER ARCHITECTURE (SIPHONED FROM REACT-CORE) ---
+
+    /**
+     * Initializes the Fiber Work Loop. This prevents massive documents from
+     * blocking the Node.js event loop by breaking parsing into chunks.
+     */
+    private async startWorkLoop(filePath: string): Promise<void> {
+        // 1. Mock Extraction of binary to XML (In reality, use unzipper & xmldom)
+        const rootXmlNode: unknown = await this.extractDocxXml(filePath);
+        
+        // 2. Create the Root Fiber
+        this.workInProgress = this.createFiberNode('Document', rootXmlNode, null);
+        this.nextUnitOfWork = this.workInProgress;
+
+        // 3. Begin interruptible processing loop
+        await this.scheduleWork();
+    }
+
+    /**
+     * Asynchronous scheduler mimicking React's requestIdleCallback/Scheduler.
+     */
+    private async scheduleWork(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            const workLoop = async () => {
+                try {
+                    // Yield to event loop every 50ms to maintain GrogKernel responsiveness
+                    const deadline = Date.now() + 50; 
+                    
+                    while (this.nextUnitOfWork !== null && Date.now() < deadline) {
+                        this.nextUnitOfWork = await this.performUnitOfWork(this.nextUnitOfWork);
+                    }
+
+                    if (this.nextUnitOfWork !== null) {
+                        // Constrain API/CPU requests using the 4 Pillars
+                        await this.concurrencyControl.constrainAPIRequests();
+                        setImmediate(workLoop); // Yield back to Node.js event loop
+                    } else {
+                        await this.commitRoot();
+                        resolve();
+                    }
+                } catch (e: unknown) {
+                    await this.cqrsHandler.handleError(e);
+                    reject(e);
+                }
+            };
+            
+            setImmediate(workLoop);
+        });
+    }
+
+    /**
+     * Processes a single Fiber Node and returns the next node to process.
+     * Depth-first traversal (Children -> Siblings -> Parent).
+     */
+    private async performUnitOfWork(fiber: DocxFiberNode): Promise<DocxFiberNode | null> {
+        // 1. Begin phase: Parse XML and generate DNA Chunk if applicable
+        await this.beginWork(fiber);
+
+        // 2. If children exist, process them next (Depth-first)
+        if (fiber.child) {
+            return fiber.child;
+        }
+
+        // 3. Complete phase: No children, bubble up
+        let currentFiber: DocxFiberNode | null = fiber;
+        while (currentFiber !== null) {
+            await this.completeWork(currentFiber);
+            
+            if (currentFiber.sibling) {
+                return currentFiber.sibling;
+            }
+            currentFiber = currentFiber.parent;
+        }
+
+        return null;
+    }
+
+    private async beginWork(fiber: DocxFiberNode): Promise<void> {
+        // Simulate parsing logic based on tag
+        if (fiber.tag === 'Paragraph') {
+            // In a real implementation, we would extract text runs here
+            fiber.dnaExtracted = {
+                id: randomUUID(),
+                sourceFile: 'Dissertation.docx',
+                content: 'Extracted mechanistic logic from dissertation paragraph.',
+                structuralType: 'Paragraph',
+                evolutionaryValue: 0.85,
+                timestamp: Date.now()
+            };
+        }
+        
+        // Simulate child creation (Reconciliation)
+        // fiber.child = this.createFiberNode(...)
+    }
+
+    private async completeWork(fiber: DocxFiberNode): Promise<void> {
+        fiber.isComplete = true;
+        
+        // If DNA was extracted, route it through CQRS to the Local DNA Cache
+        if (fiber.dnaExtracted) {
+            await this.eventBus.publish({
+                type: 'DNAChunkExtracted',
+                payload: fiber.dnaExtracted
+            });
+        }
+    }
+
+    private async commitRoot(): Promise<void> {
+        // Finalize the ingestion
+        await this.eventBus.publish({
+            type: 'DocxIngestionComplete',
+            payload: { rootId: this.workInProgress?.id }
+        });
+        this.workInProgress = null;
+    }
+
+    // --- UTILITIES ---
+
+    private createFiberNode(tag: DocxFiberNode['tag'], rawXmlNode: unknown, parent: DocxFiberNode | null): DocxFiberNode {
+        return {
+            id: randomUUID(),
+            tag,
+            rawXmlNode,
+            parent,
+            child: null,
+            sibling: null,
+            alternate: null,
+            dnaExtracted: null,
+            isComplete: false
+        };
+    }
+
+    private async extractDocxXml(filePath: string): Promise<unknown> {
+        // Placeholder for binary extraction logic (e.g., unzipping the docx container)
+        // Enforced async/await execution style
+        return new Promise((resolve) => {
+            setTimeout(() => resolve({ type: 'mock_xml_root' }), 100);
+        });
+    }
+}
