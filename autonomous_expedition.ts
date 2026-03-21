@@ -23,13 +23,25 @@ async function fetchRepoFiles(dir = ".") {
   return files.flat();
 }
 
-async function runAutonomousExpedition() {
-  async function appendLog(msg, color) {
-    const timestamp = new Date().toISOString().split('T')[1].split('.')[0];
-    Logger.info(`[${timestamp}] ${msg}`);
+async function getExternalRepositoryPatterns() {
+  try {
+    const response = await APIGate.getAsync('https://api.github.com/repos/Meta/React-Core');
+    const { data } = response;
+    const repoPatterns = await HypergraphUtils.getPatternsFromRepo(data);
+    return repoPatterns;
+  } catch (error) {
+    Logger.error('Failed to fetch external repository patterns:', error);
   }
+}
+
+async function runAutonomousExpedition() {
+  const patternRegistry = new PatternRegistry();
+  patternRegistry.addPattern(new ChainContextEnginePattern());
+  patternRegistry.addPattern(new FiniteStateMachinePattern());
 
   const evolution = new StrategicEvolution();
+  evolution.setPatternRepository(await getExternalRepositoryPatterns());
+
   const storage = {
     async fetch(path) {
       try {
@@ -40,37 +52,40 @@ async function runAutonomousExpedition() {
     },
     push(path, content, message) {
       APIGate.writeToStorage(path, content).then();
-      appendLog(`Wrote to storage: ${path}`);
+      Logger.info(`Wrote to storage: ${path}`);
     },
   };
+
   const eventBus = {
     emit(event, data) {
-      appendLog(`[EVENT] ${event}`);
-      eventBus.on(event, data);
+      Logger.info(`[EVENT] ${event}`);
+      const { patterns } = PatternMatcher.matchPatterns(patternRegistry.getPatterns(), data);
+      const transformedContent = storage.push(path, data, message);
+      await storage.push(path, transformedContent);
     },
     on(event, callback) {
-      appendLog(`Registered on event: ${event}`);
+      Logger.info(`Registered on event: ${event}`);
     },
   };
 
   const grog = new GrogBrain(
     GEMINI_API_KEY,
     evolution,
-    appendLog,
+    Logger.info,
     storage,
     eventBus,
   );
 
   if (GEMINI_API_KEY === "DUMMY_KEY_FOR_BYPASS") {
-    appendLog("INFO: Using DUMMY_KEY_FOR_BYPASS. Gemini will fail, falling back to Cerebras.");
+    Logger.info("INFO: Using DUMMY_KEY_FOR_BYPASS. Gemini will fail, falling back to Cerebras.");
   }
 
-  appendLog("--- INITIATING AUTONOMOUS ANCIENT DNA EXPEDITION ---");
+  Logger.info("--- INITIATING AUTONOMOUS ANCIENT DNA EXPEDITION ---");
 
   const allFiles = await fetchRepoFiles();
   const sourceFiles = allFiles.filter(f => f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.js') || f.endsWith('.bat'));
 
-  appendLog("GROG IS ANALYZING THE CODEBASE FOR ARCHITECTURAL DECAY...");
+  Logger.info("GROG IS ANALYZING THE CODEBASE FOR ARCHITECTURAL DECAY...");
   const selectionPrompt = `Analyze the following file list for the "Dalek-Grog" project.
 Identify the ONE file that would benefit most from "Ancient DNA" (pre-2022 architectural patterns) to fix "LLM-generated bloat" or "Architectural Decay".
 
@@ -81,22 +96,82 @@ Output ONLY the file path as a string. No other text.`;
   const targetFile = await grog.callAIWithFallback(selectionPrompt, "You are the Grog Strategic Architect. Choose the next target for evolution.", false, false, { failFast: true });
 
   if (!targetFile || targetFile === "AI_EXHAUSTION_FAILURE" || !sourceFiles.includes(targetFile.trim())) {
-    appendLog(`SELECTION_FAILURE: Grog chose an invalid target: ${targetFile}`);
+    Logger.info(`SELECTION_FAILURE: Grog chose an invalid target: ${targetFile}`);
     return;
   }
 
-  appendLog(`TARGET_ACQUIRED: ${targetFile}`);
+  Logger.info(`TARGET_ACQUIRED: ${targetFile}`);
   const originalCode = await fs.readFile(targetFile, "utf-8");
-  appendLog(`EVOLVING ${targetFile}...`);
+  Logger.info(`EVOLVING ${targetFile}...`);
   const result = await grog.evolveFile(targetFile, originalCode);
-  appendLog("--- EVOLUTION COMPLETE ---");
-  appendLog(`STRATEGIC_DECISION: ${result.strategicDecision}`);
+  Logger.info("--- EVOLUTION COMPLETE ---");
+  Logger.info(`STRATEGIC_DECISION: ${result.strategicDecision}`);
   await fs.writeFile(targetFile, result.improvedCode, "utf-8");
-  appendLog(`MUTATION_SUCCESS: ${targetFile} has been evolved with Ancient DNA.`);
+  Logger.info(`MUTATION_SUCCESS: ${targetFile} has been evolved with Ancient DNA.`);
 }
 
 try {
   runAutonomousExpedition();
 } catch (error) {
   Logger.error('ERROR:', error);
+}
+
+// patterns.ts
+class PatternRegistry {
+  private patternSet: Set<Pattern>;
+
+  constructor() {
+    this.patternSet = new Set();
+  }
+
+  addPattern(pattern: Pattern) {
+    this.patternSet.add(pattern);
+  }
+
+  getPatterns(): Set<Pattern> {
+    return this.patternSet;
+  }
+}
+
+abstract class Pattern {
+  abstract match(data: any): boolean;
+}
+
+class ChainContextEnginePattern extends Pattern {
+  match(data: any): boolean {
+    // implementation to match the Chain Context Engine pattern
+    return true;
+  }
+}
+
+class FiniteStateMachinePattern extends Pattern {
+  match(data: any): boolean {
+    // implementation to match the Finite State Machine pattern
+    return true;
+  }
+}
+
+class PatternMatcher {
+  private patternRegistry: PatternRegistry;
+
+  constructor(patternRegistry: PatternRegistry) {
+    this.patternRegistry = patternRegistry;
+  }
+
+  matchPatterns(patterns: Set<Pattern>, data: any): { patterns: Set<Pattern> } {
+    const matchedPatterns = new Set<Pattern>();
+    for (const pattern of patterns) {
+      if (pattern.match(data)) {
+        matchedPatterns.add(pattern);
+      }
+    }
+    return { patterns: matchedPatterns };
+  }
+}
+
+// errorReporter.ts
+class ErrorReporter {
+  static reportError(message: string, error: any) {
+    Logger.error(message);
+  }
 }
