@@ -11,11 +11,11 @@ const Lane = Object.freeze({
 });
 
 const WorkPriority = Object.freeze({
-  ImmediatePriority: 1,
-  UserBlockingPriority: 2,
-  NormalPriority: 3,
-  LowPriority: 4,
-  IdlePriority: 5,
+  ImmediatePriority:     1,
+  UserBlockingPriority:  2,
+  NormalPriority:        3,
+  LowPriority:           4,
+  IdlePriority:          5,
 });
 
 const FiberFlags = Object.freeze({
@@ -37,41 +37,43 @@ const FiberFlags = Object.freeze({
 });
 
 const InternalStateFlags = Object.freeze({
-  None: 0,
+  None:        0,
   Initialized: 1 << 0,
-  Running: 1 << 1,
-  Paused: 1 << 2,
-  Disposed: 1 << 3,
-  Errored: 1 << 4,
-  Stale: 1 << 5,
+  Running:     1 << 1,
+  Paused:      1 << 2,
+  Disposed:    1 << 3,
+  Errored:     1 << 4,
+  Stale:       1 << 5,
+  Suspended:   1 << 6,
+  Aborted:     1 << 7,
 });
 
 const DiagnosticCategory = Object.freeze({
-  Warning: 0,
-  Error: 1,
+  Warning:    0,
+  Error:      1,
   Suggestion: 2,
-  Message: 3,
-  Telemetry: 4,
-  Trace: 5,
+  Message:    3,
+  Telemetry:  4,
+  Trace:      5,
 });
 
 const DiagnosticMessages = Object.freeze({
-  PHASE_ENTER: { code: 1000, category: DiagnosticCategory.Message, message: "Entering phase: {0}" },
-  BOOTSTRAP_START: { code: 1001, category: DiagnosticCategory.Message, message: "Bootstrap sequence initiated." },
-  CONFIG_VALIDATION_FAILED: { code: 2001, category: DiagnosticCategory.Error, message: "Configuration audit failed: Missing property '{0}'" },
-  PIPELINE_CANCELED: { code: 3001, category: DiagnosticCategory.Warning, message: "Pipeline execution preempted via CancellationToken." },
-  PHASE_TRANSITION_ERROR: { code: 4001, category: DiagnosticCategory.Error, message: "Phase transition error from {0} to {1}: {2}" },
-  SYSTEM_READY: { code: 5001, category: DiagnosticCategory.Message, message: "System ready. Version: {0}. Path: {1}" },
-  METRIC_SUMMARY: { code: 6001, category: DiagnosticCategory.Suggestion, message: "Unit '{0}' processed in {1}ms." },
-  SCHEDULER_YIELD: { code: 7001, category: DiagnosticCategory.Telemetry, message: "Scheduler yielding control. Execution time: {0}ms" },
-  WORK_COMMIT: { code: 8001, category: DiagnosticCategory.Message, message: "Work root committed. Total units: {0}. Lanes: {1}" },
-  POOL_EXHAUSTED: { code: 9001, category: DiagnosticCategory.Warning, message: "Object pool '{0}' exhausted. Allocating new instance." },
-  TRACE_SPAN_START: { code: 10001, category: DiagnosticCategory.Trace, message: "[SPAN START] {0}" },
-  TRACE_SPAN_END: { code: 10002, category: DiagnosticCategory.Trace, message: "[SPAN END] {0} duration={1}ms" },
-  INTERCEPTOR_FAULT: { code: 11001, category: DiagnosticCategory.Error, message: "Interceptor '{0}' failed during execution: {1}" },
-  FLOW_EXECUTION_COMPLETE: { code: 12001, category: DiagnosticCategory.Message, message: "Flow '{0}' execution finished in {1}ms" },
-  SCHEMA_TYPE_MISMATCH: { code: 13001, category: DiagnosticCategory.Error, message: "Type mismatch for {0}: expected {1}, got {2}" },
-  SCHEDULER_OVERLOAD: { code: 14001, category: DiagnosticCategory.Warning, message: "Scheduler overload detected. Backpressure applied to lane {0}." },
+  PHASE_ENTER:              { code: 1000,  category: DiagnosticCategory.Message,    message: "Entering phase: {0}" },
+  BOOTSTRAP_START:          { code: 1001,  category: DiagnosticCategory.Message,    message: "Bootstrap sequence initiated." },
+  CONFIG_VALIDATION_FAILED: { code: 2001,  category: DiagnosticCategory.Error,      message: "Configuration audit failed: Missing property '{0}'" },
+  PIPELINE_CANCELED:        { code: 3001,  category: DiagnosticCategory.Warning,    message: "Pipeline execution preempted via CancellationToken." },
+  PHASE_TRANSITION_ERROR:   { code: 4001,  category: DiagnosticCategory.Error,      message: "Phase transition error from {0} to {1}: {2}" },
+  SYSTEM_READY:             { code: 5001,  category: DiagnosticCategory.Message,    message: "System ready. Version: {0}. Path: {1}" },
+  METRIC_SUMMARY:           { code: 6001,  category: DiagnosticCategory.Suggestion, message: "Unit '{0}' processed in {1}ms." },
+  SCHEDULER_YIELD:          { code: 7001,  category: DiagnosticCategory.Telemetry,  message: "Scheduler yielding control. Execution time: {0}ms" },
+  WORK_COMMIT:              { code: 8001,  category: DiagnosticCategory.Message,    message: "Work root committed. Total units: {0}. Lanes: {1}" },
+  POOL_EXHAUSTED:           { code: 9001,  category: DiagnosticCategory.Warning,    message: "Object pool '{0}' exhausted. Allocating new instance." },
+  TRACE_SPAN_START:         { code: 10001, category: DiagnosticCategory.Trace,      message: "[SPAN START] {0}" },
+  TRACE_SPAN_END:           { code: 10002, category: DiagnosticCategory.Trace,      message: "[SPAN END] {0} duration={1}ms" },
+  INTERCEPTOR_FAULT:        { code: 11001, category: DiagnosticCategory.Error,      message: "Interceptor '{0}' failed during execution: {1}" },
+  FLOW_EXECUTION_COMPLETE:  { code: 12001, category: DiagnosticCategory.Message,    message: "Flow '{0}' execution finished in {1}ms" },
+  SCHEMA_TYPE_MISMATCH:     { code: 13001, category: DiagnosticCategory.Error,      message: "Type mismatch for {0}: expected {1}, got {2}" },
+  SCHEDULER_OVERLOAD:       { code: 14001, category: DiagnosticCategory.Warning,    message: "Scheduler overload detected. Backpressure applied to lane {0}." },
 });
 
 class NexusCancellationToken {
@@ -86,7 +88,7 @@ class NexusCancellationToken {
     this.#reason = reason;
     this.#controller.abort(reason);
     this.#listeners.forEach(fn => {
-      try { fn(reason); } catch (e) { }
+      try { fn(reason); } catch (e) {}
     });
     this.#listeners.clear();
   }
@@ -114,7 +116,7 @@ class NexusCancellationToken {
 
   static link(parentToken) {
     const child = new NexusCancellationToken();
-    parentToken.onCancellation((r) => child.cancel(r));
+    if (parentToken) parentToken.onCancellation((r) => child.cancel(r));
     return child;
   }
 
@@ -151,7 +153,7 @@ class NexusSchema {
 
       if (val !== undefined && val !== null) {
         if (req.type) {
-          const actualType = Array.isArray(val) ? 'array' : typeof val;
+          const actualType = this.#getType(val);
           if (actualType !== req.type) {
             if (req.coerce) {
               val = this.#coerce(val, req.type);
@@ -188,13 +190,26 @@ class NexusSchema {
     return validatedData;
   }
 
+  static #getType(val) {
+    if (Array.isArray(val)) return 'array';
+    if (val instanceof Date) return 'date';
+    if (val instanceof Map) return 'map';
+    if (val instanceof Set) return 'set';
+    return typeof val;
+  }
+
   static #coerce(value, type) {
-    switch (type) {
-      case 'string': return String(value);
-      case 'number': return Number(value);
-      case 'boolean': return Boolean(value);
-      case 'date': return new Date(value);
-      default: return value;
+    try {
+      switch (type) {
+        case 'string':  return String(value);
+        case 'number':  return Number(value);
+        case 'boolean': return Boolean(value);
+        case 'date':    return new Date(value);
+        case 'bigint':  return BigInt(value);
+        default:        return value;
+      }
+    } catch (e) {
+      return value;
     }
   }
 
@@ -244,48 +259,15 @@ class NexusTelemetry {
     if (this.#history.length > this.#maxHistory) this.#history.shift();
     this.#activeSpans.delete(spanId);
     this.#emit(DiagnosticMessages.TRACE_SPAN_END, [span.name, span.duration.toFixed(2)]);
-    return span;
   }
 
-  #emit(template, args) {
-    const message = template.message.replace(/{(\d+)}/g, (match, i) => args[i] !== undefined ? args[i] : match);
+  #emit(messageTemplate, params) {
     const event = {
-      code: template.code,
-      category: template.category,
-      message,
       timestamp: Date.now(),
-      telemetryId: this.id
+      code: messageTemplate.code,
+      category: messageTemplate.category,
+      message: messageTemplate.message.replace(/{(\d+)}/g, (m, i) => params[i])
     };
     this.#listeners.forEach(fn => fn(event));
-  }
-
-  getHistory() { return [...this.#history]; }
-}
-
-class NexusObjectPool {
-  #factory;
-  #pool = [];
-  #maxSize;
-  #name;
-  #telemetry;
-
-  constructor(name, factory, maxSize = 100, telemetry = null) {
-    this.#name = name;
-    this.#factory = factory;
-    this.#maxSize = maxSize;
-    this.#telemetry = telemetry;
-  }
-
-  acquire(...args) {
-    if (this.#pool.length > 0) {
-      return this.#pool.pop();
-    }
-    return this.#factory(...args);
-  }
-
-  release(instance) {
-    if (this.#pool.length < this.#maxSize) {
-      this.#pool.push(instance);
-    }
   }
 }
