@@ -33,6 +33,17 @@ const FiberFlags = {
   ForceUpdate:     0b0010000000000000,
   Concurrent:      0b0100000000000000,
   Static:          0b1000000000000000,
+  LifecycleMask:   0b1111111111111110,
+};
+
+const InternalStateFlags = {
+  None: 0,
+  Initialized: 1 << 0,
+  Running: 1 << 1,
+  Paused: 1 << 2,
+  Disposed: 1 << 3,
+  Errored: 1 << 4,
+  Stale: 1 << 5,
 };
 
 const DiagnosticCategory = {
@@ -59,11 +70,55 @@ const DiagnosticMessages = {
   TRACE_SPAN_END: { code: 10002, category: DiagnosticCategory.Trace, message: "[SPAN END] {0} duration={1}ms" },
   INTERCEPTOR_FAULT: { code: 11001, category: DiagnosticCategory.Error, message: "Interceptor '{0}' failed during execution: {1}" },
   FLOW_EXECUTION_COMPLETE: { code: 12001, category: DiagnosticCategory.Message, message: "Flow '{0}' execution finished in {1}ms" },
+  SCHEMA_TYPE_MISMATCH: { code: 13001, category: DiagnosticCategory.Error, message: "Type mismatch for {0}: expected {1}, got {2}" },
+  SCHEDULER_OVERLOAD: { code: 14001, category: DiagnosticCategory.Warning, message: "Scheduler overload detected. Backpressure applied to lane {0}." },
 };
+
+class NexusCancellationToken {
+  #isCancelled = false;
+  #reason = null;
+  #listeners = new Set();
+
+  cancel(reason = "Operation cancelled") {
+    if (this.#isCancelled) return;
+    this.#isCancelled = true;
+    this.#reason = reason;
+    this.#listeners.forEach(fn => fn(reason));
+    this.#listeners.clear();
+  }
+
+  onCancellation(fn) {
+    if (this.#isCancelled) {
+      fn(this.#reason);
+      return () => {};
+    }
+    this.#listeners.add(fn);
+    return () => this.#listeners.delete(fn);
+  }
+
+  throwIfCancelled() {
+    if (this.#isCancelled) {
+      const err = new Error(`CancellationRequested: ${this.#reason}`);
+      err.name = "CanceledError";
+      throw err;
+    }
+  }
+
+  get isCancelled() { return this.#isCancelled; }
+  get reason() { return this.#reason; }
+
+  static link(parentToken) {
+    const child = new NexusCancellationToken();
+    parentToken.onCancellation((r) => child.cancel(r));
+    return child;
+  }
+}
 
 class NexusSchema {
   static validate(schema, data) {
     if (!schema) return data;
+    if (!data || typeof data !== 'object') throw new Error("Validation target must be an object.");
+
     const errors = [];
     for (const [key, requirement] of Object.entries(schema)) {
       const value = data[key];
@@ -88,6 +143,8 @@ class NexusSchema {
 class DiagnosticEmitter {
   #listeners = new Set();
   #activeSpans = new Map();
+  #history = [];
+  #maxHistory = 1000;
 
   subscribe(fn) {
     this.#listeners.add(fn);
@@ -95,16 +152,16 @@ class DiagnosticEmitter {
   }
 
   startSpan(name, metadata = {}) {
-    const spanId = Math.random().toString(36).substr(2, 9);
-    const startTime = performance.now();
-    this.#activeSpans.set(spanId, { name, startTime, metadata });
+    const spanId = `span_${Math.random().toString(36).substring(2, 11)}`;
+    const span = { name, startTime: performance.now(), metadata, id: spanId };
+    this.#activeSpans.set(spanId, span);
     this.emit(DiagnosticMessages.TRACE_SPAN_START, name);
     return spanId;
   }
 
   endSpan(spanId) {
     const span = this.#activeSpans.get(spanId);
-    if (!span) return;
+    if (!span) return 0;
     const duration = performance.now() - span.startTime;
     this.emit(DiagnosticMessages.TRACE_SPAN_END, span.name, duration.toFixed(4));
     this.#activeSpans.delete(spanId);
@@ -112,122 +169,78 @@ class DiagnosticEmitter {
   }
 
   emit(diagnostic, ...args) {
-    let formatted = diagnostic.message;
-    args.forEach((arg, i) => formatted = formatted.replace(new RegExp(`\\{${i}\\}`, 'g'), String(arg)));
+    let message = diagnostic.message;
+    args.forEach((arg, i) => message = message.replace(new RegExp(`\\{${i}\\}`, 'g'), String(arg)));
 
     const payload = {
       timestamp: performance.now(),
       code: diagnostic.code,
       category: diagnostic.category,
-      message: formatted,
-      id: Math.random().toString(36).substr(2, 9),
+      message,
+      id: `diag_${Math.random().toString(36).substring(2, 11)}`,
       args,
       traceId: Array.from(this.#activeSpans.keys()).pop() || null
     };
-    this.#listeners.forEach(listener => {
-      try {
-        listener(payload);
-      } catch (e) {}
+
+    this.#history.push(payload);
+    if (this.#history.length > this.#maxHistory) this.#history.shift();
+    
+    this.#listeners.forEach(fn => {
+      try { 
+        fn(payload); 
+      } catch (e) {
+        console.error("Diagnostic Listener Failure:", e);
+      }
     });
   }
+
+  getHistory() { return [...this.#history]; }
+  getActiveSpans() { return new Map(this.#activeSpans); }
 }
 
 class LaneManager {
-  static getHighestPriorityLane(lanes) {
-    return lanes & -lanes;
-  }
-  static includesLane(set, subset) {
-    return (set & subset) !== Lane.NoLanes;
-  }
-  static mergeLanes(a, b) {
-    return a | b;
-  }
-  static removeLanes(set, subset) {
-    return set & ~subset;
-  }
-  static isSyncLane(lanes) {
-    return (lanes & Lane.SyncLane) !== Lane.NoLanes;
-  }
-}
+  static getHighestPriorityLane(lanes) { return lanes & -lanes; }
+  static includesLane(set, subset) { return (set & subset) !== Lane.NoLanes; }
+  static mergeLanes(a, b) { return a | b; }
+  static removeLanes(set, subset) { return set & ~subset; }
+  static isSyncLane(lanes) { return (lanes & Lane.SyncLane) !== Lane.NoLanes; }
 
-class NexusInterceptor {
-  constructor({ name, before = null, after = null, onError = null }) {
-    this.name = name;
-    this.before = before;
-    this.after = after;
-    this.onError = onError;
-  }
-}
-
-class NexusAction {
-  constructor(name, logic, options = {}) {
-    this.name = name;
-    this.logic = logic;
-    this.inputSchema = options.inputSchema || null;
-    this.outputSchema = options.outputSchema || null;
-    this.interceptors = options.interceptors || [];
-    this.metadata = options.metadata || {};
-  }
-
-  async execute(context, input) {
-    const diagnostics = context.host.diagnostics;
-    const spanId = diagnostics.startSpan(`Action:${this.name}`);
-    let currentInput = input;
-
-    try {
-      for (const interceptor of this.interceptors) {
-        if (interceptor.before) {
-          currentInput = await interceptor.before(context, currentInput) || currentInput;
-        }
-      }
-
-      const validatedInput = NexusSchema.validate(this.inputSchema, currentInput);
-      let result = await this.logic(context, validatedInput);
-      let validatedOutput = NexusSchema.validate(this.outputSchema, result);
-
-      for (const interceptor of [...this.interceptors].reverse()) {
-        if (interceptor.after) {
-          validatedOutput = await interceptor.after(context, validatedOutput) || validatedOutput;
-        }
-      }
-
-      return validatedOutput;
-    } catch (error) {
-      diagnostics.emit(DiagnosticMessages.PHASE_TRANSITION_ERROR, "ActionExecution", this.name, error.message);
-      for (const interceptor of this.interceptors) {
-        if (interceptor.onError) {
-          await interceptor.onError(context, error);
-        }
-      }
-      throw error;
-    } finally {
-      diagnostics.endSpan(spanId);
+  static *iterateLanes(lanes) {
+    let remaining = lanes;
+    while (remaining !== Lane.NoLanes) {
+      const next = this.getHighestPriorityLane(remaining);
+      yield next;
+      remaining &= ~next;
     }
   }
 }
 
-class NexusFlow {
-  constructor(name, actions = [], options = {}) {
-    this.name = name;
-    this.actions = actions;
-    this.options = options;
+class NexusPoolManager {
+  #pools = new Map();
+  #diagnostics;
+
+  constructor(diagnostics) {
+    this.#diagnostics = diagnostics;
   }
 
-  async run(context, initialInput) {
-    const startTime = performance.now();
-    const diagnostics = context.host.diagnostics;
-    const flowSpan = diagnostics.startSpan(`Flow:${this.name}`);
-    let state = initialInput;
+  acquire(key, factory) {
+    let pool = this.#pools.get(key);
+    if (!pool) {
+      pool = [];
+      this.#pools.set(key, pool);
+    }
 
-    try {
-      for (const action of this.actions) {
-        state = await action.execute(context, state);
-      }
-      const duration = performance.now() - startTime;
-      diagnostics.emit(DiagnosticMessages.FLOW_EXECUTION_COMPLETE, this.name, duration.toFixed(2));
-      return state;
-    } finally {
-      diagnostics.endSpan(flowSpan);
+    if (pool.length === 0) {
+      this.#diagnostics.emit(DiagnosticMessages.POOL_EXHAUSTED, key);
+      return factory();
+    }
+    return pool.pop();
+  }
+
+  release(key, instance) {
+    const pool = this.#pools.get(key);
+    if (pool) {
+      pool.push(instance);
     }
   }
 }
