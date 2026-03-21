@@ -3,6 +3,7 @@ class NexusCoreMutation extends NexusCore {
   private pluginStore: NexusPluginStore;
   private concurrencyControl: ConcurrencyControlModule;
   private eventStore: EventStoreModule;
+  private cqrsHandler: CQRSHandler;
 
   constructor(config: any) {
     super(config);
@@ -11,21 +12,25 @@ class NexusCoreMutation extends NexusCore {
     this.pluginStore.addPlugin(new MedullaPlugin());
     this.concurrencyControl = new ConcurrencyControlModule();
     this.eventStore = new EventStoreModule();
+    this.cqrsHandler = new CQRSHandler();
   }
 
   async start(): Promise<void> {
     try {
       await this.createPluginQueue();
       await this.initializePluginActivation();
+      await this.cqrsHandler.initialize();
       await this.eventStore.initialize();
     } catch (e) {
-      this.handleError(e);
+      await this.cqrsHandler.handleError(e);
     }
   }
 
   private createPluginQueue(): void {
-    this.pluginQueue = new Queue(this.pluginStore.getPlugins());
-    this.concurrencyControl.constrainAPIRequests(this.pluginQueue);
+    this.pluginStore.getPlugins().forEach((plugin) => {
+      this.pluginQueue = new Queue([plugin]);
+      this.concurrencyControl.constrainAPIRequests(this.pluginQueue);
+    });
   }
 
   private initializePluginActivation(): void {
@@ -33,11 +38,45 @@ class NexusCoreMutation extends NexusCore {
       plugin.activate();
     });
   }
+}
 
-  private handleError(e: any): void {
+class CQRSHandler {
+  private handlers: Map<string, any>;
+
+  constructor() {
+    this.handlers = new Map();
+  }
+
+  async initialize(): Promise<void> {
+    const commandHandler = new CommandHandler();
+    const queryHandler = new QueryHandler();
+    this.handlers.set('commandHandler', commandHandler);
+    this.handlers.set('queryHandler', queryHandler);
+    await commandHandler.initialize();
+    await queryHandler.initialize();
+  }
+
+  async handleCommand(command: any): Promise<void> {
+    const handler = this.handlers.get('commandHandler');
+    await handler.handle(command);
+  }
+
+  async handleQuery(query: any): Promise<void> {
+    const handler = this.handlers.get('queryHandler');
+    await handler.handle(query);
+  }
+
+  handleError(e: any): Promise<void> {
     console.error(e);
-    this.concurrencyControl.handleAPIRequest(e);
-    this.eventStore.appendEvent('error', e.toString(), { timestamp: Date.now() });
+    return this.handleAPIRequest(e);
+  }
+
+  async handleAPIRequest(e: any): Promise<void> {
+    await this.appendEvent('error', e.toString(), { timestamp: Date.now() });
+  }
+
+  async appendEvent(eventName: string, payload: any, metadata: any): Promise<void> {
+    // Utilize Event Sourcing's append-event functionality for persistent data management
   }
 }
 
@@ -46,7 +85,7 @@ class UniEventBus extends EventEmitter {
     try {
       await this.program.eventBus.registerListener(listener, listenerName);
     } catch (e) {
-      this.handleError(e);
+      await this.cqrsHandler.handleError(e);
     }
   }
 
@@ -54,13 +93,8 @@ class UniEventBus extends EventEmitter {
     try {
       await this.program.eventBus.dispatchEvent(eventName, message, options);
     } catch (e) {
-      this.handleError(e);
+      await this.cqrsHandler.handleError(e);
     }
-  }
-
-  private handleError(e: any): void {
-    console.error(e);
-    this.concurrencyControl.handleAPIRequest(e);
   }
 }
 
@@ -69,19 +103,15 @@ class Injector extends DependencyInjector {
     try {
       await this.program.injector.inject(targetInstance, targetServices);
     } catch (e) {
-      this.handleError(e);
+      await this.cqrsHandler.handleError(e);
     }
-  }
-
-  private handleError(e: any): void {
-    console.error(e);
-    this.concurrencyControl.handleAPIRequest(e);
   }
 }
 
 class EventStoreModule extends EventStore {
   async initialize(): Promise<void> {
     await this.createEventIndex();
+    await this.cqrsHandler.initializeEventStore();
   }
 
   private createEventIndex(): void {
@@ -90,5 +120,6 @@ class EventStoreModule extends EventStore {
 
   async appendEvent(eventName: string, payload: any, metadata: any): Promise<void> {
     // Utilize Event Sourcing's append-event functionality for persistent data management
+    await this.cqrsHandler.appendEvent(eventName, payload, metadata);
   }
 }
