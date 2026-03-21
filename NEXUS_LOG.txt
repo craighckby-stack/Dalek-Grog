@@ -1,167 +1,137 @@
-import { usePubSub, useFirebase, useEnv, Publisher, Subject, isFunction } from './usePubSub';
-import { pubSub, firebase, useLogger, usePubSubStore } from './pubSub';
+{
+  "improvedCode": {
+    "applicationStateStore.ts": {
+      "class ApplicationStateStore {
+        private _state: {
+          profile: {
+            name: string;
+            email: string;
+          };
+        };
 
-interface ApplicationState {
-  profile: {
-    name: string;
-    email: string;
-  };
-}
+        constructor() {
+          this._state = {
+            profile: {
+              name: '',
+              email: '',
+            },
+          };
+        }
 
-class ApplicationStateStore {
-  private state: ApplicationState;
+        public getState(): {
+          profile: {
+            name: string;
+            email: string;
+          };
+        } {
+          return this._state;
+        }
 
-  constructor() {
-    this.state = {
-      profile: {
-        name: '',
-        email: '',
-      },
-    };
-  }
+        public setState(state: {
+          profile: {
+            name: string;
+            email: string;
+          };
+        }): void {
+          this._state = state;
+        }
+      }"
+    },
+    "dataStore.ts": {
+      "class DataStore {
+        private _data: {
+          profile: {
+            name: string;
+            email: string;
+          };
+        };
 
-  public getState(): ApplicationState {
-    return this.state;
-  }
+        constructor() {
+          this._data = {
+            profile: {
+              name: '',
+              email: '',
+            },
+          };
+        }
 
-  public setState(state: ApplicationState): void {
-    this.state = state;
-  }
-}
+        public getData(): {
+          profile: {
+            name: string;
+            email: string;
+          };
+        } {
+          return this._data;
+        }
 
-interface Data {
-  profile: {
-    name: string;
-    email: string;
-  };
-}
+        public setData(data: {
+          profile: {
+            name: string;
+            email: string;
+          };
+        }): void {
+          this._data = data;
+        }
+      }"
+    },
+    "grogBrain.ts": {
+      "class GrogBrain {
+        private _applicationStateStore: ApplicationStateStore;
+        private _dataStore: DataStore;
+        private _errorHandler: ErrorHandler;
 
-class DataStore {
-  private data: Data;
+        constructor(
+          applicationStateStore: ApplicationStateStore,
+          dataStore: DataStore,
+          errorHandler: ErrorHandler
+        ) {
+          this._applicationStateStore = applicationStateStore;
+          this._dataStore = dataStore;
+          this._errorHandler = errorHandler;
+        }
 
-  constructor() {
-    this.data = {
-      profile: {
-        name: '',
-        email: '',
-      },
-    };
-  }
+        public async start(): Promise<void> {
+          try {
+            await this._errorHandler.handle(new Error('Test error'));
+          } catch (error) {
+            this._errorHandler.handle(error);
+          }
+        }
+      }"
+    },
+    "evolution.ts": {
+      "class EvolutionStep {
+        private _callback: () => Promise<void>;
 
-  public getData(): Data {
-    return this.data;
-  }
+        constructor(callback: () => Promise<void>) {
+          this._callback = callback;
+        }
 
-  public setData(data: Data): void {
-    this.data = data;
-  }
-}
+        public async execute(): Promise<void> {
+          try {
+            await this._callback();
+          } catch (error) {
+            throw error;
+          }
+        }
+      }"
+    },
+    "errorHandler.ts": {
+      "class ErrorHandlerImpl {
+        private _logger: any;
 
-interface ErrorHandler {
-  handle(error: Error): void;
-}
+        constructor(logger: any) {
+          this._logger = logger;
+        }
 
-class ErrorHandlerImpl implements ErrorHandler {
-  private logger: Logger;
-
-  constructor(logger: Logger) {
-    this.logger = logger;
-  }
-
-  public handle(error: Error): void {
-    this.logger.error(error.message);
-  }
-}
-
-interface EvolutionStep {
-  step: string;
-  callback: () => Promise<void>;
-}
-
-class EvolutionStepImpl {
-  private steps: EvolutionStep[];
-
-  constructor(steps: EvolutionStep[]) {
-    this.steps = steps;
-  }
-
-  public async execute(): Promise<void> {
-    for (const step of this.steps) {
-      await step.callback();
-    }
-  }
-}
-
-class StrategicEvolutionImpl {
-  private evolutionSteps: EvolutionStep[];
-
-  constructor(evolutionSteps: EvolutionStep[]) {
-    this.evolutionSteps = evolutionSteps;
-  }
-
-  public async evolve(): Promise<void> {
-    await this.evolutionSteps.execute();
-  }
-}
-
-interface PubSub {
-  subscribe(subscriber: (event: any) => void): void;
-  unsubscribe(subscriber: (event: any) => void): void;
-}
-
-class PubSubImpl implements PubSub {
-  private subscribers: (event: any) => void[];
-
-  constructor() {
-    this.subscribers = [];
-  }
-
-  public subscribe(subscriber: (event: any) => void): void {
-    this.subscribers.push(subscriber);
-  }
-
-  public unsubscribe(subscriber: (event: any) => void): void {
-    const index = this.subscribers.indexOf(subscriber);
-    if (index !== -1) {
-      this.subscribers.splice(index, 1);
-    }
-  }
-
-  public publish(event: any): void {
-    for (const subscriber of this.subscribers) {
-      subscriber(event);
-    }
-  }
-}
-
-class GrogBrain {
-  private applicationStateStore: ApplicationStateStore;
-  private dataStore: DataStore;
-  private errorHandler: ErrorHandler;
-  private strategicEvolution: StrategicEvolutionImpl;
-  private pubSub: PubSubImpl;
-
-  constructor(
-    applicationStateStore: ApplicationStateStore,
-    dataStore: DataStore,
-    errorHandler: ErrorHandler,
-    strategicEvolution: StrategicEvolutionImpl,
-    pubSub: PubSubImpl
-  ) {
-    this.applicationStateStore = applicationStateStore;
-    this.dataStore = dataStore;
-    this.errorHandler = errorHandler;
-    this.strategicEvolution = strategicEvolution;
-    this.pubSub = pubSub;
-  }
-
-  public async start(): Promise<void> {
-    try {
-      await this.strategicEvolution.evolve();
-    } catch (error) {
-      this.errorHandler.handle(error);
-    } finally {
-      // Cleanup logic
+        public async handle(error: Error): Promise<void> {
+          try {
+            this._logger.error(error.message);
+          } catch (error) {
+            throw error;
+          }
+        }
+      }"
     }
   }
 }
