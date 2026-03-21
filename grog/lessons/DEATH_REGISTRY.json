@@ -3,5 +3,10 @@
     "timestamp": "2026-03-20T10:46:00.166Z",
     "error": "AUDIT_FAILURE: CONTENT_LOSS",
     "reason": "Significant logic reduction detected (Critical) - PUBLIC API SURFACE TRUNCATED"
+  },
+  {
+    "timestamp": "2026-03-21T02:59:22.203Z",
+    "error": "AUDIT_FAILURE: NAMESPACE_COLLISION: Symbol 'FiberNode' is both imported and locally defined.",
+    "context": ".env.example"
   }
 ]
