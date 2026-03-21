@@ -86,7 +86,7 @@ class NexusCancellationToken {
     this.#reason = reason;
     this.#controller.abort(reason);
     this.#listeners.forEach(fn => {
-      try { fn(reason); } catch (e) {}
+      try { fn(reason); } catch (e) { }
     });
     this.#listeners.clear();
   }
@@ -117,53 +117,101 @@ class NexusCancellationToken {
     parentToken.onCancellation((r) => child.cancel(r));
     return child;
   }
+
+  static timeout(ms) {
+    const token = new NexusCancellationToken();
+    const timer = setTimeout(() => token.cancel(`Timeout of ${ms}ms exceeded`), ms);
+    token.onCancellation(() => clearTimeout(timer));
+    return token;
+  }
 }
 
 class NexusSchema {
   static validate(schema, data) {
     if (!schema) return data;
-    if (!data || typeof data !== 'object') {
-      throw new Error("Validation target must be an object.");
+    if (data === null || typeof data !== 'object') {
+      throw new Error("Validation target must be a non-null object.");
     }
 
     const errors = [];
-    for (const [key, requirement] of Object.entries(schema)) {
-      const value = data[key];
-      
-      if (requirement.required && (value === undefined || value === null)) {
+    const validatedData = Array.isArray(data) ? [] : {};
+
+    for (const key in schema) {
+      const req = schema[key];
+      let val = data[key];
+
+      if ((val === undefined || val === null) && req.default !== undefined) {
+        val = typeof req.default === 'function' ? req.default() : req.default;
+      }
+
+      if (req.required && (val === undefined || val === null)) {
         errors.push(`Missing required property: ${key}`);
         continue;
       }
 
-      if (value !== undefined && value !== null) {
-        if (requirement.type && typeof value !== requirement.type) {
-          errors.push(`Type mismatch for ${key}: expected ${requirement.type}, got ${typeof value}`);
+      if (val !== undefined && val !== null) {
+        if (req.type) {
+          const actualType = Array.isArray(val) ? 'array' : typeof val;
+          if (actualType !== req.type) {
+            if (req.coerce) {
+              val = this.#coerce(val, req.type);
+            } else {
+              errors.push(`Type mismatch for ${key}: expected ${req.type}, got ${actualType}`);
+            }
+          }
         }
-        if (requirement.validator && !requirement.validator(value)) {
-          errors.push(`Custom validation failed for property: ${key}`);
-        }
-        if (requirement.schema && typeof value === 'object') {
+
+        if (typeof req.validator === 'function') {
           try {
-            this.validate(requirement.schema, value);
+            if (!req.validator(val)) errors.push(`Custom validation failed for: ${key}`);
+          } catch (e) {
+            errors.push(`Validator exception for ${key}: ${e.message}`);
+          }
+        }
+
+        if (req.schema && typeof val === 'object') {
+          try {
+            val = this.validate(req.schema, val);
           } catch (e) {
             errors.push(`Nested validation failed for ${key}: ${e.message}`);
           }
         }
       }
+      validatedData[key] = val;
     }
 
     if (errors.length > 0) {
-      throw new Error(`Schema Validation Failed: ${errors.join(', ')}`);
+      const err = new Error(`Schema Validation Failed: ${errors.join(', ')}`);
+      err.details = errors;
+      throw err;
     }
-    return data;
+    return validatedData;
+  }
+
+  static #coerce(value, type) {
+    switch (type) {
+      case 'string': return String(value);
+      case 'number': return Number(value);
+      case 'boolean': return Boolean(value);
+      case 'date': return new Date(value);
+      default: return value;
+    }
+  }
+
+  static define(definition) {
+    return Object.freeze(definition);
   }
 }
 
-class DiagnosticEmitter {
+class NexusTelemetry {
   #listeners = new Set();
   #activeSpans = new Map();
   #history = [];
-  #maxHistory = 1000;
+  #maxHistory = 5000;
+
+  constructor() {
+    this.id = `telemetry_${Math.random().toString(36).substring(2, 11)}`;
+  }
 
   subscribe(fn) {
     this.#listeners.add(fn);
@@ -172,59 +220,72 @@ class DiagnosticEmitter {
 
   startSpan(name, metadata = {}) {
     const spanId = `span_${Math.random().toString(36).substring(2, 11)}`;
-    const span = { 
-      name, 
-      startTime: performance.now(), 
-      metadata, 
-      id: spanId, 
-      parentSpanId: Array.from(this.#activeSpans.keys()).pop() || null
+    const parentId = Array.from(this.#activeSpans.keys()).pop() || null;
+    const span = {
+      id: spanId,
+      parentId,
+      name,
+      startTime: performance.now(),
+      metadata: { ...metadata },
+      attributes: new Map()
     };
     this.#activeSpans.set(spanId, span);
-    this.emit(DiagnosticMessages.TRACE_SPAN_START, name);
+    this.#emit(DiagnosticMessages.TRACE_SPAN_START, [name]);
     return spanId;
   }
 
-  endSpan(spanId) {
+  endSpan(spanId, finalMetadata = {}) {
     const span = this.#activeSpans.get(spanId);
-    if (!span) return 0;
-    const duration = performance.now() - span.startTime;
-    this.emit(DiagnosticMessages.TRACE_SPAN_END, span.name, duration.toFixed(4));
+    if (!span) return;
+    span.endTime = performance.now();
+    span.duration = span.endTime - span.startTime;
+    Object.assign(span.metadata, finalMetadata);
+    this.#history.push(span);
+    if (this.#history.length > this.#maxHistory) this.#history.shift();
     this.#activeSpans.delete(spanId);
-    return duration;
+    this.#emit(DiagnosticMessages.TRACE_SPAN_END, [span.name, span.duration.toFixed(2)]);
+    return span;
   }
 
-  emit(diagnostic, ...args) {
-    let message = diagnostic.message;
-    args.forEach((arg, i) => {
-      message = message.replace(new RegExp(`\\{${i}\\}`, 'g'), String(arg));
-    });
-
-    const payload = {
-      timestamp: Date.now(),
-      perfMark: performance.now(),
-      code: diagnostic.code,
-      category: diagnostic.category,
+  #emit(template, args) {
+    const message = template.message.replace(/{(\d+)}/g, (match, i) => args[i] !== undefined ? args[i] : match);
+    const event = {
+      code: template.code,
+      category: template.category,
       message,
-      id: `diag_${Math.random().toString(36).substring(2, 11)}`,
-      args,
-      traceId: Array.from(this.#activeSpans.keys()).pop() || null
+      timestamp: Date.now(),
+      telemetryId: this.id
     };
-
-    this.#history.push(payload);
-    if (this.#history.length > this.#maxHistory) this.#history.shift();
-    
-    this.#listeners.forEach(fn => {
-      try { fn(payload); } catch (e) {}
-    });
+    this.#listeners.forEach(fn => fn(event));
   }
 
   getHistory() { return [...this.#history]; }
-  getActiveSpans() { return new Map(this.#activeSpans); }
 }
 
-class LaneManager {
-  static getHighestPriorityLane(lanes) { return lanes & -lanes; }
-  static includesLane(set, subset) { return (set & subset) === subset; }
-  static mergeLanes(a, b) { return a | b; }
-  static removeLanes(set, subset) { return set & ~subset; }
+class NexusObjectPool {
+  #factory;
+  #pool = [];
+  #maxSize;
+  #name;
+  #telemetry;
+
+  constructor(name, factory, maxSize = 100, telemetry = null) {
+    this.#name = name;
+    this.#factory = factory;
+    this.#maxSize = maxSize;
+    this.#telemetry = telemetry;
+  }
+
+  acquire(...args) {
+    if (this.#pool.length > 0) {
+      return this.#pool.pop();
+    }
+    return this.#factory(...args);
+  }
+
+  release(instance) {
+    if (this.#pool.length < this.#maxSize) {
+      this.#pool.push(instance);
+    }
+  }
 }
