@@ -8,7 +8,9 @@
     "dev": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "bootstrap": "tsx grog/bootstrap/boot.ts",
+    "postinstall": "npm run bootstrap || echo 'Bootstrap skipped - run manually with npm run bootstrap'"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

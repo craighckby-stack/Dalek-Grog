@@ -1,0 +1,22 @@
+{
+  "llm": {
+    "totalQueries": 0,
+    "localHits": 0,
+    "llmCalls": 0,
+    "llmCallsSaved": 0,
+    "savingsPercent": 0
+  },
+  "evolution": {
+    "totalEvolutions": 0,
+    "filesEvolved": 0,
+    "lastEvolution": "NEVER",
+    "patternsLearned": 0
+  },
+  "system": {
+    "bootCount": 0,
+    "uptimeMs": 0,
+    "lastBoot": "NEVER",
+    "errors": 0
+  },
+  "updatedAt": "NEVER"
+}
