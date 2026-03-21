@@ -1,25 +1,115 @@
-# Contributing to DALEK_GROG
+**Event Handlers**
 
-Thank you for your interest in contributing to DALEK_GROG! This project aims to push the boundaries of AI-driven architectural evolution.
+class EventHandlers {
+  async onEvent(event) {
+    switch (event.type) {
+      case 'NEW_CONTRIBUTION':
+        this.#newContribution(event);
+        break;
+      case 'UPDATE_CODE':
+        this.#updateCode(event);
+        break;
+      default:
+        console.log(`Unknown event type: ${event.type}`);
+    }
+  }
 
-## How to Contribute
+  #newContribution(event) {
+    console.log(`Received new contribution event: ${event.contribution.id}`);
+  }
 
-1.  **Fork the Repository**: Create your own copy of the project.
-2.  **Create a Branch**: Work on a specific feature or bug fix.
-3.  **Implement Changes**: Ensure your code follows the project's style and is well-documented.
-4.  **Test Your Changes**: Verify that your changes work as expected and don't break existing functionality.
-5.  **Submit a Pull Request**: Describe your changes and why they are beneficial.
+  #updateCode(event) {
+    console.log(`Received update code event: ${event.code.sha}`);
+  }
+}
 
-## Code of Conduct
+**Mediator**
 
-Please be respectful and constructive in all interactions.
+class Mediator {
+  async handleEvent(event) {
+    const eventHandlers = new EventHandlers();
+    eventHandlers.onEvent(event);
+    
+    const commands = new Commands();
+    commands.handleCommand(event.command);
 
-## Architectural Integrity
+    const queries = new Queries();
+    queries.handleQuery(event.query);
+  }
+}
 
-When contributing, keep in mind the core goal: **preserving architectural coherence**. Mutations should be structurally safe and adhere to the project's DNA patterns.
+**Commands**
 
-## Licensing & Attribution
+class Commands {
+  async handleCommand(command) {
+    switch (command.type) {
+      case 'CREATE_CONTRIBUTION':
+        this.#createContribution(command);
+        break;
+      case 'UPDATE_CODE':
+        this.#updateCode(command);
+        break;
+      default:
+        console.log(`Unknown command type: ${command.type}`);
+    }
+  }
 
-All contributions must adhere to the MIT License. Furthermore, because DALEK_GROG utilizes architectural DNA siphoned from various world-class repositories, all new code must include the standard architectural credit header. See `LICENSE` for the full list of credited repositories.
+  #createContribution(command) {
+    console.log(`Received create contribution command: ${command.contribution.id}`);
+  }
 
-If you find a bug or have a feature request, please open an issue on GitHub.
+  #updateCode(command) {
+    console.log(`Received update code command: ${command.code.sha}`);
+  }
+}
+
+**Queries**
+
+class Queries {
+  async handleQuery(query) {
+    switch (query.type) {
+      case 'GET_CONTRIBUTIONS':
+        this.#getContributions(query);
+        break;
+      case 'GET_CODE':
+        this.#getCode(query);
+        break;
+      default:
+        console.log(`Unknown query type: ${query.type}`);
+    }
+  }
+
+  #getContributions(query) {
+    console.log(`Received get contributions query`);
+  }
+
+  #getCode(query) {
+    console.log(`Received get code query`);
+  }
+}
+
+**Contribution**
+
+class Contribution {
+  constructor(id, content) {
+    this.id = id;
+    this.content = content;
+  }
+
+  async save() {
+    console.log(`Saved contribution: ${this.id}`);
+  }
+}
+
+**Code**
+
+class Code {
+  constructor(sha, content) {
+    this.sha = sha;
+    this.content = content;
+  }
+
+  async update() {
+    console.log(`Updated code: ${this.sha}`);
+  }
+}
