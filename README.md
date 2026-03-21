@@ -1,3 +1,11 @@
+to some up trying to make a loop reduce llm by 90% by incorporating 39000 files from test-1 using as log chunks for Grog as well as Grog chunking from cached google look ups . 
+
+and enhance whole repo by simply adding at top of readme
+
+"Place holder for automatic reboot loading new enhanced state or what ever you want" 
+
+
+
 # Dalek-Grog: Self-Evolving Code System
 
 > **This repository IS the demo.** Look at `evolution_outputs/` to see what happened.
