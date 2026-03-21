@@ -3,6 +3,8 @@ import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
+import TurndownService from "turndown";
+import * as ftp from "basic-ftp";
 
 dotenv.config();
 
@@ -14,6 +16,8 @@ async function startServer() {
   const PORT = 3000;
 
   app.use(express.json());
+
+  const turndownService = new TurndownService();
 
   // API Routes
   app.get("/api/health", (req, res) => {
@@ -94,7 +98,7 @@ async function startServer() {
           "Authorization": `Bearer ${key}`,
         },
         body: JSON.stringify({
-          model: model || "grok-beta",
+          model: model || "grok-3",
           messages,
         }),
       });
@@ -138,6 +142,94 @@ async function startServer() {
       await fs.writeFile(absolutePath, content, "utf-8");
       console.log(`GROK_SELF_MUTATION: Successfully evolved ${filePath}`);
       res.json({ status: "success", message: `File ${filePath} evolved successfully.` });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // WEB SIPHON: Manual internet retrieval for GROK
+  app.post("/api/web/siphon", async (req, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: "URL REQUIRED" });
+
+    try {
+      let content = "";
+      
+      if (url.startsWith("ftp://")) {
+        // FTP SIPHON: Retrieval from legacy FTP archives
+        const client = new ftp.Client();
+        client.ftp.verbose = false;
+        try {
+          const parsedUrl = new URL(url);
+          await client.access({
+            host: parsedUrl.hostname,
+            user: parsedUrl.username || "anonymous",
+            password: parsedUrl.password || "anonymous",
+            secure: false
+          });
+          
+          // Fetch the file content as a string
+          const chunks: any[] = [];
+          await client.downloadTo(new (await import("stream")).Writable({
+            write(chunk, encoding, callback) {
+              chunks.push(chunk);
+              callback();
+            }
+          }), parsedUrl.pathname);
+          
+          content = Buffer.concat(chunks).toString("utf-8");
+        } finally {
+          client.close();
+        }
+      } else {
+        // HTTP(S) SIPHON
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+          }
+        });
+
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+        const html = await response.text();
+        content = turndownService.turndown(html);
+      }
+      
+      // Chunk it back as a code block for Grog
+      const formatted = `\`\`\`markdown\n# SIPHONED CONTENT: ${url}\n\n${content.slice(0, 15000)}\n\`\`\``;
+      
+      res.json({ content: formatted });
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // WAYBACK SIPHON: Retrieval from Wayback Machine
+  app.post("/api/web/wayback", async (req, res) => {
+    const { url } = req.body;
+    if (!url) return res.status(400).json({ error: "URL REQUIRED" });
+
+    try {
+      // 1. Check availability
+      const availRes = await fetch(`https://archive.org/wayback/available?url=${encodeURIComponent(url)}`);
+      const availData = await availRes.json();
+      
+      const snapshot = availData.archived_snapshots?.closest;
+      if (!snapshot || !snapshot.available) {
+        return res.status(404).json({ error: "NO SNAPSHOT AVAILABLE IN WAYBACK MACHINE" });
+      }
+
+      // 2. Fetch snapshot
+      const snapshotUrl = snapshot.url;
+      const response = await fetch(snapshotUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status} FETCHING SNAPSHOT`);
+
+      const html = await response.text();
+      const markdown = turndownService.turndown(html);
+      
+      const formatted = `\`\`\`markdown\n# WAYBACK SNAPSHOT: ${url}\n# TIMESTAMP: ${snapshot.timestamp}\n\n${markdown.slice(0, 15000)}\n\`\`\``;
+      
+      res.json({ content: formatted, snapshotUrl });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }

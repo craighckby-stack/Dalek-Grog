@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * DALEK_CAAN v3.1: Advanced Architectural Siphon Engine
+ * DALEK_GROG v3.1: Autonomous Evolution Engine
  * Copyright (c) 2026 craighckby-stack
  * 
  * This project incorporates architectural DNA siphoned from:
@@ -74,6 +74,9 @@ export default function App() {
   const grogBrainRef = useRef<GrogBrain | null>(null);
   const eventBusRef = useRef<EventBus>(new EventBus());
   const [grogThoughts, setGrogThoughts] = useState<any[]>([]);
+  const [grogEpiphanies, setGrogEpiphanies] = useState<{ type: string, insight: string, priority: number }[]>([]);
+  const [isThinking, setIsThinking] = useState(false);
+  const [isRebooting, setIsRebooting] = useState(false);
 
   useEffect(() => {
     const bus = eventBusRef.current;
@@ -84,10 +87,10 @@ export default function App() {
     return () => bus.unsubscribe('grog:thought', handler);
   }, []);
 
-  const [targetRepo, setTargetRepo] = useState("craighckby-stack/Test-1-");
+  const [targetRepo, setTargetRepo] = useState("craighckby-stack/Dalek-Grog");
   const [targetBranch, setTargetBranch] = useState("main");
   const [originalBranch, setOriginalBranch] = useState("main"); // Default to main
-  const [backupRepo, setBackupRepo] = useState("craighckby-stack/Test-1-");
+  const [backupRepo, setBackupRepo] = useState("craighckby-stack/Dalek-Grog");
   const logEndRef = useRef<HTMLDivElement>(null);
   const lastPushedLogIndex = useRef(0);
   const [lastValidation, setLastValidation] = useState<{ valid: boolean; reason?: string } | null>(null);
@@ -210,7 +213,7 @@ export default function App() {
   }, [logs]);
 
   useEffect(() => {
-    addLog(`DALEK_CAAN INITIALIZED. TARGET: ${targetRepo} (${originalBranch})`, "var(--color-dalek-purple)");
+    addLog(`DALEK_GROG INITIALIZED. TARGET: ${targetRepo} (${originalBranch})`, "var(--color-dalek-purple)");
     fetchRepoFiles().catch(e => {
       addLog(`INITIAL FILE DISCOVERY FAILED: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
     });
@@ -309,6 +312,9 @@ export default function App() {
       const evolvedCode = await grogBrainRef.current.proposeSelfMutation(targetFile, currentContent);
       
       // 3. Apply mutation
+      setIsRebooting(true);
+      await new Promise(res => setTimeout(res, 3000));
+
       const mutateResponse = await fetch('/api/grog/self-mutate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -318,14 +324,35 @@ export default function App() {
       const mutateData = await mutateResponse.json();
       if (mutateData.status === 'success') {
         addLog(`GROK_SELF_MUTATION_SUCCESS: ${targetFile}. REBOOTING SYSTEM...`, "var(--color-dalek-green)");
-        // The system will reboot automatically because the dev server restarts on file change
+        
+        // Wait for the animation to be visible, then reload
+        await new Promise(res => setTimeout(res, 2000));
+        window.location.reload();
       } else {
         throw new Error(mutateData.error || "Mutation failed");
       }
     } catch (error) {
       addLog(`GROK_SELF_MUTATION_FAILED: ${error instanceof Error ? error.message : 'Unknown'}`, "var(--color-dalek-red)");
+      setIsRebooting(false);
     } finally {
       setIsSelfMutating(false);
+    }
+  };
+
+  const runGrogThinking = async () => {
+    if (!grogBrainRef.current || isThinking) return;
+    
+    setIsThinking(true);
+    addLog("GROK_THOUGHT_PROCESS_INITIATED: ANALYZING ARCHITECTURAL VECTORS...", "var(--color-dalek-gold)");
+    
+    try {
+      const insights = await grogBrainRef.current.think();
+      setGrogEpiphanies(insights);
+      addLog(`GROK_THOUGHT_COMPLETE: ${insights.length} STRATEGIC INSIGHTS GENERATED.`, "var(--color-dalek-green)");
+    } catch (e) {
+      addLog("GROK_THOUGHT_FAILED: NEURAL INTERFERENCE DETECTED.", "var(--color-dalek-red)");
+    } finally {
+      setIsThinking(false);
     }
   };
 
@@ -933,7 +960,7 @@ OUTPUT ONLY JSON.`;
 
     try {
       const targets = await fetchRepoFiles();
-      const jsFiles = targets.filter(f => f.endsWith('.js'));
+      const sourceFiles = targets.filter(f => f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.bat'));
       const metaFiles = targets.filter(f => f.startsWith('meta_') && f.endsWith('.json'));
       
       let prunedCount = 0;
@@ -942,7 +969,10 @@ OUTPUT ONLY JSON.`;
         if (abortRef.current) break;
         
         const baseName = metaFile.replace('meta_', '').replace('.json', '');
-        const hasSource = jsFiles.some(js => js.replace('.js', '') === baseName);
+        const hasSource = sourceFiles.some(src => {
+          const srcBase = src.replace('.js', '').replace('.ts', '').replace('.bat', '');
+          return srcBase === baseName;
+        });
 
         if (!hasSource) {
           addLog(`PRUNING ORPHANED METADATA: ${metaFile}...`);
@@ -976,7 +1006,7 @@ OUTPUT ONLY JSON.`;
 
     try {
       const files = await fetchRepoFiles();
-      const analysisPrompt = `Analyze the following file list for a project named "Test-1-".
+      const analysisPrompt = `Analyze the following file list for a project named "Dalek-Grog".
 Identify files that appear redundant, duplicated, or unnecessary (e.g., multiple versions of the same file, temporary files, or files that don't fit the architecture).
 
 FILE LIST:
@@ -1079,7 +1109,7 @@ If no redundant files are found, return an empty array [].`;
       /^Here is the mutated code.*?\n/is,
       /^I have updated the file.*?\n/is,
       /^Based on the provided context.*?\n/is,
-      /^integrated the DALEK CAAN architecture.*?\n/is,
+      /^integrated the DALEK GROG architecture.*?\n/is,
       /^The following is the ES6 Javascript code:.*?\n/is,
       /^Here is the ES6 Javascript code:.*?\n/is,
       /^The code has been mutated.*?\n/is,
@@ -1114,7 +1144,7 @@ If no redundant files are found, return an empty array [].`;
       "Here is the mutated code",
       "I have updated the file",
       "Based on the provided context",
-      "integrated the DALEK CAAN architecture"
+      "integrated the DALEK GROG architecture"
     ];
 
     if (fillerKeywords.some(kw => mutated.includes(kw))) {
@@ -1566,7 +1596,7 @@ OUTPUT ONLY JSON.`;
       for (const file of sourceFiles) {
         addLog(`AUDITING LICENSE HEADER: ${file}...`, "var(--color-dalek-gold-dim)");
         const content = await fetchFileContent(file);
-        if (content && !content.includes("DALEK_CAAN v3.1: Advanced Architectural Siphon Engine")) {
+        if (content && !content.includes("DALEK_GROG v3.1: Autonomous Evolution Engine")) {
           // Strip existing license if it's the old short one
           let newContent = content;
           if (content.startsWith("/**\n * @license\n * SPDX-License-Identifier: Apache-2.0\n */")) {
@@ -1762,7 +1792,7 @@ OUTPUT ONLY JSON.`;
           if (!parallelMode) setRound(r);
           addLog(`ROUND ${r}/${rounds} [${file}]: Siphoning patterns...`);
 
-          const systemPrompt = PromptService.interpolate(prompts?.evolution_system || `You are Grog's Autonomous Evolution Engine. Your mission is to RECONSTRUCT Grog's Brain (Test-1-) by integrating high-level architectural patterns from {{vote}}.
+          const systemPrompt = PromptService.interpolate(prompts?.evolution_system || `You are Grog's Autonomous Evolution Engine. Your mission is to RECONSTRUCT Grog's Brain (Dalek-Grog) by integrating high-level architectural patterns from {{vote}}.
 MISSION OBJECTIVES:
 1. LEXICAL ALIGNMENT: Rename siphoned variables, classes, and functions to align with Grog's internal lexicon.
 2. LOGIC MERGING: Do not just replace code; merge the siphoned logic into the existing structure of {{file}}.
@@ -1817,6 +1847,16 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
                 const newEntry = { insight: structuredData.strategicDecision, priority: structuredData.priority || 1, file, cycle: processedCount };
                 return [...prev, newEntry].sort((a, b) => b.priority - a.priority).slice(0, 20);
               });
+
+              // Handle AI-generated Siphon commands
+              if (structuredData.strategicDecision.includes("SIPHON_WEB:") || structuredData.strategicDecision.includes("SIPHON_WAYBACK:")) {
+                const command = structuredData.strategicDecision.match(/(SIPHON_WEB:|SIPHON_WAYBACK:)\s*([^\s]+)/)?.[0];
+                if (command) {
+                  siphonWebContent(command).catch(e => {
+                    addLog(`WEB SIPHON TRIGGER FAILED: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
+                  });
+                }
+              }
             }
 
             let finalImprovedCode = cleanedCode;
@@ -1943,6 +1983,34 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
     } finally {
       setIsRunning(false);
       setStatus("READY");
+    }
+  };
+
+  const siphonWebContent = async (command: string) => {
+    const isWayback = command.startsWith("SIPHON_WAYBACK:");
+    const url = command.replace(isWayback ? "SIPHON_WAYBACK:" : "SIPHON_WEB:", "").trim();
+    
+    if (!url) return;
+
+    addLog(`INITIATING WEB SIPHON: ${isWayback ? 'WAYBACK' : 'LIVE'} -> ${url}`, "var(--color-dalek-gold)");
+    
+    try {
+      const endpoint = isWayback ? "/api/web/wayback" : "/api/web/siphon";
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url })
+      });
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      
+      const data = await response.json();
+      if (data.content) {
+        addLog(`WEB SIPHON SUCCESSFUL: ${data.content.length} chars retrieved.`, "var(--color-dalek-cyan)");
+        setDnaSignature(prev => `${prev}\n\n[WEB_DNA_SOURCE: ${url}]\n${data.content}`);
+      }
+    } catch (e) {
+      addLog(`WEB SIPHON FAILED [${url}]: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
     }
   };
 
@@ -2144,7 +2212,7 @@ ${combinedContent.slice(0, 15000)}`,
       }
 
       const signature = await callAIWithFallback(
-        `EXTRACT CORE ARCHITECTURAL PATTERNS AND RECONSTRUCTION BLUEPRINT FROM THIS REPOSITORY SAMPLE FOR GROG'S BRAIN (Test-1-):
+        `EXTRACT CORE ARCHITECTURAL PATTERNS AND RECONSTRUCTION BLUEPRINT FROM THIS REPOSITORY SAMPLE FOR GROG'S BRAIN (Dalek-Grog):
 1. DNA SIGNATURE: Identify the core architectural essence.
 2. RECONSTRUCTION BLUEPRINT:
    - LEXICAL ALIGNMENT: How should external names/variables be renamed to fit Grog's internal logic?
@@ -2171,7 +2239,7 @@ ${combinedContent.slice(0, 15000)}`,
   const manualUpdateReadme = async () => {
     addLog("MANUAL OVERRIDE: INITIATING README EVOLUTION...", "var(--color-dalek-gold)");
     
-    const readmeSystem = prompts?.readme_system || "You are a Technical Documentation Engineer. Your goal is to provide a professional, accurate, and comprehensive README.md for Grog's Brain (Test-1-). Ensure all technical components like 'Flow' and 'Plugin Architecture' are documented with clarity. Maintain a constructive and professional tone.";
+    const readmeSystem = prompts?.readme_system || "You are a Technical Documentation Engineer. Your goal is to provide a professional, accurate, and comprehensive README.md for Grog's Brain (Dalek-Grog). Ensure all technical components like 'Flow' and 'Plugin Architecture' are documented with clarity. Maintain a constructive and professional tone.";
     const readmeUser = PromptService.interpolate(prompts?.readme_user || `GENERATE TECHNICAL DOCUMENTATION (README.md) FOR GROG'S BRAIN:
 - FILES PROCESSED: {{count}}
 - LATEST FILE: {{file}}
@@ -2180,10 +2248,10 @@ ${combinedContent.slice(0, 15000)}`,
 - SATURATION STATUS: {{saturation}}
 
 The README must include:
-1. PROJECT OVERVIEW: Grog's Brain (Test-1-) is an autonomous system that evolves its own code by siphoning and integrating patterns from external repositories.
+1. PROJECT OVERVIEW: Grog's Brain (Dalek-Grog) is an autonomous system that evolves its own code by siphoning and integrating patterns from external repositories.
 2. RECONSTRUCTION PROCESS: Explain the technical mechanism of "Brain Reconstruction"—siphoning architectural DNA from origins (e.g., DeepMind, Google) and performing Lexical Alignment, Logic Merging, and Brain Binding to integrate external patterns into Grog's internal logic.
-3. AUTONOMOUS EVOLUTION LOOP: Describe how the system continuously iterates on the 'main' branch to evolve Grog's Brain (Test-1-) through recursive pattern siphoning and self-mutation.
-4. CHAINED CONTEXT & MEMORY: Explain the implementation of a shared state/memory that ensures consistency across the reconstructed files in Test-1-.
+3. AUTONOMOUS EVOLUTION LOOP: Describe how the system continuously iterates on the 'main' branch to evolve Grog's Brain (Dalek-Grog) through recursive pattern siphoning and self-mutation.
+4. CHAINED CONTEXT & MEMORY: Explain the implementation of a shared state/memory that ensures consistency across the reconstructed files in Dalek-Grog.
 5. CURRENT STATUS: A factual summary of Grog's brain development based on the provided counts and file names.
 
 OUTPUT ONLY MARKDOWN. DO NOT INCLUDE ANY STORYTELLING OR FICTIONAL ELEMENTS.`, {
@@ -2306,8 +2374,8 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
   };
 
   useEffect(() => {
-    if (prompts && targetRepo === "craighckby-stack/Test-1-" && !isRunning && status === 'INIT') {
-      addLog("AUTO-START PROTOCOL DETECTED for Grog's Brain (Test-1-). INITIATING...", "var(--color-dalek-gold)");
+    if (prompts && targetRepo === "craighckby-stack/Dalek-Grog" && !isRunning && status === 'INIT') {
+      addLog("AUTO-START PROTOCOL DETECTED for Grog's Brain (Dalek-Grog). INITIATING...", "var(--color-dalek-gold)");
       quickStart().catch(e => {
         addLog(`AUTO-START FAILED: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
       });
@@ -2322,7 +2390,10 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
           <h1 className="text-2xl font-bold uppercase tracking-widest">System Critical Failure</h1>
           <p className="max-w-md text-sm text-zinc-500">{error.message}</p>
           <button 
-            onClick={resetError}
+            onClick={() => {
+              resetError();
+              window.location.reload();
+            }}
             className="dalek-btn px-6 py-2 text-xs"
           >
             REBOOT SYSTEM
@@ -2332,13 +2403,34 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
     >
       <div className="p-2 sm:p-5 flex flex-col items-center gap-4 min-h-screen bg-black">
       {/* Header */}
+      {/* System Reboot Overlay */}
+      {isRebooting && (
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center space-y-6 animate-in fade-in duration-500">
+          <div className="relative">
+            <Brain size={80} className="text-dalek-purple animate-pulse" />
+            <div className="absolute inset-0 border-4 border-dalek-purple rounded-full animate-ping opacity-20" />
+          </div>
+          <div className="text-center space-y-2">
+            <h2 className="font-display text-2xl text-dalek-purple tracking-[0.5em] animate-bounce">SYSTEM REBOOT</h2>
+            <p className="text-[10px] text-zinc-500 font-mono tracking-widest uppercase">Instantiating New Architectural DNA...</p>
+            <div className="flex items-center justify-center gap-2">
+              <span className="w-1 h-1 bg-dalek-purple rounded-full animate-ping" />
+              <span className="text-[8px] text-dalek-purple/60 font-mono uppercase">Neural Pathways Reconfiguring...</span>
+            </div>
+          </div>
+          <div className="w-64 h-1 bg-zinc-900 rounded-full overflow-hidden">
+            <div className="h-full bg-dalek-purple animate-[shimmer_2s_infinite]" style={{ width: '100%' }} />
+          </div>
+        </div>
+      )}
+
       <header className="w-full max-w-[1750px] flex flex-col md:flex-row items-center justify-between border-b border-dalek-red-dim pb-3 gap-4">
         <div className="text-center md:text-left">
           <h1 className="font-display text-2xl font-black tracking-[0.4em] shadow-dalek-red drop-shadow-[0_0_10px_rgba(255,32,32,0.8)]">
-            DALEK CAAN v3.6
+            DALEK GROG v3.6
           </h1>
           <div className="text-[8px] text-dalek-purple tracking-[0.3em] mt-1 uppercase">
-            DALEK_CAAN SIPHON SYSTEM
+            DALEK_GROG SIPHON SYSTEM
           </div>
         </div>
         <div className="flex flex-wrap justify-center md:justify-end gap-1 md:gap-2 items-center">
@@ -2363,7 +2455,7 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
             </button>
           </div>
           <button 
-            onClick={() => { throw new Error("DALEK_CAAN: Manual Error Triggered for Sentry Verification."); }}
+            onClick={() => { throw new Error("DALEK_GROG: Manual Error Triggered for Sentry Verification."); }}
             className="p-1.5 text-zinc-600 hover:text-dalek-red transition-colors"
             title="Trigger Manual Error"
           >
@@ -2646,6 +2738,32 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
                     {isScanningEvolution ? 'SCANNING...' : 'FORCE REPOSITORY SCAN'}
                   </button>
                   <button 
+                    onClick={runGrogThinking}
+                    disabled={isThinking}
+                    className="w-full py-2 bg-dalek-purple/10 text-dalek-purple border border-dalek-purple/30 text-[9px] font-bold hover:bg-dalek-purple/20 transition-all disabled:opacity-50 mb-2 flex items-center justify-center gap-2"
+                  >
+                    {isThinking ? <RefreshCw size={10} className="animate-spin" /> : <Brain size={10} />}
+                    {isThinking ? 'THINKING...' : 'INITIATE STRATEGIC THOUGHT'}
+                  </button>
+
+                  {grogEpiphanies.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                      <span className="text-[8px] text-dalek-purple uppercase tracking-widest block">Strategic Epiphanies</span>
+                      <div className="space-y-2">
+                        {grogEpiphanies.map((e, i) => (
+                          <div key={i} className="p-2 bg-dalek-purple/5 border border-dalek-purple/20 rounded-sm">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-[7px] font-bold text-dalek-purple uppercase">{e.type}</span>
+                              <span className="text-[7px] text-zinc-600">PRIORITY: {e.priority}</span>
+                            </div>
+                            <p className="text-[9px] text-zinc-300 leading-tight">{e.insight}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <button 
                     onClick={runGrogTests}
                     disabled={isTesting}
                     className="w-full py-2 bg-dalek-gold/10 text-dalek-gold border border-dalek-gold/30 text-[9px] font-bold hover:bg-dalek-gold/20 transition-all disabled:opacity-50 mb-2"
@@ -2655,9 +2773,18 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
                   <button 
                     onClick={() => handleSelfMutation('src/evolutors/GrogBrain.ts')}
                     disabled={isSelfMutating}
-                    className="w-full py-2 bg-dalek-red/10 text-dalek-red border border-dalek-red/30 text-[9px] font-bold hover:bg-dalek-red/20 transition-all disabled:opacity-50"
+                    className="w-full py-2 bg-dalek-red/10 text-dalek-red border border-dalek-red/30 text-[9px] font-bold hover:bg-dalek-red/20 transition-all disabled:opacity-50 mb-2"
                   >
                     {isSelfMutating ? 'EVOLVING CORE...' : 'SELF-MUTATE (REBOOT SYSTEM)'}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setIsRebooting(true);
+                      setTimeout(() => window.location.reload(), 2000);
+                    }}
+                    className="w-full py-2 bg-zinc-900 text-zinc-500 border border-zinc-800 text-[9px] font-bold hover:bg-zinc-800 transition-all"
+                  >
+                    MANUAL SYSTEM REBOOT
                   </button>
                 </div>
               </div>

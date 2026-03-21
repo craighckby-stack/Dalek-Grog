@@ -1,6 +1,6 @@
 
 /**
- * DALEK_CAAN v3.6: Advanced Logging System
+ * DALEK_GROG v3.6: Advanced Logging System
  */
 
 export enum LogLevel {

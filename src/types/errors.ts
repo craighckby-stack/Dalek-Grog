@@ -1,6 +1,6 @@
 
 /**
- * DALEK_CAAN v3.6: Custom Error Architecture
+ * DALEK_GROG v3.6: Custom Error Architecture
  */
 
 export class APIError extends Error {

@@ -1,5 +1,5 @@
 /**
- * DALEK_CAAN DNA SAMPLE: HIGH-ORDER ARCHITECTURAL PATTERNS
+ * DALEK_GROG DNA SAMPLE: HIGH-ORDER ARCHITECTURAL PATTERNS
  * 
  * This file serves as a reference for the Siphon Engine to extract 
  * coding styles, logic structures, and architectural signatures.

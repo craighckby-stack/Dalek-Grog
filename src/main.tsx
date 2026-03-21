@@ -2,7 +2,7 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * DALEK_CAAN v3.1: Advanced Architectural Siphon Engine
+ * DALEK_GROG v3.1: Autonomous Evolution Engine
  * Copyright (c) 2026 craighckby-stack
  * 
  * This project incorporates architectural DNA siphoned from:
