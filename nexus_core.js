@@ -1,4 +1,4 @@
-const Lane = {
+const Lane = Object.freeze({
   NoLanes:             0b0000000000000000000000000000000,
   SyncLane:            0b0000000000000000000000000000001,
   InputContinuousLane: 0b0000000000000000000000000000010,
@@ -8,17 +8,17 @@ const Lane = {
   SelectiveLane:       0b0011000000000000000000000000000,
   IdleLane:            0b0100000000000000000000000000000,
   OffscreenLane:       0b1000000000000000000000000000000,
-};
+});
 
-const WorkPriority = {
+const WorkPriority = Object.freeze({
   ImmediatePriority: 1,
   UserBlockingPriority: 2,
   NormalPriority: 3,
   LowPriority: 4,
   IdlePriority: 5,
-};
+});
 
-const FiberFlags = {
+const FiberFlags = Object.freeze({
   NoFlags:         0b0000000000000000,
   Placement:       0b0000000000000010,
   Update:          0b0000000000000100,
@@ -34,9 +34,9 @@ const FiberFlags = {
   Concurrent:      0b0100000000000000,
   Static:          0b1000000000000000,
   LifecycleMask:   0b1111111111111110,
-};
+});
 
-const InternalStateFlags = {
+const InternalStateFlags = Object.freeze({
   None: 0,
   Initialized: 1 << 0,
   Running: 1 << 1,
@@ -44,18 +44,18 @@ const InternalStateFlags = {
   Disposed: 1 << 3,
   Errored: 1 << 4,
   Stale: 1 << 5,
-};
+});
 
-const DiagnosticCategory = {
+const DiagnosticCategory = Object.freeze({
   Warning: 0,
   Error: 1,
   Suggestion: 2,
   Message: 3,
   Telemetry: 4,
   Trace: 5,
-};
+});
 
-const DiagnosticMessages = {
+const DiagnosticMessages = Object.freeze({
   PHASE_ENTER: { code: 1000, category: DiagnosticCategory.Message, message: "Entering phase: {0}" },
   BOOTSTRAP_START: { code: 1001, category: DiagnosticCategory.Message, message: "Bootstrap sequence initiated." },
   CONFIG_VALIDATION_FAILED: { code: 2001, category: DiagnosticCategory.Error, message: "Configuration audit failed: Missing property '{0}'" },
@@ -72,18 +72,22 @@ const DiagnosticMessages = {
   FLOW_EXECUTION_COMPLETE: { code: 12001, category: DiagnosticCategory.Message, message: "Flow '{0}' execution finished in {1}ms" },
   SCHEMA_TYPE_MISMATCH: { code: 13001, category: DiagnosticCategory.Error, message: "Type mismatch for {0}: expected {1}, got {2}" },
   SCHEDULER_OVERLOAD: { code: 14001, category: DiagnosticCategory.Warning, message: "Scheduler overload detected. Backpressure applied to lane {0}." },
-};
+});
 
 class NexusCancellationToken {
   #isCancelled = false;
   #reason = null;
   #listeners = new Set();
+  #controller = new AbortController();
 
   cancel(reason = "Operation cancelled") {
     if (this.#isCancelled) return;
     this.#isCancelled = true;
     this.#reason = reason;
-    this.#listeners.forEach(fn => fn(reason));
+    this.#controller.abort(reason);
+    this.#listeners.forEach(fn => {
+      try { fn(reason); } catch (e) {}
+    });
     this.#listeners.clear();
   }
 
@@ -106,6 +110,7 @@ class NexusCancellationToken {
 
   get isCancelled() { return this.#isCancelled; }
   get reason() { return this.#reason; }
+  get signal() { return this.#controller.signal; }
 
   static link(parentToken) {
     const child = new NexusCancellationToken();
@@ -117,15 +122,19 @@ class NexusCancellationToken {
 class NexusSchema {
   static validate(schema, data) {
     if (!schema) return data;
-    if (!data || typeof data !== 'object') throw new Error("Validation target must be an object.");
+    if (!data || typeof data !== 'object') {
+      throw new Error("Validation target must be an object.");
+    }
 
     const errors = [];
     for (const [key, requirement] of Object.entries(schema)) {
       const value = data[key];
+      
       if (requirement.required && (value === undefined || value === null)) {
         errors.push(`Missing required property: ${key}`);
         continue;
       }
+
       if (value !== undefined && value !== null) {
         if (requirement.type && typeof value !== requirement.type) {
           errors.push(`Type mismatch for ${key}: expected ${requirement.type}, got ${typeof value}`);
@@ -133,9 +142,19 @@ class NexusSchema {
         if (requirement.validator && !requirement.validator(value)) {
           errors.push(`Custom validation failed for property: ${key}`);
         }
+        if (requirement.schema && typeof value === 'object') {
+          try {
+            this.validate(requirement.schema, value);
+          } catch (e) {
+            errors.push(`Nested validation failed for ${key}: ${e.message}`);
+          }
+        }
       }
     }
-    if (errors.length > 0) throw new Error(`Schema Validation Failed: ${errors.join(', ')}`);
+
+    if (errors.length > 0) {
+      throw new Error(`Schema Validation Failed: ${errors.join(', ')}`);
+    }
     return data;
   }
 }
@@ -153,7 +172,13 @@ class DiagnosticEmitter {
 
   startSpan(name, metadata = {}) {
     const spanId = `span_${Math.random().toString(36).substring(2, 11)}`;
-    const span = { name, startTime: performance.now(), metadata, id: spanId };
+    const span = { 
+      name, 
+      startTime: performance.now(), 
+      metadata, 
+      id: spanId, 
+      parentSpanId: Array.from(this.#activeSpans.keys()).pop() || null
+    };
     this.#activeSpans.set(spanId, span);
     this.emit(DiagnosticMessages.TRACE_SPAN_START, name);
     return spanId;
@@ -170,10 +195,13 @@ class DiagnosticEmitter {
 
   emit(diagnostic, ...args) {
     let message = diagnostic.message;
-    args.forEach((arg, i) => message = message.replace(new RegExp(`\\{${i}\\}`, 'g'), String(arg)));
+    args.forEach((arg, i) => {
+      message = message.replace(new RegExp(`\\{${i}\\}`, 'g'), String(arg));
+    });
 
     const payload = {
-      timestamp: performance.now(),
+      timestamp: Date.now(),
+      perfMark: performance.now(),
       code: diagnostic.code,
       category: diagnostic.category,
       message,
@@ -186,11 +214,7 @@ class DiagnosticEmitter {
     if (this.#history.length > this.#maxHistory) this.#history.shift();
     
     this.#listeners.forEach(fn => {
-      try { 
-        fn(payload); 
-      } catch (e) {
-        console.error("Diagnostic Listener Failure:", e);
-      }
+      try { fn(payload); } catch (e) {}
     });
   }
 
@@ -200,47 +224,7 @@ class DiagnosticEmitter {
 
 class LaneManager {
   static getHighestPriorityLane(lanes) { return lanes & -lanes; }
-  static includesLane(set, subset) { return (set & subset) !== Lane.NoLanes; }
+  static includesLane(set, subset) { return (set & subset) === subset; }
   static mergeLanes(a, b) { return a | b; }
   static removeLanes(set, subset) { return set & ~subset; }
-  static isSyncLane(lanes) { return (lanes & Lane.SyncLane) !== Lane.NoLanes; }
-
-  static *iterateLanes(lanes) {
-    let remaining = lanes;
-    while (remaining !== Lane.NoLanes) {
-      const next = this.getHighestPriorityLane(remaining);
-      yield next;
-      remaining &= ~next;
-    }
-  }
-}
-
-class NexusPoolManager {
-  #pools = new Map();
-  #diagnostics;
-
-  constructor(diagnostics) {
-    this.#diagnostics = diagnostics;
-  }
-
-  acquire(key, factory) {
-    let pool = this.#pools.get(key);
-    if (!pool) {
-      pool = [];
-      this.#pools.set(key, pool);
-    }
-
-    if (pool.length === 0) {
-      this.#diagnostics.emit(DiagnosticMessages.POOL_EXHAUSTED, key);
-      return factory();
-    }
-    return pool.pop();
-  }
-
-  release(key, instance) {
-    const pool = this.#pools.get(key);
-    if (pool) {
-      pool.push(instance);
-    }
-  }
 }
