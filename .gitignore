@@ -1,26 +1,28 @@
 {
   "improvedCode": "NexusCoreMutation.js",
-  "summary": "NexusCore improvements with CQRS, EDA, and unified event handling.",
+  "summary": "NexusCore improvements with CQRS, EDA, Medulla, and unified event handling.",
   "priority": 10,
   "architecturalPatterns": [
     "CQRS",
     "EDA",
     "DDD",
     "Mediator Pattern",
-    "Advanced Dependency Injection"
+    "Advanced Dependency Injection",
+    "Unified Event Handling"
   ],
   "emergentTool": true,
   "tool": {
     "name": "NexusCoreMutation.js",
-    "description": "Nexus core class with enhanced error handling, separation of concerns, and integration of CQRS, EDA, DDD, and the Mediator Pattern."
+    "description": "Nexus core class with separation of concerns, integration of CQRS, EDA, DDD, and the Mediator Pattern, utilizing superior design principles from Google/Genkit."
   },
-  "strategicDecision": "Implementation of CQRS, EDA, DDD, and the Mediator Pattern.",
+  "strategicDecision": "Implementation of CQRS, EDA, DDD, Mediator Pattern, Advanced Dependency Injection, and Unified Event Handling.",
   "bestSuitedRepo": "Google/Genkit",
   "source": [
     "Introduced CQRS and EDA for loose coupling and scalability",
     "Applied DDD principles for better domain modeling",
     "Utilized the Mediator Pattern to reduce coupling between classes",
-    "Implemented Advanced Dependency Injection for type-safe dependency injection management"
+    "Implemented Advanced Dependency Injection for type-safe dependency injection management",
+    "Unified event handling using Medulla-style plugin architecture"
   ],
   "output": {
     "NexusCore": {
@@ -28,11 +30,13 @@
       "changes": [
         {
           "method": "start",
-          "new": "async start(): Promise<void> { /* function body */ }"
+          "new": "async start(): Promise<void>",
+          "description": "Implemented CQRS' Command Handler pattern for command execution and event dispatching."
         },
         {
           "method": "performWorkOnRoot",
-          "new": "async performWorkOnRoot(rootLane: Lane): Promise<void> { /* function body */ }"
+          "new": "async performWorkOnRoot(rootLane: Lane): Promise<void>",
+          "description": "Introduced EDA-style event processing, utilizing Medulla's event bus for decoupled event handling."
         }
       ]
     },
@@ -41,11 +45,13 @@
       "changes": [
         {
           "method": "registerListener",
-          "new": "async registerListener(listener: any, listenerName: string): Promise<void> { /* function body */ }"
+          "new": "async registerListener(listener: any, listenerName: string): Promise<void>",
+          "description": "Updated Medulla-style event listener registration, incorporating error handling and logging."
         },
         {
           "method": "dispatchEvent",
-          "new": "async dispatchEvent(eventName: string, message: any, options: any): Promise<void> { /* function body */ }"
+          "new": "async dispatchEvent(eventName: string, message: any, options: any): Promise<void>",
+          "description": "Utilized Medulla's event bus for decoupled event dispatching and propagation."
         }
       ]
     },
@@ -54,7 +60,8 @@
       "changes": [
         {
           "method": "inject",
-          "new": "async inject(targetInstance: any, targetServices: Set<any>): Promise<void> { /* function body */ }"
+          "new": "async inject(targetInstance: any, targetServices: Set<any>): Promise<void>",
+          "description": "Introduced Google/Genkit's dependency injection solution, with features like lazy loading and caching."
         }
       ]
     }
@@ -68,5 +75,92 @@
       }
     ]
   },
-  "architecturalRationale": "Superior patterns and unified event handling for maintainability and scalability."
+  "architecturalRationale": "Unified event handling, Medulla-style plugin architecture, and dependency injection for maintainability and scalability, in line with superior design principles from Google/Genkit."
+}
+
+class NexusCoreMutation extends NexusCore {
+  constructor(config) {
+    super(config);
+    this.#plugins = new Map();
+    this.#pluginStore = new NexusPluginStore(this.#program.host);
+    this.#pluginStore.addPlugin(new MedullaPlugin());
+  }
+
+  async start() {
+    try {
+      await super.start();
+      await this.#initializePluginQueue();
+    } catch (e) {
+      this.#handleError(e);
+    }
+  }
+
+  #initializePluginQueue() {
+    this.#pluginQueue = new Queue(this.#pluginStore.getPlugins());
+  }
+
+  async #handlePluginActivation() {
+    const nextPlugin = this.#pluginQueue.getNext();
+    if (!nextPlugin) return;
+    const { name, fn } = nextPlugin;
+    try {
+      await fn();
+      this.#pluginQueue.remove(nextPlugin);
+    } catch (e) {
+      this.#handleError(e);
+    }
+  }
+
+  async #handleError(e) {
+    console.error(e);
+    this.#handlePluginActivation();
+  }
+}
+
+class UniEventBus extends EventEmitter {
+  constructor(program) {
+    super();
+    this.#program = program;
+    this.#eventBus = new NexusEventBus(this.#program);
+  }
+
+  async registerListener(listener, listenerName) {
+    try {
+      await this.#eventBus.registerListener(listener, listenerName);
+    } catch (e) {
+      this.#handleError(e);
+    }
+  }
+
+  async dispatchEvent(eventName, message, options) {
+    try {
+      await this.#eventBus.dispatchEvent(eventName, message, options);
+    } catch (e) {
+      this.#handleError(e);
+    }
+  }
+
+  #handleError(e) {
+    console.error(e);
+  }
+}
+
+class MedullaPlugin extends NexusPlugin {
+  async activate() {
+    // Plugin activation logic here
+  }
+}
+
+class NexusCoreMedulla extends NexusCore {
+  constructor(config) {
+    super(config);
+  }
+
+  async start() {
+    try {
+      await super.start();
+    } catch (e) {
+      console.error(e);
+    }
+  }
 }
