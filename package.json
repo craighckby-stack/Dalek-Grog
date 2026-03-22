@@ -1,25 +1,26 @@
 {
-  "name": "dalek-grog",
-  "version": "1.0.0",
-  "description": "Self-Evolving Code System - See evolution_outputs/ for demo",
+  "name": "dalek-caan",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "tsc --noEmit",
-    "bootstrap": "tsx grog/bootstrap/boot.ts",
-    "postinstall": "npm run bootstrap || echo 'Bootstrap skipped - run manually with npm run bootstrap'"
+    "clean": "rm -rf dist",
+    "lint": "tsc --noEmit"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
     "@sentry/react": "^10.43.0",
+    "@tailwindcss/vite": "^4.1.14",
+    "@vitejs/plugin-react": "^5.0.4",
     "basic-ftp": "^5.2.0",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
     "firebase": "^12.10.0",
     "lucide-react": "^0.546.0",
+    "mammoth": "^1.12.0",
     "motion": "^12.23.24",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -33,15 +34,7 @@
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
-    "typescript": "~5.8.2"
-  },
-  "keywords": [
-    "agi",
-    "evolution",
-    "code-evolution",
-    "dna-siphon",
-    "self-improving"
-  ],
-  "author": "craighckby-stack",
-  "license": "MIT"
+    "typescript": "~5.8.2",
+    "vite": "^6.2.0"
+  }
 }

@@ -65,6 +65,12 @@ export class APIGate {
     this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
+  /** Update gate configuration at runtime */
+  updateConfig(newConfig: Partial<APIGateConfig>): void {
+    this.config = { ...this.config, ...newConfig };
+    this.config.log(`CONFIG UPDATED: maxConcurrency=${this.config.maxConcurrency}`, 'info');
+  }
+
   /**
    * Main gate method. Wrap any engine call with this.
    * Returns cached result if available, queues if at capacity,

@@ -23,7 +23,15 @@ import { StrategyEvolution, EvolutionaryStrategy } from './evolutors/evolutionSe
 import { SteganographyService } from './siphons/steganographyService';
 import { GrogBrain } from './evolutors/GrogBrain';
 import { EventBus, NexusTask, NexusTaskHeap, NexusPatch, NexusArchitecturalLinter, NexusDiagnosticReporter, NexusCompilerHost } from './core/nexus_core';
+import { GithubService } from './services/githubService';
+import { WebSiphonService } from './services/webSiphonService';
 import { NEXUS_CORE_TEMPLATE } from './templates/nexus_core_template';
+import * as mammoth from 'mammoth';
+
+import { DeathRegistryPanel } from './components/DeathRegistryPanel';
+import { ManualControlPanel } from './components/ManualControlPanel';
+import { GrogDashboard } from './components/GrogDashboard';
+import { SystemControlPanel } from './components/SystemControlPanel';
 
 export default function App() {
   const [isRunning, setIsRunning] = useState(false);
@@ -69,14 +77,44 @@ export default function App() {
   const [isEnhancingManual, setIsEnhancingManual] = useState(false);
   const [parallelMode, setParallelMode] = useState(false);
   const [parallelThreads, setParallelThreads] = useState(3);
+  const [maxRounds, setMaxRounds] = useState(10);
 
   const [isPruning, setIsPruning] = useState(false);
+  const [deathRecords, setDeathRecords] = useState<any[]>([]);
+  const [isAnalyzingDeaths, setIsAnalyzingDeaths] = useState(false);
+  const [deathAnalysis, setDeathAnalysis] = useState<string | null>(null);
   const grogBrainRef = useRef<GrogBrain | null>(null);
   const eventBusRef = useRef<EventBus>(new EventBus());
+  const githubServiceRef = useRef<GithubService | null>(null);
+  const webSiphonServiceRef = useRef<WebSiphonService | null>(null);
   const [grogThoughts, setGrogThoughts] = useState<any[]>([]);
   const [grogEpiphanies, setGrogEpiphanies] = useState<{ type: string, insight: string, priority: number }[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [isRebooting, setIsRebooting] = useState(false);
+
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      if (file.name.endsWith('.docx')) {
+        reader.onload = async (e) => {
+          try {
+            const arrayBuffer = e.target?.result as ArrayBuffer;
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            resolve(result.value);
+          } catch (err) {
+            reject(new Error(`Failed to parse .docx file: ${err instanceof Error ? err.message : 'Unknown error'}`));
+          }
+        };
+        reader.onerror = () => reject(new Error('FileReader error occurred.'));
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.onload = (e) => resolve(e.target?.result as string);
+        reader.onerror = () => reject(new Error('FileReader error occurred.'));
+        reader.readAsText(file);
+      }
+    });
+  };
 
   useEffect(() => {
     const bus = eventBusRef.current;
@@ -91,6 +129,72 @@ export default function App() {
   const [targetBranch, setTargetBranch] = useState("main");
   const [originalBranch, setOriginalBranch] = useState("main"); // Default to main
   const [backupRepo, setBackupRepo] = useState("craighckby-stack/Dalek-Grog");
+
+  const fetchDeathRecords = async () => {
+    try {
+      const content = await fetchFileContent('grog/lessons/DEATH_REGISTRY.json');
+      if (content) {
+        const records = robustParseJSON(content);
+        setDeathRecords(records);
+      }
+    } catch (e) {
+      // Silent fail if not exists
+    }
+  };
+
+  const analyzeDeathRecords = async () => {
+    if (deathRecords.length === 0) return "";
+    setIsAnalyzingDeaths(true);
+    addLog("INITIATING CRITICAL FAILURE ANALYSIS...", "var(--color-dalek-gold)");
+    
+    try {
+      const prompt = `Analyze these system "death" records (critical failures) for the Dalek-Grog project.
+      Identify recurring patterns, root causes, and suggest architectural adaptations to prevent these in the future.
+      
+      DEATH RECORDS:
+      ${JSON.stringify(deathRecords, null, 2)}
+      
+      Output a concise technical analysis and a set of "Evolutionary Directives".`;
+      
+      const analysis = await callAIWithFallback(prompt, "You are a System Reliability Engineer and Failure Analyst.");
+      setDeathAnalysis(analysis);
+      addLog("FAILURE ANALYSIS COMPLETE. EVOLUTIONARY DIRECTIVES GENERATED.", "var(--color-dalek-cyan)");
+      return analysis;
+    } catch (e) {
+      addLog("FAILURE ANALYSIS FAILED.", "var(--color-dalek-red)");
+      return "Analysis failed.";
+    } finally {
+      setIsAnalyzingDeaths(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'grog') {
+      fetchDeathRecords();
+    }
+  }, [activeTab]);
+
+  const addLog = (message: string, color: string = "var(--color-dalek-cyan-dim)") => {
+    const newLog: LogEntry = {
+      id: Math.random().toString(36).substring(7),
+      timestamp: new Date().toISOString(),
+      message,
+      color
+    };
+    setLogs(prev => [...prev, newLog].slice(-200));
+  };
+
+  useEffect(() => {
+    githubServiceRef.current = new GithubService(targetRepo, targetBranch, addLog);
+    webSiphonServiceRef.current = new WebSiphonService(addLog);
+  }, []);
+
+  useEffect(() => {
+    if (githubServiceRef.current) {
+      githubServiceRef.current.updateConfig(targetRepo, targetBranch);
+    }
+  }, [targetRepo, targetBranch]);
+
   const logEndRef = useRef<HTMLDivElement>(null);
   const lastPushedLogIndex = useRef(0);
   const [lastValidation, setLastValidation] = useState<{ valid: boolean; reason?: string } | null>(null);
@@ -120,8 +224,19 @@ export default function App() {
       try {
         const patterns = await fetchFileContent('grog/lessons/PATTERNS.json');
         const strategies = await fetchFileContent('grog/rules/STRATEGIES.json');
-        if (patterns) setGrogPatterns(JSON.parse(patterns));
-        if (strategies) setGrogStrategies(JSON.parse(strategies));
+        const savedDna = await fetchFileContent('grog/dna/DNA_SIGNATURE.md');
+        const savedSaturation = await fetchFileContent('grog/dna/SATURATION_GUIDELINES.md');
+        
+        if (patterns) setGrogPatterns(robustParseJSON(patterns));
+        if (strategies) setGrogStrategies(robustParseJSON(strategies));
+        if (savedDna) {
+          setDnaSignature(savedDna);
+          addLog("DNA SIGNATURE RECOVERED FROM REPOSITORY.", "var(--color-dalek-green)");
+        }
+        if (savedSaturation) {
+          setSaturationGuidelines(savedSaturation);
+          addLog("SATURATION GUIDELINES RECOVERED FROM REPOSITORY.", "var(--color-dalek-green)");
+        }
       } catch (e) {
         // Fallback to local if not in repo yet
         try {
@@ -255,7 +370,7 @@ export default function App() {
           
           // Trigger the evolution process
           setTimeout(() => {
-            handleManualEnhance(targetContent, topTarget.path, true).catch(() => {});
+            runManualEnhancement(targetContent, topTarget.path, true).catch(() => {});
           }, 1000);
         }
       } else {
@@ -362,44 +477,44 @@ export default function App() {
 
     addLog(`UPLOADING SOURCE DNA: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)...`, "var(--color-dalek-gold)");
     
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        setSourceDNA(text);
+    try {
+      const text = await readFileAsText(file);
+      setSourceDNA(text);
+      
+      setIsAnalyzingDNA(true);
+      addLog("ANALYZING DNA STRUCTURE: EXTRACTING CORE PATTERNS...", "var(--color-dalek-gold)");
+      
+      // Since 25MB is too large for a single prompt, we'll take a significant sample 
+      // or summarize if we had a chunking logic. For now, let's take the first 500KB 
+      // as a representative sample for pattern extraction.
+      const sample = text.slice(0, 500000); 
+      
+      const signature = await callAIWithFallback(
+        `Analyze this source code/data and extract its most advanced architectural patterns, 
+        coding styles, and logic structures into a dense "DNA Signature" (max 2000 words). 
+        This signature will be used to siphon logic into other files.
         
-        setIsAnalyzingDNA(true);
-        addLog("ANALYZING DNA STRUCTURE: EXTRACTING CORE PATTERNS...", "var(--color-dalek-gold)");
+        SOURCE SAMPLE:
+        ${sample}`,
+        "You are a Master Architect specializing in pattern extraction and code siphoning."
+      );
+      
+      if (signature) {
+        setDnaSignature(signature);
+        addLog("DNA SIGNATURE EXTRACTED AND INSTANTIATED.", "var(--color-dalek-green)");
         
-        // Since 25MB is too large for a single prompt, we'll take a significant sample 
-        // or summarize if we had a chunking logic. For now, let's take the first 500KB 
-        // as a representative sample for pattern extraction.
-        const sample = text.slice(0, 500000); 
-        
-        const signature = await callAIWithFallback(
-          `Analyze this source code/data and extract its most advanced architectural patterns, 
-          coding styles, and logic structures into a dense "DNA Signature" (max 2000 words). 
-          This signature will be used to siphon logic into other files.
-          
-          SOURCE SAMPLE:
-          ${sample}`,
-          "You are a Master Architect specializing in pattern extraction and code siphoning."
-        );
-        
-        if (signature) {
-          setDnaSignature(signature);
-          addLog("DNA SIGNATURE EXTRACTED AND INSTANTIATED.", "var(--color-dalek-green)");
-        } else {
-          addLog("DNA ANALYSIS FAILED: USING RAW SAMPLE AS FALLBACK.", "var(--color-dalek-red)");
-          setDnaSignature(sample.slice(0, 5000)); // Fallback to a small slice
-        }
-      } catch (error) {
-        addLog(`DNA ANALYSIS FAILED: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
-      } finally {
-        setIsAnalyzingDNA(false);
+        // Persist DNA to repository for future recovery
+        await pushToRepo('grog/dna/DNA_SIGNATURE.md', signature, "NEXUS_CORE: DNA Signature Extraction and Persistence");
+        addLog("DNA SIGNATURE PERSISTED TO REPOSITORY VAULT.", "var(--color-dalek-cyan)");
+      } else {
+        addLog("DNA ANALYSIS FAILED: USING RAW SAMPLE AS FALLBACK.", "var(--color-dalek-red)");
+        setDnaSignature(sample.slice(0, 5000)); // Fallback to a small slice
       }
-    };
-    reader.readAsText(file);
+    } catch (error) {
+      addLog(`DNA ANALYSIS FAILED: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
+    } finally {
+      setIsAnalyzingDNA(false);
+    }
   };
 
   const handleSaturationUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -409,19 +524,19 @@ export default function App() {
     setIsAnalyzingSaturation(true);
     addLog(`UPLOADING SATURATION GUIDELINES: ${file.name}...`, "var(--color-dalek-gold)");
     
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      try {
-        const text = event.target?.result as string;
-        setSaturationGuidelines(text);
-        addLog("SATURATION GUIDELINES INSTANTIATED.", "var(--color-dalek-green)");
-      } catch (error) {
-        addLog("FAILED TO INSTANTIATE SATURATION GUIDELINES.", "var(--color-dalek-red)");
-      } finally {
-        setIsAnalyzingSaturation(false);
-      }
-    };
-    reader.readAsText(file);
+    try {
+      const text = await readFileAsText(file);
+      setSaturationGuidelines(text);
+      addLog("SATURATION GUIDELINES INSTANTIATED.", "var(--color-dalek-green)");
+      
+      // Persist to repository
+      await pushToRepo('grog/dna/SATURATION_GUIDELINES.md', text, "NEXUS_CORE: Saturation Guidelines Persistence");
+      addLog("SATURATION GUIDELINES PERSISTED TO REPOSITORY VAULT.", "var(--color-dalek-cyan)");
+    } catch (error) {
+      addLog(`FAILED TO INSTANTIATE SATURATION GUIDELINES: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
+    } finally {
+      setIsAnalyzingSaturation(false);
+    }
   };
 
   const handleManualUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -430,18 +545,18 @@ export default function App() {
     
     addLog(`MANUAL UPLOAD: ${file.name} (${(file.size / 1024).toFixed(2)}KB)...`, "var(--color-dalek-gold)");
     
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target?.result as string;
+    try {
+      const text = await readFileAsText(file);
       setManualFileContent(text);
       setManualFileName(file.name);
       setCurrentCode(text);
       addLog("FILE LOADED. READY FOR ENHANCEMENT.", "var(--color-dalek-green)");
-    };
-    reader.readAsText(file);
+    } catch (error) {
+      addLog(`MANUAL UPLOAD FAILED: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
+    }
   };
 
-  const handleManualEnhance = async (contentOverride?: string, fileNameOverride?: string, autoPush: boolean = false) => {
+  const runManualEnhancement = async (contentOverride?: string, fileNameOverride?: string, autoPush: boolean = false) => {
     const targetContent = contentOverride || manualFileContent;
     const targetName = fileNameOverride || manualFileName;
 
@@ -488,7 +603,7 @@ export default function App() {
         try {
           const content = await fetchFileContent(suggestion.path);
           if (content) {
-            await handleManualEnhance(content, suggestion.path, true);
+            await runManualEnhancement(content, suggestion.path, true);
             addLog(`GROK_EVOLVED: ${suggestion.path} successfully mutated.`, "var(--color-dalek-green)");
           }
         } catch (err) {
@@ -552,127 +667,31 @@ export default function App() {
       setIsBuildingGraph(false);
     }
   };
-  const fetchRepoFiles = async (repoOverride?: string, retryCount: number = 0) => {
-    if (isFetchingFiles && retryCount === 0) return [];
-    const activeRepo = repoOverride || targetRepo;
-    if (!activeRepo) return [];
-    
+  const fetchRepoFiles = async (repo?: string, branch?: string) => {
+    if (!githubServiceRef.current) return [];
     setIsFetchingFiles(true);
+    const activeRepo = repo || targetRepo;
+    const activeBranch = branch || targetBranch;
+    addLog(`INITIATING PRE-FLIGHT DISCOVERY: SYNCING WITH ${activeRepo} (${activeBranch})...`, "var(--color-dalek-gold)");
+    
     try {
-      // Try to get the default branch first
-      const repoUrl = `https://api.github.com/repos/${activeRepo}`;
-      const repoRes = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: repoUrl })
-      });
+      const { files, usedBranch } = await githubServiceRef.current.fetchRepoFiles(activeRepo, activeBranch);
       
-      if (!repoRes.ok) {
-        const errorData = await safeFetchJson(repoRes);
-        if (errorData.error === "HTML_RESPONSE" && retryCount < 3) {
-          addLog("GITHUB PROXY RETURNED HTML. RETRYING DISCOVERY...", "var(--color-dalek-gold-dim)");
-          await new Promise(res => setTimeout(res, 2000 * (retryCount + 1)));
-          return fetchRepoFiles(repoOverride, retryCount + 1);
+      if (files.length !== repoFiles.length || activeRepo !== targetRepo) {
+        setRepoFiles(files);
+        addLog(`DISCOVERED: ${files.length} files in ${activeRepo} (${usedBranch}).`, "var(--color-dalek-cyan)");
+        if (activeRepo === targetRepo && usedBranch !== originalBranch) {
+          setOriginalBranch(usedBranch);
         }
-        addLog(`GITHUB ERROR: FAILED TO FETCH REPO INFO (${repoRes.status}). ${errorData.error || errorData.message || ''}`, "var(--color-dalek-red)");
-        setIsFetchingFiles(false);
-        return [];
+        buildDependencyGraph(files).catch(() => {});
       }
-
-      const repoData = await safeFetchJson(repoRes);
-      if (repoData.error) {
-        if (repoData.error === "HTML_RESPONSE" && retryCount < 3) {
-          addLog("GITHUB PROXY RETURNED HTML (MALFORMED). RETRYING...", "var(--color-dalek-gold-dim)");
-          await new Promise(res => setTimeout(res, 2000 * (retryCount + 1)));
-          return fetchRepoFiles(repoOverride, retryCount + 1);
-        }
-        addLog(`GITHUB ERROR: MALFORMED REPO DATA. ${repoData.message}`, "var(--color-dalek-red)");
-        setIsFetchingFiles(false);
-        return [];
-      }
-      
-      let initialBranch = originalBranch || repoData.default_branch || "master";
-
-      const branchesToTry = Array.from(new Set([initialBranch, "master", "main", "develop"]));
-      let data = null;
-      let usedBranch = "";
-
-      for (const b of branchesToTry) {
-        const res = await fetch("/api/github/proxy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            url: `https://api.github.com/repos/${activeRepo}/git/trees/${b}?recursive=1`
-          })
-        });
-        
-        if (res.ok) {
-          const jsonData = await safeFetchJson(res);
-          if (!jsonData.error) {
-            data = jsonData;
-            usedBranch = b;
-            break;
-          }
-        }
-      }
-      
-      if (!data) {
-        addLog(`GITHUB ERROR: COULD NOT DISCOVER FILES IN ANY BRANCH (MASTER/MAIN/DEVELOP). CHECK REPOSITORY PERMISSIONS.`, "var(--color-dalek-red)");
-        setIsFetchingFiles(false);
-        return [];
-      }
-
-      if (data) {
-        const files = data.tree
-          .filter((item: any) => item.type === 'blob')
-          .map((item: any) => item.path);
-        
-        if (files.length !== repoFiles.length || activeRepo !== targetRepo) {
-          setRepoFiles(files);
-          addLog(`DISCOVERED: ${files.length} files in ${activeRepo} (${usedBranch}).`, "var(--color-dalek-cyan)");
-          if (activeRepo === targetRepo && usedBranch !== originalBranch) {
-            setOriginalBranch(usedBranch);
-          }
-          buildDependencyGraph(files).catch(() => {});
-        }
-        return files;
-      } else {
-        // Fallback to contents API
-        const fallbackRes = await fetch("/api/github/proxy", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            url: `https://api.github.com/repos/${activeRepo}/contents?ref=${initialBranch}`
-          })
-        });
-        if (fallbackRes.ok) {
-          const data = await fallbackRes.json();
-          const files = data
-            .filter((item: any) => item.type === 'file')
-            .map((item: any) => item.name);
-          
-          if (files.length !== repoFiles.length) {
-            setRepoFiles(files);
-            addLog(`DISCOVERED: ${files.length} files in ${activeRepo} (Flat).`, "var(--color-dalek-cyan)");
-          }
-          return files;
-        }
-      }
+      return files;
     } catch (e) {
-      addLog("REPO DISCOVERY FAILED", "var(--color-dalek-red)");
+      addLog(`REPO DISCOVERY FAILED: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
+      return [];
     } finally {
       setIsFetchingFiles(false);
     }
-    return [];
-  };
-
-  const addLog = (message: string, color?: string) => {
-    const entry: LogEntry = {
-      timestamp: new Date().toLocaleTimeString(),
-      message,
-      color
-    };
-    setLogs(prev => [...prev, entry]);
   };
 
   const learnFromMistake = async (error: string, context: string, retryAction?: () => Promise<any>) => {
@@ -759,7 +778,7 @@ OUTPUT ONLY JSON.`;
       const response = result.text;
       if (!response) throw new Error("EMPTY AI RESPONSE");
       
-      const correctionData = JSON.parse(response);
+      const correctionData = robustParseJSON(response);
       
       const fullCorrection = `ANALYSIS: ${correctionData.analysis}\nDIRECTION: ${correctionData.direction}\nADAPTATION: ${correctionData.adaptation}`;
       
@@ -953,39 +972,42 @@ OUTPUT ONLY JSON.`;
     }
   };
 
-  const pruneMetadata = async () => {
-    setIsRunning(true);
+  const pruneOrphanedMetadata = async () => {
+    setIsPruning(true);
     setStatus("PRUNING");
-    addLog("INITIATING ORPHANED METADATA PRUNE...", "var(--color-dalek-gold)");
-
+    addLog("INITIATING METADATA PRUNING: IDENTIFYING ORPHANED LOGS...", "var(--color-dalek-gold)");
+    
     try {
-      const targets = await fetchRepoFiles();
-      const sourceFiles = targets.filter(f => f.endsWith('.js') || f.endsWith('.ts') || f.endsWith('.bat'));
-      const metaFiles = targets.filter(f => f.startsWith('meta_') && f.endsWith('.json'));
+      const allFiles = await fetchRepoFiles();
+      const metaFiles = allFiles.filter(f => f.startsWith('meta_') && f.endsWith('.json'));
+      const sourceFiles = allFiles.filter(f => !f.startsWith('meta_'));
       
-      let prunedCount = 0;
-
-      for (const metaFile of metaFiles) {
-        if (abortRef.current) break;
-        
-        const baseName = metaFile.replace('meta_', '').replace('.json', '');
-        const hasSource = sourceFiles.some(src => {
-          const srcBase = src.replace('.js', '').replace('.ts', '').replace('.bat', '');
+      const orphaned = metaFiles.filter(meta => {
+        const baseName = meta.replace('meta_', '').replace('.json', '');
+        return !sourceFiles.some(src => {
+          const srcBase = src.replace(/\.(js|ts|tsx|jsx|bat)$/, '');
           return srcBase === baseName;
         });
+      });
 
-        if (!hasSource) {
-          addLog(`PRUNING ORPHANED METADATA: ${metaFile}...`);
-          await deleteFromRepo(metaFile, "NEXUS_CORE: Pruning orphaned metadata");
-          prunedCount++;
-        }
+      if (orphaned.length === 0) {
+        addLog("PRUNING COMPLETE: NO ORPHANED METADATA DETECTED.", "var(--color-dalek-green)");
+        return;
       }
 
-      addLog(`PRUNE COMPLETE: ${prunedCount} ORPHANED METADATA FILES REMOVED.`, "var(--color-dalek-green)");
-    } catch (e) {
-      addLog("PRUNE FAILED: SYSTEM ERROR", "var(--color-dalek-red)");
+      addLog(`DETECTED ${orphaned.length} ORPHANED META FILES. COMMENCING DELETION...`, "var(--color-dalek-gold)");
+      
+      for (const meta of orphaned) {
+        if (abortRef.current) break;
+        await deleteFromRepo(meta, `NEXUS_CORE: Pruning orphaned metadata for ${meta}`);
+      }
+      
+      addLog(`PRUNING COMPLETE: ${orphaned.length} FILES REMOVED.`, "var(--color-dalek-green)");
+      fetchRepoFiles().catch(() => {});
+    } catch (error) {
+      addLog(`PRUNING FAILURE: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
     } finally {
-      setIsRunning(false);
+      setIsPruning(false);
       setStatus("READY");
     }
   };
@@ -1001,7 +1023,7 @@ OUTPUT ONLY JSON.`;
 
   const pruneRedundantFiles = async () => {
     setIsRunning(true);
-    setStatus("DEBUGGING");
+    setStatus("PRUNING");
     addLog("INITIATING REDUNDANCY ANALYSIS: SCANNING FOR DUPLICATES...", "var(--color-dalek-gold)");
 
     try {
@@ -1050,32 +1072,16 @@ If no redundant files are found, return an empty array [].`;
       
       // Convert data URL to base64 for GitHub
       const base64 = encodedDataUrl.split(',')[1];
-      await pushToRepo('dna_vault.png', base64, "NEXUS_CORE: Steganographic DNA Vault Update", targetRepo, 'main', true);
+      await pushToRepo('dna_vault.png', base64, "NEXUS_CORE: Steganographic DNA Vault Update", targetRepo, 'main');
       addLog("DNA VAULT SECURED: STEGANOGRAPHIC PAYLOAD DEPLOYED TO REPOSITORY.", "var(--color-dalek-green)");
     } catch (e) {
       addLog(`STEGANOGRAPHY FAILURE: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
     }
   };
 
-  const fetchFileContent = async (path: string) => {
-    const url = `https://api.github.com/repos/${targetRepo}/contents/${path}${originalBranch ? `?ref=${originalBranch}` : ''}`;
-    addLog(`FETCHING CONTENT: ${path} (Branch: ${originalBranch || 'default'})`, "var(--color-dalek-gold-dim)");
-    try {
-      const res = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-      if (res.ok) {
-        const data = await safeFetchJson(res);
-        if (data.content) {
-          return safeAtob(data.content);
-        }
-      }
-    } catch (e) {
-      addLog(`FAILED TO FETCH CONTENT FOR ${path}`, "var(--color-dalek-red)");
-    }
-    return "";
+  const fetchFileContent = async (path: string, repo: string = targetRepo, branch: string = targetBranch) => {
+    if (!githubServiceRef.current) return null;
+    return await githubServiceRef.current.fetchFileContent(path, repo, branch);
   };
 
   const sanitizeMutation = (text: string): string => {
@@ -1129,7 +1135,7 @@ If no redundant files are found, return an empty array [].`;
     // 1. JSON Validation
     if (ext === 'json') {
       try {
-        JSON.parse(mutated);
+        robustParseJSON(mutated);
       } catch (e) {
         const res = { valid: false, reason: "INVALID_JSON_STRUCTURE" };
         setLastValidation(res);
@@ -1175,230 +1181,44 @@ If no redundant files are found, return an empty array [].`;
   };
 
   const createBranch = async (repo: string, newBranch: string, baseBranch: string = "main") => {
-    addLog(`INITIATING BRANCH CREATION: ${newBranch} from ${baseBranch}...`, "var(--color-dalek-gold)");
-    try {
-      // 1. Get base branch SHA
-      const baseRes = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: `https://api.github.com/repos/${repo}/git/refs/heads/${baseBranch}` })
-      });
-      
-      if (!baseRes.ok) {
-        addLog(`BRANCH ERROR: COULD NOT FIND BASE BRANCH ${baseBranch}`, "var(--color-dalek-red)");
-        return false;
-      }
-      
-      const baseData = await safeFetchJson(baseRes);
-      if (baseData.error) {
-        addLog(`BRANCH ERROR: MALFORMED BASE BRANCH DATA. ${baseData.message}`, "var(--color-dalek-red)");
-        return false;
-      }
-      const sha = baseData.object.sha;
-      
-      // 2. Create new branch
-      const createRes = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: `https://api.github.com/repos/${repo}/git/refs`,
-          method: "POST",
-          body: {
-            ref: `refs/heads/${newBranch}`,
-            sha
-          }
-        })
-      });
-      
-      if (createRes.ok) {
-        addLog(`BRANCH CREATED: ${newBranch} is now active.`, "var(--color-dalek-green)");
-        return true;
-      } else {
-        const err = await safeFetchJson(createRes);
-        if (err.message === "Reference already exists") {
-          addLog(`BRANCH EXISTS: ${newBranch} already exists, proceeding.`, "var(--color-dalek-cyan)");
-          return true;
-        }
-        addLog(`BRANCH ERROR: ${err.message || err.error}`, "var(--color-dalek-red)");
-        return false;
-      }
-    } catch (e) {
-      addLog(`BRANCH ERROR: ${e instanceof Error ? e.message : 'Unknown error'}`, "var(--color-dalek-red)");
-      return false;
-    }
+    if (!githubServiceRef.current) return false;
+    return await githubServiceRef.current.createBranch(repo, newBranch, baseBranch);
   };
 
   const getBaseName = (path: string) => {
     return path.replace(/\.(js|ts|tsx|jsx|json|css|md|html|py|go|rs|yml|yaml)$/i, '');
   };
 
-  const pushToRepo = async (path: string, content: string, message: string, repoOverride?: string, branchOverride?: string, isBase64: boolean = false, retryCount: number = 0) => {
-    const MAX_RETRIES = 3;
-    setSyncStatus("BUSY");
-    const activeRepo = repoOverride || targetRepo;
-    const activeBranch = branchOverride || targetBranch || originalBranch || "master";
-    const url = `https://api.github.com/repos/${activeRepo}/contents/${path}${activeBranch ? `?ref=${activeBranch}` : ''}`;
-    let sha = null;
-    
-    try {
-      const check = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-      if (check.ok) {
-        const data = await safeFetchJson(check);
-        if (!data.error) {
-          sha = data.sha;
-        }
-      }
-    } catch (e) {
-      // File might not exist, that's fine
-    }
-
-    try {
-      const res = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: `https://api.github.com/repos/${activeRepo}/contents/${path}`,
-          method: "PUT",
-          body: {
-            message,
-            content: isBase64 ? content : safeBtoa(content),
-            sha,
-            branch: activeBranch
-          }
-        })
-      });
-
-      if (res.ok) {
-        addLog(`INSTANTIATED: ${path} successfully synced to ${activeRepo} (${activeBranch}).`, "var(--color-dalek-green)");
-        setSyncStatus("OK");
-      } else {
-        const errorData = await safeFetchJson(res);
-        const errorMsg = errorData.message || errorData.error || 'Push rejected.';
-        
-        if (retryCount < MAX_RETRIES && (errorMsg.includes("conflict") || errorMsg.includes("sha") || errorMsg.includes("is not at") || errorData.error === "HTML_RESPONSE")) {
-          const isHtml = errorData.error === "HTML_RESPONSE";
-          addLog(`${isHtml ? 'GITHUB PROXY RETURNED HTML' : 'RESOLVING PUSH CONFLICT'} FOR ${path} (Attempt ${retryCount + 1}/${MAX_RETRIES}). RETRYING...`, "var(--color-dalek-gold)");
-          await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
-          return pushToRepo(path, content, message, repoOverride, branchOverride, isBase64, retryCount + 1);
-        }
-
-        addLog(`GITHUB ERROR (${activeRepo}): ${errorMsg}`, "var(--color-dalek-red)");
-        setSyncStatus("ERR");
-
-        if (!repoOverride && retryCount === 0) {
-          await learnFromMistake(errorMsg, `GITHUB PUSH FAILED: ${path} to ${activeRepo}`, async () => {
-            addLog("RETRYING PUSH VIA MISTAKE LEDGER...", "var(--color-dalek-gold)");
-            return pushToRepo(path, content, message, repoOverride, branchOverride, isBase64, 1);
-          });
-        }
-      }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Network error';
-      
-      if (retryCount < MAX_RETRIES) {
-        addLog(`NETWORK ERROR DURING PUSH: ${path}. RETRYING...`, "var(--color-dalek-gold)");
-        await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
-        return pushToRepo(path, content, message, repoOverride, branchOverride, isBase64, retryCount + 1);
-      }
-
-      addLog(`GITHUB ERROR (${activeRepo}): ${errorMsg}`, "var(--color-dalek-red)");
+  const pushToRepo = async (path: string, content: string, message: string, repoOverride?: string, branchOverride?: string) => {
+    if (!githubServiceRef.current) return false;
+    const repo = repoOverride || targetRepo;
+    const branch = branchOverride || targetBranch || originalBranch || "master";
+    const success = await githubServiceRef.current.pushToRepo(path, content, message, repo, branch);
+    if (success) {
+      addLog(`INSTANTIATED: ${path} successfully synced to ${repo} (${branch}).`, "var(--color-dalek-green)");
+      setSyncStatus("OK");
+    } else {
       setSyncStatus("ERR");
-      
-      if (!repoOverride && retryCount === 0) {
-        await learnFromMistake(errorMsg, `GITHUB PUSH EXCEPTION: ${path}`, async () => {
-          return pushToRepo(path, content, message, repoOverride, branchOverride, isBase64, 1);
-        });
-      }
     }
+    return success;
   };
 
   const deleteFromRepo = async (path: string, message: string) => {
+    if (!githubServiceRef.current) return false;
     setSyncStatus("BUSY");
-    const url = `https://api.github.com/repos/${targetRepo}/contents/${path}${originalBranch ? `?ref=${originalBranch}` : ''}`;
-    let sha = null;
-    
-    try {
-      const check = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-      if (check.ok) {
-        const data = await check.json();
-        sha = data.sha;
-      } else {
-        return; // File doesn't exist
-      }
-    } catch (e) {
-      return;
+    const success = await githubServiceRef.current.deleteFromRepo(path, message, targetRepo, targetBranch || originalBranch || "master");
+    if (success) {
+      addLog(`PURGED: ${path} removed.`, "var(--color-dalek-red-dim)");
+      setSyncStatus("OK");
+    } else {
+      setSyncStatus("ERR");
     }
-
-    if (!sha) return;
-
-    try {
-      const res = await fetch("/api/github/proxy", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: `https://api.github.com/repos/${targetRepo}/contents/${path}`,
-          method: "DELETE",
-          body: {
-            message,
-            sha,
-            branch: originalBranch || "master"
-          }
-        })
-      });
-
-      if (res.ok) {
-        addLog(`PURGED: ${path} removed from ${originalBranch || 'master'}.`, "var(--color-dalek-red-dim)");
-        setSyncStatus("OK");
-      }
-    } catch (error) {
-      console.error(error);
-    }
+    return success;
   };
 
+  // Consolidated pruning logic
   const pruneRedundantMetadata = async () => {
-    setIsPruning(true);
-    addLog("INITIATING METADATA PRUNING: IDENTIFYING ORPHANED LOGS...", "var(--color-dalek-gold)");
-    
-    try {
-      const allFiles = await fetchRepoFiles();
-      const metaFiles = allFiles.filter(f => f.startsWith('meta_') && f.endsWith('.json'));
-      const sourceFiles = allFiles.filter(f => !f.startsWith('meta_'));
-      
-      const orphaned = metaFiles.filter(meta => {
-        const baseName = meta.replace('meta_', '').replace('.json', '');
-        // Check if any source file matches this base name (ignoring extension)
-        return !sourceFiles.some(src => {
-          const srcBase = src.replace(/\.(js|ts|tsx|jsx)$/, '');
-          return srcBase === baseName;
-        });
-      });
-
-      if (orphaned.length === 0) {
-        addLog("PRUNING COMPLETE: NO ORPHANED METADATA DETECTED.", "var(--color-dalek-green)");
-        return;
-      }
-
-      addLog(`DETECTED ${orphaned.length} ORPHANED META FILES. COMMENCING DELETION...`, "var(--color-dalek-gold)");
-      
-      for (const meta of orphaned) {
-        await deleteFromRepo(meta, `NEXUS_CORE: Pruning orphaned metadata for ${meta}`);
-      }
-      
-      addLog(`PRUNING COMPLETE: ${orphaned.length} FILES REMOVED.`, "var(--color-dalek-green)");
-      fetchRepoFiles().catch(() => {});
-    } catch (error) {
-      addLog(`PRUNING FAILURE: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
-    } finally {
-      setIsPruning(false);
-    }
+    await pruneOrphanedMetadata();
   };
 
   const selfOptimizePrompts = async () => {
@@ -1427,7 +1247,7 @@ Output ONLY a JSON object matching the SystemPrompts interface.`;
       const result = await callAIWithFallback(optimizationPrompt, "You are a Meta-Optimization Engine.");
       if (result) {
         const cleaned = result.replace(/```json|```/g, "").trim();
-        const newPrompts = JSON.parse(cleaned) as SystemPrompts;
+        const newPrompts = robustParseJSON(cleaned) as SystemPrompts;
         await PromptService.updatePrompts(newPrompts);
         setPrompts(newPrompts);
         addLog("PROMPT SELF-EVOLUTION SUCCESSFUL. SYSTEM RE-INSTANTIATED.", "var(--color-dalek-cyan)");
@@ -1729,7 +1549,7 @@ OUTPUT ONLY JSON.`;
           if (voteResponse) {
             let cleaned = voteResponse.replace(/```[a-z]*\n|```/gi, "").trim();
             try {
-              const parsed = JSON.parse(cleaned);
+              const parsed = robustParseJSON(cleaned);
               if (parsed.vote) cleaned = String(parsed.vote);
               else if (parsed.repository) cleaned = String(parsed.repository);
               else if (parsed.name) cleaned = String(parsed.name);
@@ -1785,7 +1605,9 @@ OUTPUT ONLY JSON.`;
         const targetFormat = fileTypeMap[ext] || 'Source Code';
         const typeInstructions = typeInstructionsMap[ext] || 'Focus on architectural elegance, modularity, and extreme scalability.';
 
-        const rounds = 10;
+        const rounds = maxRounds;
+        let currentContext = initialContext || "";
+
         for (let r = 1; r <= rounds; r++) {
           if (abortRef.current) break;
           
@@ -1812,7 +1634,7 @@ DEPENDENCY MAP: {{dependencyMap}}
 
 TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind the incoming logic.`, {
             file, round: r, totalRounds: rounds, vote,
-            context: initialContext ? (initialContext.length > 5000 ? `...${initialContext.slice(-5000)}` : initialContext) : 'NONE',
+            context: currentContext ? (currentContext.length > 5000 ? `...${currentContext.slice(-5000)}` : currentContext) : 'NONE',
             dna: dnaSignature || 'NONE',
             saturation: saturationGuidelines || 'NONE',
             dependencyMap: JSON.stringify(dependencyMap[file] || 'No direct dependencies mapped.'),
@@ -1824,10 +1646,35 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
           if (result) {
             let structuredData: any = robustParseJSON(result);
             if (!structuredData) {
-               structuredData = { improvedCode: result.replace(/```[a-z]*\n|```/gi, "").trim(), summary: "Fallback recovery", emergentTool: false, tool: null, strategicDecision: "JSON Parse Failure", priority: 1 };
+               // If robustParseJSON failed, try to extract code block manually
+               const codeBlockMatch = result.match(/```(?:[a-z]*)\n?([\s\S]*?)\n?```/);
+               const extractedCode = codeBlockMatch ? codeBlockMatch[1].trim() : result.trim();
+               structuredData = { 
+                 improvedCode: extractedCode, 
+                 summary: "JSON_PARSE_FAILURE_RECOVERY", 
+                 emergentTool: false, 
+                 tool: null, 
+                 strategicDecision: "RECOVERY_MODE", 
+                 priority: 1 
+               };
             }
 
             const cleanedCode = structuredData.improvedCode || "";
+            const summary = structuredData.summary || "No summary provided.";
+            
+            // Update context for next round or next file
+            currentContext += `\n[Round ${r} Summary]: ${summary}`;
+            if (currentContext.length > 10000) currentContext = currentContext.slice(-10000);
+            
+            // Saturation Check
+            const currentSaturation = grogBrainRef.current?.calculateSaturation(cleanedCode) || 0;
+            if (currentSaturation >= 100) {
+              addLog(`ROUND ${r}/${rounds} [${file}]: 100% DNA SATURATION ACHIEVED. TERMINATING MUTATION FOR THIS NODE.`, "var(--color-dalek-green)");
+              code = cleanedCode;
+              if (!parallelMode) setCurrentCode(code);
+              break;
+            }
+
             if (!parallelMode) {
               setLastSummary(structuredData.summary || "");
               setLastStrategicDecision(structuredData.strategicDecision || "");
@@ -1908,9 +1755,10 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
           }
         }
         processedCount++;
-        return code;
+        return { code, context: currentContext };
       } catch (error) {
         addLog(`FILE PROCESSING FAILURE [${file}]: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
+        return { code: "", context: initialContext || "" };
       }
     };
 
@@ -1932,7 +1780,13 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
           strategyIndex++;
           setCurrentStrategy(strategy);
 
-          const promise = processSingleFile(file, chainedContext)
+          const promise = processSingleFile(file, localChainedContext)
+            .then(res => {
+              if (res && res.context) {
+                localChainedContext += `\n[File Context ${file}]: ${res.context}`;
+                if (localChainedContext.length > 15000) localChainedContext = localChainedContext.slice(-15000);
+              }
+            })
             .catch(e => addLog(`THREAD FAILURE [${file}]: ${e.message}`, "var(--color-dalek-red)"))
             .finally(() => {
               activePromises.splice(activePromises.indexOf(promise), 1);
@@ -1957,10 +1811,10 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
     } else {
       for (const file of filesToProcess) {
         if (abortRef.current) break;
-        const result = await processSingleFile(file, localChainedContext);
-        if (result) {
-          localChainedContext = result;
-          setChainedContext(result);
+        const res = await processSingleFile(file, localChainedContext);
+        if (res && res.context) {
+          localChainedContext = res.context;
+          setChainedContext(res.context);
         }
       }
     }
@@ -1987,6 +1841,7 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
   };
 
   const siphonWebContent = async (command: string) => {
+    if (!webSiphonServiceRef.current) return;
     const isWayback = command.startsWith("SIPHON_WAYBACK:");
     const url = command.replace(isWayback ? "SIPHON_WAYBACK:" : "SIPHON_WEB:", "").trim();
     
@@ -1995,32 +1850,23 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
     addLog(`INITIATING WEB SIPHON: ${isWayback ? 'WAYBACK' : 'LIVE'} -> ${url}`, "var(--color-dalek-gold)");
     
     try {
-      const endpoint = isWayback ? "/api/web/wayback" : "/api/web/siphon";
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url })
-      });
-
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      
-      const data = await response.json();
-      if (data.content) {
-        addLog(`WEB SIPHON SUCCESSFUL: ${data.content.length} chars retrieved.`, "var(--color-dalek-cyan)");
-        setDnaSignature(prev => `${prev}\n\n[WEB_DNA_SOURCE: ${url}]\n${data.content}`);
+      const dna = await webSiphonServiceRef.current.siphonWebContent(url, isWayback);
+      if (dna) {
+        addLog(`WEB SIPHON SUCCESSFUL: ${dna.length} chars retrieved.`, "var(--color-dalek-cyan)");
+        setDnaSignature(prev => `${prev}\n\n[WEB_DNA_SOURCE: ${url}]\n${dna}`);
       }
     } catch (e) {
       addLog(`WEB SIPHON FAILED [${url}]: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
     }
   };
 
-  const siphonExternalDNA = async (repoName?: string) => {
+  const siphonExternalDNA = async (repoName?: string, skipLoading: boolean = false) => {
     const repoToSiphon = repoName || externalDnaRepo;
     if (!repoToSiphon.trim()) {
       addLog("SIPHON ERROR: NO REPOSITORY SPECIFIED.", "var(--color-dalek-red)");
       return null;
     }
-    setIsAnalyzingDNA(true);
+    if (!skipLoading) setIsAnalyzingDNA(true);
     addLog(`INITIATING EXTERNAL DNA SIPHON FROM ${repoToSiphon} INTO GROG'S BRAIN...`, "var(--color-dalek-gold)");
     
     try {
@@ -2158,9 +2004,18 @@ ${combinedContent.slice(0, 15000)}`,
       );
       
       if (signature) {
-        setDnaSignature(signature);
-        setSiphonedRepos(prev => Array.from(new Set([...prev, sanitizedRepo])));
-        addLog(`EXTERNAL DNA FROM ${sanitizedRepo} (${usedBranch}) INSTANTIATED. READY TO SIPHON INTO ${targetRepo}.`, "var(--color-dalek-green)");
+        if (!skipLoading) {
+          const newDna = dnaSignature ? `${dnaSignature}\n\n[EXTERNAL DNA: ${sanitizedRepo}]\n${signature}` : signature;
+          setDnaSignature(newDna);
+          setSiphonedRepos(prev => Array.from(new Set([...prev, sanitizedRepo])));
+          addLog(`EXTERNAL DNA FROM ${sanitizedRepo} (${usedBranch}) INSTANTIATED. READY TO SIPHON INTO ${targetRepo}.`, "var(--color-dalek-green)");
+          
+          // Persist to repository
+          await pushToRepo('grog/dna/DNA_SIGNATURE.md', newDna, `NEXUS_CORE: Siphoned DNA from ${sanitizedRepo}`);
+        } else {
+          // Just mark as siphoned for sub-routine calls
+          setSiphonedRepos(prev => Array.from(new Set([...prev, sanitizedRepo])));
+        }
         return signature;
       }
       return null;
@@ -2168,7 +2023,7 @@ ${combinedContent.slice(0, 15000)}`,
       addLog(`EXTERNAL DNA SIPHON FAILED: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
       return null;
     } finally {
-      setIsAnalyzingDNA(false);
+      if (!skipLoading) setIsAnalyzingDNA(false);
     }
   };
 
@@ -2177,6 +2032,14 @@ ${combinedContent.slice(0, 15000)}`,
     addLog("SIPHONING DNA FROM REPOSITORY...", "var(--color-dalek-gold)");
     
     try {
+      // First, try to siphon from the specific Test-1 repo if not already siphoned
+      let externalDna = "";
+      if (!siphonedRepos.includes("craighckby-stack/Test-1")) {
+        addLog("SIPHONING CORE DNA FROM craighckby-stack/Test-1 (main)...", "var(--color-dalek-gold)");
+        const test1Dna = await siphonExternalDNA("craighckby-stack/Test-1/main", true);
+        if (test1Dna) externalDna = test1Dna;
+      }
+
       // Read first 10 files to extract patterns (to avoid token limits)
       const sampleFiles = files.filter(f => !f.startsWith('meta_') && (
         f.endsWith('.js') || 
@@ -2187,7 +2050,7 @@ ${combinedContent.slice(0, 15000)}`,
         f.endsWith('.py')
       )).slice(0, 10);
       
-      addLog(`SAMPLING ${sampleFiles.length} FILES FOR DNA EXTRACTION.`, "var(--color-dalek-gold-dim)");
+      addLog(`SAMPLING ${sampleFiles.length} FILES FOR DNA EXTRACTION FROM ${targetRepo}.`, "var(--color-dalek-gold-dim)");
       let combinedContent = "";
       
       for (const file of sampleFiles) {
@@ -2226,11 +2089,18 @@ ${combinedContent.slice(0, 15000)}`,
       );
       
       if (signature) {
-        setDnaSignature(signature);
+        const finalDna = externalDna ? `[EXTERNAL DNA: craighckby-stack/Test-1]\n${externalDna}\n\n[LOCAL DNA: ${targetRepo}]\n${signature}` : signature;
+        setDnaSignature(finalDna);
         addLog("REPOSITORY DNA INSTANTIATED.", "var(--color-dalek-green)");
+        
+        // Persist DNA to repository
+        await pushToRepo('grog/dna/DNA_SIGNATURE.md', finalDna, "NEXUS_CORE: DNA Signature Persistence");
+        return finalDna;
       }
+      return externalDna || null;
     } catch (e) {
       addLog("REPOSITORY DNA SIPHON FAILED", "var(--color-dalek-red)");
+      return null;
     } finally {
       setIsAnalyzingDNA(false);
     }
@@ -2495,121 +2365,39 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
         {/* Left Column: Controls and Logs */}
         <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
           {activeTab === 'manual' ? (
-            <div className="panel-container space-y-4 p-4">
+            <div className="panel-container p-4 space-y-4">
               <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
                 <h2 className="text-[12px] font-bold text-dalek-gold flex items-center gap-2 uppercase tracking-widest">
-                  <Sparkles size={14} /> Manual Enhancement Mode
+                  <Shield size={14} /> Unified Manual Control
                 </h2>
-                <span className="text-[8px] text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded">v1.0</span>
               </div>
-
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-tighter text-zinc-500 flex items-center gap-1">
-                    <FileCode size={10} /> SOURCE FILE
-                  </label>
-                  <div className="relative">
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      id="manual-file-upload"
-                      onChange={handleManualUpload}
-                      disabled={isEnhancingManual}
-                    />
-                    <label 
-                      htmlFor="manual-file-upload"
-                      className={`dalek-input block text-center cursor-pointer transition-all py-4 border-dashed border-2 ${manualFileContent ? 'border-dalek-green/50 text-dalek-green' : 'border-zinc-800 text-zinc-500 hover:border-dalek-gold'}`}
-                    >
-                      {manualFileContent ? 'FILE LOADED ✓ (CLICK TO REPLACE)' : 'DRAG & DROP OR CLICK TO UPLOAD SOURCE'}
-                    </label>
-                  </div>
-                </div>
-
-                {manualFileContent && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className="bg-black/40 border border-zinc-900 p-3 rounded-sm space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] text-zinc-500 uppercase tracking-widest">File Statistics</span>
-                        <span className="text-[9px] text-dalek-cyan">{manualFileContent.length} characters</span>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="text-[8px] text-zinc-600">Lines: {manualFileContent.split('\n').length}</div>
-                        <div className="text-[8px] text-zinc-600">Words: {manualFileContent.split(/\s+/).length}</div>
-                      </div>
-                      
-                      <div className="pt-2 border-t border-zinc-900/50 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[8px] text-zinc-500 uppercase tracking-tighter">Siphoned DNA</span>
-                          <span className={`text-[8px] font-bold ${dnaSignature ? 'text-dalek-cyan' : 'text-zinc-700'}`}>
-                            {dnaSignature ? 'ACTIVE' : 'NONE'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[8px] text-zinc-500 uppercase tracking-tighter">Saturation Guidelines</span>
-                          <span className={`text-[8px] font-bold ${saturationGuidelines ? 'text-dalek-gold' : 'text-zinc-700'}`}>
-                            {saturationGuidelines ? 'LOADED' : 'NONE'}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-[8px] text-zinc-500 uppercase tracking-tighter">Strategic Ledger</span>
-                          <span className={`text-[8px] font-bold ${strategicLedger.length > 0 ? 'text-dalek-red' : 'text-zinc-700'}`}>
-                            {strategicLedger.length} INSIGHTS
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <button 
-                      onClick={handleManualEnhance}
-                      disabled={isEnhancingManual}
-                      className={`w-full dalek-btn py-4 text-[12px] font-bold flex items-center justify-center gap-3 transition-all ${isEnhancingManual ? 'bg-dalek-gold/20 text-dalek-gold animate-pulse' : 'bg-dalek-gold/10 text-dalek-gold border-dalek-gold hover:bg-dalek-gold/20'}`}
-                    >
-                      {isEnhancingManual ? (
-                        <>
-                          <RefreshCw size={18} className="animate-spin" />
-                          EVOLVING CODE...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles size={18} />
-                          INITIATE ENHANCEMENT
-                        </>
-                      )}
-                    </button>
-                  </div>
-                )}
-
-                {manualEnhancedCode && (
-                  <div className="space-y-2 pt-4 border-t border-zinc-900 animate-in fade-in slide-in-from-bottom-2 duration-500">
-                    <div className="flex items-center justify-between">
-                      <label className="text-[10px] uppercase tracking-tighter text-dalek-green flex items-center gap-1">
-                        <Zap size={10} /> ENHANCED OUTPUT
-                      </label>
-                      <button 
-                        onClick={() => {
-                          navigator.clipboard.writeText(manualEnhancedCode);
-                          addLog("ENHANCED CODE COPIED TO CLIPBOARD.", "var(--color-dalek-green)");
-                        }}
-                        className="text-[8px] text-zinc-500 hover:text-dalek-cyan flex items-center gap-1"
-                      >
-                        <Copy size={10} /> COPY CODE
-                      </button>
-                    </div>
-                    <div className="bg-dalek-green/5 border border-dalek-green/20 p-3 rounded-sm">
-                      <p className="text-[10px] text-zinc-400 leading-relaxed italic">
-                        "The architecture has been siphoned and reconstructed. Performance vectors optimized. Logic redundancy purged."
-                      </p>
-                    </div>
-                    <button 
-                      onClick={() => pushToRepo(manualFileName, manualEnhancedCode, `NEXUS_CORE: Manual Evolution of ${manualFileName}`)}
-                      className="w-full py-2 bg-dalek-green/10 text-dalek-green border border-dalek-green/30 text-[9px] font-bold hover:bg-dalek-green/20 transition-all mt-2"
-                    >
-                      COMMIT CHANGES TO REPOSITORY
-                    </button>
-                  </div>
-                )}
-              </div>
-
+              <ManualControlPanel 
+                externalDnaRepo={externalDnaRepo}
+                setExternalDnaRepo={setExternalDnaRepo}
+                isRunning={isRunning}
+                isAnalyzingDNA={isAnalyzingDNA}
+                siphonExternalDNA={siphonExternalDNA}
+                handleDNAUpload={handleDNAUpload}
+                setSiphonedRepos={setSiphonedRepos}
+                pruneRedundantMetadata={pruneRedundantMetadata}
+                isPruning={isPruning}
+                mistakes={mistakes}
+                setMistakes={setMistakes}
+                showMistakeLedger={showMistakeLedger}
+                setShowMistakeLedger={setShowMistakeLedger}
+                siphonedRepos={siphonedRepos}
+                handleManualUpload={handleManualUpload}
+                runManualEnhancement={runManualEnhancement}
+                manualFileName={manualFileName}
+                manualFileContent={manualFileContent}
+                manualEnhancedCode={manualEnhancedCode}
+                isEnhancingManual={isEnhancingManual}
+                pushToRepo={pushToRepo}
+                addLog={addLog}
+                dnaSignature={dnaSignature}
+                saturationGuidelines={saturationGuidelines}
+                strategicLedger={strategicLedger}
+              />
               <div className="mt-auto pt-4">
                 <div className="h-[200px] overflow-y-auto text-[10px] bg-[#010000] p-3 border border-zinc-950 text-zinc-600 font-mono scrollbar-thin scrollbar-thumb-dalek-red-dim break-words">
                   {logs.map((log, i) => (
@@ -2623,814 +2411,102 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
               </div>
             </div>
           ) : activeTab === 'grog' ? (
-            <div className="panel-container space-y-4 p-4">
-              <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
-                <h2 className="text-[12px] font-bold text-dalek-purple flex items-center gap-2 uppercase tracking-widest">
-                  <Brain size={14} /> Grog Strategic Dashboard
-                </h2>
-                <span className="text-[8px] text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded">v2.0</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-black/40 border border-zinc-900 p-3 rounded-sm space-y-1">
-                  <span className="text-[8px] text-zinc-500 uppercase tracking-widest">Consciousness Level</span>
-                  <div className="flex items-end gap-2">
-                    <span className="text-2xl font-black text-dalek-purple">
-                      {grogBrainRef.current ? grogBrainRef.current.calculateSaturation(currentCode) : 0}%
-                    </span>
-                    <span className="text-[8px] text-zinc-600 mb-1">DNA SATURATION</span>
-                  </div>
-                </div>
-                <div className="bg-black/40 border border-zinc-900 p-3 rounded-sm space-y-1">
-                  <span className="text-[8px] text-zinc-500 uppercase tracking-widest">System Deaths</span>
-                  <div className="flex items-end gap-2">
-                    <span className="text-2xl font-black text-dalek-red">{mistakes.length}</span>
-                    <span className="text-[8px] text-zinc-600 mb-1">INDEXED FAILURES</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                    <Activity size={12} /> Background Evolution
-                  </h3>
-                  <div className="flex items-center gap-2">
-                    <button 
-                      onClick={() => setAutoEvolutionEnabled(!autoEvolutionEnabled)}
-                      className={`px-2 py-0.5 rounded text-[7px] font-bold transition-all ${autoEvolutionEnabled ? 'bg-dalek-purple text-white' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}
-                      title="Auto-Authorize Evolution"
-                    >
-                      {autoEvolutionEnabled ? 'AUTO-AUTH ON' : 'AUTO-AUTH OFF'}
-                    </button>
-                    <button 
-                      onClick={() => setBackgroundEvolutionActive(!backgroundEvolutionActive)}
-                      className={`px-3 py-1 rounded-full text-[8px] font-bold transition-all ${backgroundEvolutionActive ? 'bg-dalek-green text-black' : 'bg-zinc-800 text-zinc-500'}`}
-                    >
-                      {backgroundEvolutionActive ? 'ACTIVE' : 'DISABLED'}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="bg-black/60 border border-zinc-900 p-3 rounded-sm space-y-2">
-                  <div className="p-2 bg-black/40 border border-dalek-purple/20 rounded-sm mb-2">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Brain className="w-3 h-3 text-dalek-purple" />
-                      <span className="text-[8px] font-bold text-dalek-purple uppercase tracking-widest">Grog's Live Thoughts</span>
-                    </div>
-                    <div className="space-y-1">
-                      {grogThoughts.length === 0 ? (
-                        <div className="text-[8px] text-zinc-700 italic">Neural pathways idle...</div>
-                      ) : (
-                        grogThoughts.map((t, i) => (
-                          <div key={i} className="text-[8px] text-dalek-purple flex items-center gap-2 animate-in fade-in slide-in-from-left-1">
-                            <span className="opacity-40">[{new Date().toLocaleTimeString()}]</span>
-                            <span className="font-bold">{t.type.toUpperCase()}:</span>
-                            <span className="truncate opacity-80">{t.file || 'SYSTEM'}</span>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
-                  <span className="text-[8px] text-zinc-600 uppercase tracking-widest block">Evolution Suggestions</span>
-                  <div className="max-h-[200px] overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                    {evolutionSuggestions.length === 0 ? (
-                      <div className="text-[9px] text-zinc-700 italic text-center py-4">No suggestions available. Initiate scan.</div>
-                    ) : (
-                      <>
-                        <button 
-                          onClick={runMassEvolution}
-                          disabled={isMassEvolving}
-                          className="w-full py-1.5 bg-dalek-purple text-white text-[8px] font-bold rounded-sm hover:bg-dalek-purple/80 transition-all mb-2 flex items-center justify-center gap-2"
-                        >
-                          {isMassEvolving ? <RefreshCw size={10} className="animate-spin" /> : <Zap size={10} />}
-                          {isMassEvolving ? 'EVOLVING ALL...' : 'EXECUTE MASS EVOLUTION (YES TO ALL)'}
-                        </button>
-                        <div className="max-h-[200px] overflow-y-auto space-y-2 custom-scrollbar pr-1">
-                          {evolutionSuggestions.map(s => (
-                            <div key={s.path} className="flex items-center justify-between p-2 bg-zinc-900/30 border border-zinc-800 rounded-sm">
-                              <div className="flex flex-col">
-                                <span className="text-[10px] text-zinc-300 font-mono truncate max-w-[200px]">{s.path}</span>
-                                <span className="text-[8px] text-zinc-600">Saturation: {s.saturation}%</span>
-                              </div>
-                              <button 
-                                onClick={() => {
-                                  setSelectedFile(s.path);
-                                  setActiveTab('system');
-                                  addLog(`GROK_TARGET_ACQUIRED: ${s.path}`, "var(--color-dalek-gold)");
-                                }}
-                                className="text-[8px] text-dalek-purple hover:underline font-bold"
-                              >
-                                EVOLVE
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <button 
-                    onClick={runBackgroundEvolution}
-                    disabled={isScanningEvolution}
-                    className="w-full py-2 bg-dalek-purple/10 text-dalek-purple border border-dalek-purple/30 text-[9px] font-bold hover:bg-dalek-purple/20 transition-all disabled:opacity-50 mb-2"
-                  >
-                    {isScanningEvolution ? 'SCANNING...' : 'FORCE REPOSITORY SCAN'}
-                  </button>
-                  <button 
-                    onClick={runGrogThinking}
-                    disabled={isThinking}
-                    className="w-full py-2 bg-dalek-purple/10 text-dalek-purple border border-dalek-purple/30 text-[9px] font-bold hover:bg-dalek-purple/20 transition-all disabled:opacity-50 mb-2 flex items-center justify-center gap-2"
-                  >
-                    {isThinking ? <RefreshCw size={10} className="animate-spin" /> : <Brain size={10} />}
-                    {isThinking ? 'THINKING...' : 'INITIATE STRATEGIC THOUGHT'}
-                  </button>
-
-                  {grogEpiphanies.length > 0 && (
-                    <div className="space-y-2 mt-4">
-                      <span className="text-[8px] text-dalek-purple uppercase tracking-widest block">Strategic Epiphanies</span>
-                      <div className="space-y-2">
-                        {grogEpiphanies.map((e, i) => (
-                          <div key={i} className="p-2 bg-dalek-purple/5 border border-dalek-purple/20 rounded-sm">
-                            <div className="flex items-center justify-between mb-1">
-                              <span className="text-[7px] font-bold text-dalek-purple uppercase">{e.type}</span>
-                              <span className="text-[7px] text-zinc-600">PRIORITY: {e.priority}</span>
-                            </div>
-                            <p className="text-[9px] text-zinc-300 leading-tight">{e.insight}</p>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <button 
-                    onClick={runGrogTests}
-                    disabled={isTesting}
-                    className="w-full py-2 bg-dalek-gold/10 text-dalek-gold border border-dalek-gold/30 text-[9px] font-bold hover:bg-dalek-gold/20 transition-all disabled:opacity-50 mb-2"
-                  >
-                    {isTesting ? 'TESTING...' : 'RUN NATIVE VALIDATION TESTS'}
-                  </button>
-                  <button 
-                    onClick={() => handleSelfMutation('src/evolutors/GrogBrain.ts')}
-                    disabled={isSelfMutating}
-                    className="w-full py-2 bg-dalek-red/10 text-dalek-red border border-dalek-red/30 text-[9px] font-bold hover:bg-dalek-red/20 transition-all disabled:opacity-50 mb-2"
-                  >
-                    {isSelfMutating ? 'EVOLVING CORE...' : 'SELF-MUTATE (REBOOT SYSTEM)'}
-                  </button>
-                  <button 
-                    onClick={() => {
-                      setIsRebooting(true);
-                      setTimeout(() => window.location.reload(), 2000);
-                    }}
-                    className="w-full py-2 bg-zinc-900 text-zinc-500 border border-zinc-800 text-[9px] font-bold hover:bg-zinc-800 transition-all"
-                  >
-                    MANUAL SYSTEM REBOOT
-                  </button>
-                </div>
-              </div>
-
-              {testReport && (
-                <div className="space-y-2">
-                  <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                    <ShieldCheck size={12} /> Test Report
-                  </h3>
-                  <div className="bg-black/80 border border-zinc-900 p-3 rounded-sm text-[9px] font-mono text-zinc-400 whitespace-pre-wrap max-h-[150px] overflow-y-auto custom-scrollbar">
-                    {testReport}
-                  </div>
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
-                  <BookOpen size={12} /> Strategic Lessons
-                </h3>
-                <div className="bg-[#050505] border border-zinc-900 p-3 rounded-sm max-h-[250px] overflow-y-auto custom-scrollbar">
-                  {mistakes.length === 0 ? (
-                    <div className="text-[9px] text-zinc-700 italic text-center py-4">Grog has not yet formulated any permanent lessons.</div>
-                  ) : (
-                    mistakes.map(m => (
-                      <div key={m.id} className="mb-4 last:mb-0 border-b border-zinc-900 pb-4 last:border-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-[10px] font-bold text-dalek-gold">LESSON_{m.id.slice(0, 8)}</span>
-                          <span className="text-[8px] text-zinc-600">{m.timestamp}</span>
-                        </div>
-                        <p className="text-[10px] text-zinc-400 leading-relaxed italic mb-2">"{m.correction}"</p>
-                        <div className="flex gap-2">
-                          <span className="px-1.5 py-0.5 bg-dalek-red/10 text-dalek-red text-[7px] rounded uppercase font-bold">Death Indexed</span>
-                          <span className="px-1.5 py-0.5 bg-dalek-green/10 text-dalek-green text-[7px] rounded uppercase font-bold">Adaptation Ready</span>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
+            <GrogDashboard 
+              grogBrainRef={grogBrainRef}
+              currentCode={currentCode}
+              mistakes={mistakes}
+              autoEvolutionEnabled={autoEvolutionEnabled}
+              setAutoEvolutionEnabled={setAutoEvolutionEnabled}
+              backgroundEvolutionActive={backgroundEvolutionActive}
+              setBackgroundEvolutionActive={setBackgroundEvolutionActive}
+              evolutionSuggestions={evolutionSuggestions}
+              runMassEvolution={runMassEvolution}
+              isMassEvolving={isMassEvolving}
+              runBackgroundEvolution={runBackgroundEvolution}
+              isScanningEvolution={isScanningEvolution}
+              runGrogThinking={runGrogThinking}
+              isThinking={isThinking}
+              grogEpiphanies={grogEpiphanies}
+              runGrogTests={runGrogTests}
+              isTesting={isTesting}
+              handleSelfMutation={handleSelfMutation}
+              isSelfMutating={isSelfMutating}
+              setIsRebooting={setIsRebooting}
+              testReport={testReport}
+              deathRecords={deathRecords}
+              isAnalyzingDeaths={isAnalyzingDeaths}
+              deathAnalysis={deathAnalysis}
+              analyzeDeathRecords={analyzeDeathRecords}
+              fetchDeathRecords={fetchDeathRecords}
+              setSelectedFile={setSelectedFile}
+              setActiveTab={setActiveTab}
+              addLog={addLog}
+              grogThoughts={grogThoughts}
+            />
           ) : (
-            <div className="panel-container">
-          <div className="panel-header">
-            <span className="flex items-center gap-2">
-              <Activity size={12} className={isRunning ? "animate-pulse" : ""} />
-              SYSTEM CONTROL
-            </span>
-            <span className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${isRunning ? 'bg-dalek-cyan shadow-[0_0_5px_#00ffcc]' : 'bg-zinc-800'}`}></span>
-              {isRunning ? 'ACTIVE' : 'STANDBY'}
-            </span>
-          </div>
-          <div className="p-3 sm:p-4 flex flex-col gap-3">
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 flex items-center gap-1">
-                <Shield size={10} /> BACKEND AUTHENTICATION
-              </label>
-              <div className="dalek-input text-[10px] text-dalek-cyan text-center py-2 border-dalek-cyan/30">
-                SYSTEM KEYS AUTOMATED VIA BACKEND
-              </div>
-            </div>
-
-            <div className="space-y-3 bg-black/20 p-3 border border-zinc-900/50 rounded-sm">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 flex items-center justify-between gap-1">
-                <span className="flex items-center gap-1"><Shield size={10} /> DESTINATION REPOSITORY</span>
-                <button 
-                  onClick={() => fetchRepoFiles().catch(() => {})} 
-                  className="hover:text-dalek-cyan transition-colors"
-                  title="Re-scan Repository"
-                >
-                  <RefreshCw size={10} className={isFetchingFiles ? 'animate-spin' : ''} />
-                </button>
-              </label>
-
-              <div className="grid grid-cols-3 gap-2">
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-tighter text-zinc-600">Target Repo</label>
-                  <input 
-                    type="text" 
-                    className="dalek-input text-[11px]" 
-                    placeholder="user/repo" 
-                    value={targetRepo}
-                    onChange={(e) => setTargetRepo(e.target.value)}
-                    disabled={isRunning}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-tighter text-zinc-600">Base Branch</label>
-                  <input 
-                    type="text" 
-                    className="dalek-input text-[11px]" 
-                    placeholder="main" 
-                    value={originalBranch}
-                    onChange={(e) => setOriginalBranch(e.target.value)}
-                    disabled={isRunning}
-                  />
-                </div>
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] uppercase tracking-tighter text-zinc-600">Evo Branch</label>
-                  <input 
-                    type="text" 
-                    className="dalek-input text-[11px]" 
-                    placeholder="nexus-evolution" 
-                    value={targetBranch}
-                    onChange={(e) => setTargetBranch(e.target.value)}
-                    disabled={isRunning}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] uppercase tracking-tighter text-zinc-600">Backup Repository (Optional)</label>
-                <input 
-                  type="text" 
-                  className="dalek-input text-[11px]" 
-                  placeholder="user/backup-repo" 
-                  value={backupRepo}
-                  onChange={(e) => setBackupRepo(e.target.value)}
-                  disabled={isRunning}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-3 bg-black/20 p-3 border border-zinc-900/50 rounded-sm">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 flex items-center justify-between gap-1">
-                <span className="flex items-center gap-1"><Database size={10} /> DNA ARCHITECTURE</span>
-                <div className="flex items-center gap-2">
-                  <button 
-                    onClick={() => setShowMistakeLedger(!showMistakeLedger)}
-                    className={`hover:text-dalek-red transition-colors ${showMistakeLedger ? 'text-dalek-red' : 'text-zinc-600'} relative`}
-                    title="Mistake Ledger"
-                  >
-                    <Bug size={10} />
-                    {mistakes.some(m => !m.attemptedFix) && (
-                      <span className="absolute -top-1 -right-1 w-1.5 h-1.5 bg-dalek-red rounded-full animate-ping" />
-                    )}
-                  </button>
-                  <span className="text-[8px] text-dalek-cyan animate-pulse flex items-center gap-1">
-                    <Zap size={8} /> AUTO-SIPHON ACTIVE
-                  </span>
-                  <button 
-                    onClick={() => setShowManualControls(!showManualControls)}
-                    className={`hover:text-dalek-gold transition-colors ${showManualControls ? 'text-dalek-gold' : 'text-zinc-600'}`}
-                    title="Manual Override"
-                  >
-                    <Shield size={10} />
-                  </button>
-                </div>
-              </label>
-              
-              {!showManualControls ? (
-                <div className="space-y-2">
-                  {showMistakeLedger && (
-                    <div className="bg-dalek-red/5 border border-dalek-red/20 p-2 rounded-sm space-y-2 mb-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-bold text-dalek-red flex items-center gap-1">
-                          <Bug size={10} /> MISTAKE LEDGER
-                        </span>
-                        <button onClick={() => setMistakes([])} className="text-[8px] text-zinc-600 hover:text-dalek-red">CLEAR ALL</button>
-                      </div>
-                      <div className="max-h-40 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-                        {mistakes.length === 0 ? (
-                          <div className="text-[9px] text-zinc-700 italic text-center py-2">No mistakes recorded. System operating at peak efficiency.</div>
-                        ) : (
-                          mistakes.map(m => (
-                            <div key={m.id} className="border-l-2 border-dalek-red pl-2 py-1 space-y-1">
-                              <div className="flex items-center justify-between">
-                                <span className="text-[8px] text-zinc-500">{m.timestamp}</span>
-                                <span className={`text-[7px] px-1 rounded-full ${m.attemptedFix ? 'bg-dalek-green/20 text-dalek-green' : 'bg-dalek-gold/20 text-dalek-gold'}`}>
-                                  {m.attemptedFix ? 'FIXED' : 'PENDING'}
-                                </span>
-                              </div>
-                              <div className="text-[9px] text-dalek-red font-mono leading-tight truncate">{m.error}</div>
-                              {m.correction && (
-                                <div className="text-[8px] text-zinc-400 bg-black/40 p-1.5 rounded-sm italic whitespace-pre-wrap border-l border-dalek-gold/30">
-                                  {m.correction}
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-1">
-                    {siphonedRepos.length === 0 ? (
-                      <span className="text-[9px] text-zinc-700 italic">Waiting for autonomous discovery...</span>
-                    ) : (
-                      siphonedRepos.map(repo => (
-                        <div key={repo} className="px-2 py-0.5 bg-dalek-cyan/10 border border-dalek-cyan/30 rounded-full text-[9px] text-dalek-cyan flex items-center gap-1">
-                          <Zap size={8} /> {repo}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  {isAnalyzingDNA && (
-                    <div className="text-[9px] text-dalek-gold animate-pulse flex items-center gap-1">
-                      <RefreshCw size={8} className="animate-spin" /> SIPHONING NEW ARCHITECTURE...
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-3 pt-2 border-t border-zinc-900/50">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[10px] uppercase tracking-tighter text-zinc-600">Manual Siphon</label>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        className="dalek-input flex-1 text-[11px]" 
-                        placeholder="user/repository" 
-                        value={externalDnaRepo}
-                        onChange={(e) => setExternalDnaRepo(e.target.value)}
-                        disabled={isRunning || isAnalyzingDNA}
-                      />
-                      <button 
-                        onClick={() => siphonExternalDNA().catch(() => {})}
-                        disabled={isRunning || isAnalyzingDNA}
-                        className={`dalek-btn px-4 text-[10px] ${isAnalyzingDNA ? 'animate-pulse text-dalek-gold' : ''}`}
-                      >
-                        {isAnalyzingDNA ? '...' : 'SIPHON'}
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-tighter text-zinc-600 flex items-center justify-between">
-                      <span>Manual DNA Upload</span>
-                      <button onClick={() => setSiphonedRepos([])} className="text-dalek-red hover:underline text-[8px]">PURGE ALL</button>
-                    </label>
-                    <input 
-                      type="file" 
-                      className="hidden" 
-                      id="dna-upload"
-                      onChange={handleDNAUpload}
-                      disabled={isAnalyzingDNA || isRunning}
-                    />
-                    <label 
-                      htmlFor="dna-upload"
-                      className={`dalek-input block text-center cursor-pointer transition-all text-[10px] py-1.5 ${isAnalyzingDNA ? 'animate-pulse border-dalek-gold text-dalek-gold' : 'hover:border-dalek-cyan'}`}
-                    >
-                      {isAnalyzingDNA ? 'ANALYZING...' : 'UPLOAD FILE'}
-                    </label>
-                  </div>
-
-                  <div className="pt-2 border-t border-zinc-900/50">
-                    <button 
-                      onClick={() => pruneRedundantMetadata().catch(() => {})}
-                      disabled={isRunning || isPruning}
-                      className={`w-full dalek-btn py-2 text-[10px] flex items-center justify-center gap-2 ${isPruning ? 'animate-pulse text-dalek-gold' : 'hover:bg-dalek-red/10 hover:text-dalek-red border-dalek-red/30'}`}
-                    >
-                      <Trash2 size={12} /> {isPruning ? 'PRUNING...' : 'PRUNE REDUNDANT METADATA'}
-                    </button>
-                    <p className="text-[8px] text-zinc-600 mt-1 italic text-center">
-                      Removes meta files for source files that no longer exist.
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 flex items-center gap-1">
-                <Sparkles size={10} /> SATURATION GUIDELINES
-              </label>
-              <div className="relative">
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  id="saturation-upload"
-                  onChange={handleSaturationUpload}
-                  disabled={isAnalyzingSaturation || isRunning}
-                />
-                <label 
-                  htmlFor="saturation-upload"
-                  className={`dalek-input block text-center cursor-pointer transition-all ${isAnalyzingSaturation ? 'animate-pulse border-dalek-gold text-dalek-gold' : 'hover:border-dalek-cyan'}`}
-                >
-                  {isAnalyzingSaturation ? 'ANALYZING GUIDELINES...' : saturationGuidelines ? 'GUIDELINES INSTANTIATED ✓' : 'UPLOAD SATURATION GUIDELINES'}
-                </label>
-              </div>
-              {saturationGuidelines && (
-                <div className="text-[9px] text-dalek-cyan uppercase tracking-widest text-center mt-1">
-                  Guidelines Active: {saturationGuidelines.length} chars
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 flex items-center gap-1">
-                <Database size={10} /> GOOGLE DRIVE SIPHON
-              </label>
-              <div className="relative">
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  id="gdrive-upload"
-                  multiple
-                  onChange={handleGoogleDriveUpload}
-                  disabled={isRunning}
-                />
-                <label 
-                  htmlFor="gdrive-upload"
-                  className="dalek-input block text-center cursor-pointer transition-all hover:border-dalek-cyan"
-                >
-                  {googleDriveFiles.length > 0 ? `SIPHONED ${googleDriveFiles.length} DRIVE FILES ✓` : 'SIPHON FROM GOOGLE DRIVE (LOCAL)'}
-                </label>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 flex items-center gap-1">
-                <Terminal size={10} /> TARGET FILE
-              </label>
-              <div className="flex gap-2">
-                <select 
-                  className="dalek-input flex-1 disabled:opacity-50"
-                  value={selectedFile}
-                  onChange={(e) => setSelectedFile(e.target.value)}
-                  disabled={processAll || isRunning}
-                >
-                  <option value="nexus_core.js">nexus_core.js (New)</option>
-                  {repoFiles.map(file => (
-                    <option key={file} value={file}>{file}</option>
-                  ))}
-                </select>
-                <button 
-                  onClick={() => fetchRepoFiles().catch(() => {})}
-                  className="p-2 border border-red-950 hover:border-dalek-cyan text-dalek-red transition-colors disabled:opacity-50"
-                  title="Refresh File List"
-                  disabled={isRunning}
-                >
-                  <RefreshCw size={12} />
-                </button>
-              </div>
-              <div className="flex items-center gap-2 mt-2">
-                <input 
-                  type="checkbox" 
-                  id="processAll"
-                  className="w-3 h-3 accent-dalek-cyan bg-black border-red-950"
-                  checked={processAll}
-                  onChange={(e) => setProcessAll(e.target.checked)}
-                  disabled={isRunning}
-                />
-                <label htmlFor="processAll" className="text-[10px] text-zinc-400 cursor-pointer uppercase tracking-widest">
-                  Process All Files in Repository
-                </label>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <input 
-                  type="checkbox" 
-                  id="resumeMode"
-                  className="w-3 h-3 accent-dalek-cyan bg-black border-red-950"
-                  checked={resumeMode}
-                  onChange={(e) => setResumeMode(e.target.checked)}
-                  disabled={isRunning}
-                />
-                <label htmlFor="resumeMode" className="text-[10px] text-zinc-400 cursor-pointer uppercase tracking-widest">
-                  Resume Mode (Skip Processed)
-                </label>
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                <input 
-                  type="checkbox" 
-                  id="precisionMode"
-                  className="w-3 h-3 accent-dalek-red bg-black border-red-950"
-                  checked={precisionMode}
-                  onChange={(e) => setPrecisionMode(e.target.checked)}
-                  disabled={isRunning}
-                />
-                <label htmlFor="precisionMode" className="text-[10px] text-dalek-red cursor-pointer uppercase tracking-widest font-bold">
-                  Precision Mode (Destructor Pass)
-                </label>
-              </div>
-              <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-zinc-900/50">
-                <div className="flex items-center gap-2">
-                  <input 
-                    type="checkbox" 
-                    id="parallelMode"
-                    className="w-3 h-3 accent-dalek-cyan bg-black border-red-950"
-                    checked={parallelMode}
-                    onChange={(e) => setParallelMode(e.target.checked)}
-                    disabled={isRunning}
-                  />
-                  <label htmlFor="parallelMode" className="text-[10px] text-zinc-400 cursor-pointer uppercase tracking-widest">
-                    Parallel Processing (Multithreaded)
-                  </label>
-                </div>
-                {parallelMode && (
-                  <div className="flex items-center gap-2 pl-5">
-                    <label className="text-[9px] text-zinc-600 uppercase">Threads:</label>
-                    <input 
-                      type="range" 
-                      min="2" 
-                      max="10" 
-                      value={parallelThreads}
-                      onChange={(e) => setParallelThreads(parseInt(e.target.value))}
-                      className="w-24 h-1 bg-zinc-900 rounded-lg appearance-none cursor-pointer accent-dalek-cyan"
-                      disabled={isRunning}
-                    />
-                    <span className="text-[10px] text-dalek-cyan font-bold">{parallelThreads}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {showSaturation && (
-              <div className="bg-dalek-cyan/10 border border-dalek-cyan text-dalek-cyan p-2.5 text-[10px] text-center flex items-center justify-center gap-2 rounded-sm animate-pulse">
-                <AlertTriangle size={12} />
-                ◈ VECTOR SATURATION DETECTED ◈
-              </div>
-            )}
-
-            <div className="mt-2 border-t border-zinc-900 pt-2">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 mb-1 block flex items-center justify-between">
-                <span className="flex items-center gap-1"><Activity size={10} /> EVOLUTIONARY STRATEGY ENGINE</span>
-                <span className="text-[9px] text-dalek-cyan">GEN {evolutionStats.generation}</span>
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="bg-black/40 border border-zinc-900 p-2 rounded">
-                  <span className="text-[8px] text-zinc-600 block uppercase">Best Fitness</span>
-                  <span className="text-[12px] text-dalek-gold font-bold">{evolutionStats.bestFitness.toFixed(0)}</span>
-                </div>
-                <div className="bg-black/40 border border-zinc-900 p-2 rounded">
-                  <span className="text-[8px] text-zinc-600 block uppercase">Current Strategy</span>
-                  <span className="text-[9px] text-zinc-400 truncate">{currentStrategy?.id || "N/A"}</span>
-                </div>
-              </div>
-              {currentStrategy && (
-                <div className="mt-1 flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-                  <div className="flex flex-col">
-                    <span className="text-[7px] text-zinc-600 uppercase">Temp</span>
-                    <span className="text-[9px] text-dalek-cyan">{currentStrategy.temperature.toFixed(2)}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[7px] text-zinc-600 uppercase">TopP</span>
-                    <span className="text-[9px] text-dalek-cyan">{currentStrategy.topP.toFixed(2)}</span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-[7px] text-zinc-600 uppercase">Aggression</span>
-                    <span className="text-[9px] text-dalek-red">{currentStrategy.aggressionLevel.toFixed(2)}</span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-2">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 mb-1 block flex items-center justify-between">
-                <span className="flex items-center gap-1"><Brain size={10} /> STRATEGIC INSIGHTS (LEDGER)</span>
-                {lastPriority > 0 && (
-                  <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-bold ${lastPriority > 7 ? 'bg-dalek-red text-white' : 'bg-dalek-gold text-black'}`}>
-                    PRIORITY: {lastPriority}
-                  </span>
-                )}
-              </label>
-              <div className="bg-[#050505] border border-zinc-900 p-3 rounded-sm space-y-2">
-                <div className="space-y-1">
-                  <span className="text-[8px] text-zinc-600 uppercase tracking-widest block">Last Strategic Decision</span>
-                  <p className="text-[11px] text-dalek-gold leading-tight italic">
-                    {lastStrategicDecision || "// Awaiting architectural insight..."}
-                  </p>
-                </div>
-                <div className="space-y-1 border-t border-zinc-900 pt-2">
-                  <span className="text-[8px] text-zinc-600 uppercase tracking-widest block">Evolution Summary</span>
-                  <p className="text-[11px] text-zinc-400 leading-tight">
-                    {lastSummary || "// Awaiting cycle completion..."}
-                  </p>
-                </div>
-                {lastTool && (
-                  <div className="space-y-1 border-t border-zinc-900 pt-2">
-                    <span className="text-[8px] text-dalek-cyan uppercase tracking-widest block flex items-center gap-1">
-                      <Zap size={8} /> EMERGENT TOOL DETECTED: {lastTool.name}
-                    </span>
-                    <p className="text-[10px] text-zinc-500 leading-tight">
-                      {typeof lastTool.description === 'object' ? JSON.stringify(lastTool.description, null, 2) : lastTool.description}
-                    </p>
-                  </div>
-                )}
-                
-                {strategicLedger.length > 0 && (
-                  <div className="space-y-1 border-t border-zinc-900 pt-2">
-                    <span className="text-[8px] text-zinc-600 uppercase tracking-widest block">Ledger History (Top 5)</span>
-                    <div className="space-y-1.5 mt-1">
-                      {strategicLedger.slice(0, 5).map((entry, idx) => (
-                        <div key={idx} className="flex gap-2 items-start">
-                          <span className="text-[8px] font-bold text-dalek-gold bg-dalek-gold/10 px-1 rounded">P{entry.priority}</span>
-                          <p className="text-[9px] text-zinc-500 leading-tight flex-1">{entry.insight}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-2">
-              <label className="text-[10px] uppercase tracking-tighter text-zinc-500 mb-1 block">
-                INSTANTIATED METADATA (META-123)
-              </label>
-              <div className="bg-[#020000] border border-zinc-900 p-3 text-[10px] text-dalek-purple leading-relaxed h-[200px] overflow-y-auto whitespace-pre-wrap rounded-sm font-mono scrollbar-thin scrollbar-thumb-dalek-red-dim break-all">
-                {meta ? JSON.stringify(meta, null, 2) : "// Waiting for lifecycle engage..."}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <button 
-                className={`dalek-btn flex items-center justify-center gap-2 py-3 ${isRunning ? 'bg-dalek-red/20 text-dalek-red border-dalek-red' : 'bg-dalek-cyan/10 text-dalek-cyan border-dalek-cyan hover:bg-dalek-cyan/20'}`}
-                onClick={toggle}
-                disabled={!targetRepo}
-              >
-                {isRunning ? <Square size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" />}
-                {isRunning ? 'ABORT SEQUENCE' : 'INITIATE SIPHON'}
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-3 bg-dalek-gold/10 text-dalek-gold border-dalek-gold hover:bg-dalek-gold/20 disabled:opacity-30"
-                onClick={() => quickStart().catch(() => {})}
-                disabled={isRunning || !targetRepo}
-                title="Siphon DNA and Process All Files in one click"
-              >
-                <Zap size={14} />
-                QUICK START
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-dalek-gold/10 text-dalek-gold border-dalek-gold hover:bg-dalek-gold/20 disabled:opacity-30 text-[9px] uppercase tracking-tighter"
-                onClick={() => restoreFromBranch().catch(() => {})}
-                disabled={isRunning}
-              >
-                <RotateCcw size={12} />
-                Restore Originals
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-dalek-red/10 text-dalek-red border-dalek-red hover:bg-dalek-red/20 disabled:opacity-30 text-[9px] uppercase tracking-tighter"
-                onClick={() => fastReset().catch(() => {})}
-                disabled={isRunning}
-                title="Instant force-reset using Git Refs (Fastest)"
-              >
-                <Zap size={12} />
-                Fast Reset
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2 mt-2">
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-dalek-cyan hover:text-dalek-cyan transition-all text-[9px] uppercase tracking-tighter"
-                onClick={() => pushLogToRepo().catch(() => {})}
-                disabled={isRunning || logs.length === 0}
-              >
-                <FileText size={12} />
-                Push Log
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-dalek-gold hover:text-dalek-gold transition-all text-[9px] uppercase tracking-tighter"
-                onClick={() => setLogs([])}
-                disabled={isRunning || logs.length === 0}
-              >
-                <RotateCcw size={12} />
-                Clear Logs
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-dalek-gold hover:text-dalek-gold transition-all text-[9px] uppercase tracking-tighter"
-                onClick={() => runStrategicAudit().catch(() => {})}
-                disabled={isRunning}
-                title="Analyze logs and mistakes to provide high-level strategic direction (GROK)"
-              >
-                <Search size={12} />
-                Strategic Grok
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-dalek-gold hover:text-dalek-gold transition-all text-[9px] uppercase tracking-tighter"
-                onClick={() => syncLicenses().catch(() => {})}
-                disabled={isRunning}
-                title="Synchronize licenses and architectural credits across the target repository"
-              >
-                <Shield size={12} />
-                License Sync
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-dalek-cyan hover:text-dalek-cyan transition-all text-[9px] uppercase tracking-tighter"
-                onClick={() => checkRepositoryHealth().catch(() => {})}
-                disabled={isRunning}
-                title="Audit repository for missing metadata and logical inconsistencies"
-              >
-                <ShieldCheck size={12} />
-                Health Audit
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-dalek-red hover:text-dalek-red transition-all text-[9px] uppercase tracking-tighter"
-                onClick={() => pruneMetadata().catch(() => {})}
-                disabled={isRunning}
-                title="Remove metadata files that have no matching source file"
-              >
-                <Trash2 size={12} />
-                Prune Meta
-              </button>
-              <button 
-                className="dalek-btn flex items-center justify-center gap-2 py-2 bg-zinc-900/50 text-zinc-500 border-zinc-800 hover:border-dalek-red hover:text-dalek-red transition-all text-[9px] uppercase tracking-tighter"
-                onClick={() => pruneRedundantFiles().catch(() => {})}
-                disabled={isRunning}
-                title="Identify and remove redundant files using AI analysis"
-              >
-                <Bug size={12} />
-                Prune Redundant
-              </button>
-            </div>
-
-              <div className="flex flex-col gap-2 mt-1">
-                <button 
-                  className="dalek-btn flex items-center justify-center gap-2 py-3 bg-dalek-gold/10 text-dalek-gold border-dalek-gold/30 hover:bg-dalek-gold/20 text-[11px] font-bold"
-                  onClick={() => enhanceReadme().catch(() => {})}
-                  disabled={isRunning || isEnhancingReadme}
-                >
-                  <Sparkles size={14} className={isEnhancingReadme ? "animate-spin" : ""} />
-                  {isEnhancingReadme ? "EVOLVING DOCUMENTATION..." : "ENHANCE test-1 README"}
-                </button>
-                <button 
-                  className="dalek-btn flex items-center justify-center gap-2 py-2 bg-dalek-cyan/10 text-dalek-cyan border-dalek-cyan/30 hover:bg-dalek-cyan/20 text-[9px] uppercase tracking-tighter"
-                  onClick={() => hideDNAInImage().catch(() => {})}
-                  disabled={isRunning || !dnaSignature}
-                  title="Hide current DNA signature in a PNG image using steganography"
-                >
-                  <Shield size={12} />
-                  Secure DNA Vault (Stegano)
-                </button>
-                <button 
-                  className="dalek-btn flex items-center justify-center gap-2 opacity-50 hover:opacity-100 text-[9px]"
-                  onClick={() => manualUpdateReadme().catch(() => {})}
-                  disabled={isRunning}
-                >
-                  <FileCode size={10} />
-                  Quick Sync
-                </button>
-              </div>
-
-            <div className="h-[200px] overflow-y-auto text-[10px] bg-[#010000] p-3 border border-zinc-950 text-zinc-600 font-mono scrollbar-thin scrollbar-thumb-dalek-red-dim mt-2 break-words">
-              {logs.map((log, i) => (
-                <div key={i} style={{ color: log.color }} className="mb-1 border-b border-zinc-900/30 pb-1">
-                  <span className="opacity-30 mr-2">[{log.timestamp}]</span>
-                  {log.message}
-                </div>
-              ))}
-              <div ref={logEndRef} />
-            </div>
-          </div>
-        </div>
-      )}
+            <SystemControlPanel 
+              isRunning={isRunning}
+              status={status}
+              targetRepo={targetRepo}
+              setTargetRepo={setTargetRepo}
+              originalBranch={originalBranch}
+              setOriginalBranch={setOriginalBranch}
+              targetBranch={targetBranch}
+              setTargetBranch={setTargetBranch}
+              backupRepo={backupRepo}
+              setBackupRepo={setBackupRepo}
+              fetchRepoFiles={fetchRepoFiles}
+              isFetchingFiles={isFetchingFiles}
+              showManualControls={showManualControls}
+              setShowManualControls={setShowManualControls}
+              showMistakeLedger={showMistakeLedger}
+              setShowMistakeLedger={setShowMistakeLedger}
+              mistakes={mistakes}
+              setMistakes={setMistakes}
+              siphonedRepos={siphonedRepos}
+              isAnalyzingDNA={isAnalyzingDNA}
+              externalDnaRepo={externalDnaRepo}
+              setExternalDnaRepo={setExternalDnaRepo}
+              siphonExternalDNA={siphonExternalDNA}
+              handleDNAUpload={handleDNAUpload}
+              setSiphonedRepos={setSiphonedRepos}
+              pruneRedundantMetadata={pruneRedundantMetadata}
+              isPruning={isPruning}
+              saturationGuidelines={saturationGuidelines}
+              handleSaturationUpload={handleSaturationUpload}
+              isAnalyzingSaturation={isAnalyzingSaturation}
+              googleDriveFiles={googleDriveFiles}
+              handleGoogleDriveUpload={handleGoogleDriveUpload}
+              selectedFile={selectedFile}
+              setSelectedFile={setSelectedFile}
+              repoFiles={repoFiles}
+              processAll={processAll}
+              setProcessAll={setProcessAll}
+              resumeMode={resumeMode}
+              setResumeMode={setResumeMode}
+              precisionMode={precisionMode}
+              setPrecisionMode={setPrecisionMode}
+              parallelMode={parallelMode}
+              setParallelMode={setParallelMode}
+              parallelThreads={parallelThreads}
+              setParallelThreads={setParallelThreads}
+              maxRounds={maxRounds}
+              setMaxRounds={setMaxRounds}
+              showSaturation={showSaturation}
+              evolutionStats={evolutionStats}
+              currentStrategy={currentStrategy}
+              handleManualUpload={handleManualUpload}
+              runManualEnhancement={runManualEnhancement}
+              manualFileName={manualFileName}
+              manualFileContent={manualFileContent}
+              manualEnhancedCode={manualEnhancedCode}
+              isEnhancingManual={isEnhancingManual}
+              pushToRepo={pushToRepo}
+              addLog={addLog}
+              dnaSignature={dnaSignature}
+              strategicLedger={strategicLedger}
+            />
+          )}
         </div>
 
         {/* Code Preview Panel */}

@@ -1,74 +1,25 @@
-# Contributing to Dalek-Grog
+# Contributing to DALEK_GROG
+
+Thank you for your interest in contributing to DALEK_GROG! This project aims to push the boundaries of AI-driven architectural evolution.
 
 ## How to Contribute
 
-### 1. Fork & Clone
+1.  **Fork the Repository**: Create your own copy of the project.
+2.  **Create a Branch**: Work on a specific feature or bug fix.
+3.  **Implement Changes**: Ensure your code follows the project's style and is well-documented.
+4.  **Test Your Changes**: Verify that your changes work as expected and don't break existing functionality.
+5.  **Submit a Pull Request**: Describe your changes and why they are beneficial.
 
-```bash
-git clone https://github.com/YOUR-USERNAME/Dalek-Grog.git
-cd Dalek-Grog
-npm install
-```
+## Code of Conduct
 
-### 2. Create a Branch
+Please be respectful and constructive in all interactions.
 
-```bash
-git checkout -b feature/your-feature-name
-```
+## Architectural Integrity
 
-### 3. Make Changes
+When contributing, keep in mind the core goal: **preserving architectural coherence**. Mutations should be structurally safe and adhere to the project's DNA patterns.
 
-- Follow existing code style
-- Add tests if applicable
-- Update documentation
+## Licensing & Attribution
 
-### 4. Test
+All contributions must adhere to the MIT License. Furthermore, because DALEK_GROG utilizes architectural DNA siphoned from various world-class repositories, all new code must include the standard architectural credit header. See `LICENSE` for the full list of credited repositories.
 
-```bash
-npm run lint
-npm run dev
-```
-
-### 5. Submit PR
-
-- Push to your fork
-- Open a Pull Request
-- Describe your changes
-
----
-
-## Code Style
-
-- TypeScript strict mode
-- Async/await over promises
-- JSDoc comments for public methods
-- No `any` types - use `unknown`
-
----
-
-## Evolution Rules
-
-When contributing evolved code:
-
-1. **Preserve functionality** - Evolution should improve, not break
-2. **Add summary** - Explain what changed and why
-3. **Respect saturation** - Follow constraint guidelines
-4. **Learn from failures** - Update `grog/lessons/`
-
----
-
-## Areas for Contribution
-
-| Area | Description |
-|------|-------------|
-| DNA Patterns | Add new architectural patterns |
-| Siphons | Improve DNA extraction |
-| UI | Enhance the dashboard |
-| Docs | Improve documentation |
-| Tests | Add test coverage |
-
----
-
-## Questions?
-
-Open an issue or check `evolution_outputs/` for examples of evolved code.
+If you find a bug or have a feature request, please open an issue on GitHub.

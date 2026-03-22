@@ -7,37 +7,62 @@
  */
 
 /**
- * Robustly parses JSON from a string, handling code blocks and malformed input.
+ * Robustly parses JSON from a string, handling code blocks, malformed input, 
+ * trailing commas, and unquoted keys common in AI outputs.
  */
 export const robustParseJSON = (text: string) => {
   if (!text) return null;
-  try {
-    return JSON.parse(text.trim());
-  } catch (e) {
-    const codeBlockMatch = text.match(/```(?:json)?\n?([\s\S]*?)```/i);
-    if (codeBlockMatch) {
+  
+  const cleanJson = (str: string) => {
+    try {
+      // 1. Try standard parse
+      return JSON.parse(str.trim());
+    } catch (e) {
+      // 2. Handle common AI issues: trailing commas, unquoted keys, single quotes
       try {
-        return JSON.parse(codeBlockMatch[1].trim());
-      } catch (innerE) {}
+        let fixed = str.trim()
+          // Remove trailing commas before closing braces/brackets
+          .replace(/,\s*([}\]])/g, '$1')
+          // Handle unquoted keys (basic version)
+          .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
+          // Handle single quoted keys/values (very basic attempt)
+          // This is risky but often needed for non-standard JSON
+          .replace(/'/g, '"');
+        
+        return JSON.parse(fixed);
+      } catch (innerE) {
+        return null;
+      }
     }
-    const startObj = text.indexOf('{');
-    const endObj = text.lastIndexOf('}');
-    const startArr = text.indexOf('[');
-    const endArr = text.lastIndexOf(']');
-    let objResult = null;
-    if (startObj !== -1 && endObj !== -1 && endObj > startObj) {
-      try {
-        objResult = JSON.parse(text.substring(startObj, endObj + 1));
-      } catch (objE) {}
-    }
-    let arrResult = null;
-    if (startArr !== -1 && endArr !== -1 && endArr > startArr) {
-      try {
-        arrResult = JSON.parse(text.substring(startArr, endArr + 1));
-      } catch (arrE) {}
-    }
-    return objResult || arrResult;
+  };
+
+  const result = cleanJson(text);
+  if (result) return result;
+
+  // If initial clean failed, try to extract from code blocks
+  const codeBlockMatch = text.match(/```(?:json)?\n?([\s\S]*?)```/i);
+  if (codeBlockMatch) {
+    const extracted = cleanJson(codeBlockMatch[1]);
+    if (extracted) return extracted;
   }
+
+  // Try to find the first { or [ and last } or ]
+  const startObj = text.indexOf('{');
+  const endObj = text.lastIndexOf('}');
+  const startArr = text.indexOf('[');
+  const endArr = text.lastIndexOf(']');
+
+  if (startObj !== -1 && endObj !== -1 && endObj > startObj) {
+    const extracted = cleanJson(text.substring(startObj, endObj + 1));
+    if (extracted) return extracted;
+  }
+
+  if (startArr !== -1 && endArr !== -1 && endArr > startArr) {
+    const extracted = cleanJson(text.substring(startArr, endArr + 1));
+    if (extracted) return extracted;
+  }
+
+  return null;
 };
 
 /**

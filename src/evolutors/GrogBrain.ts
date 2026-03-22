@@ -2,27 +2,20 @@
  * @license
  * SPDX-License-Identifier: Apache-2.0
  * 
- * DALEK_GROG v4.0: Autonomous Evolution Engine with AGI Components
+ * DALEK_GROG v3.1: Autonomous Evolution Engine
  * Copyright (c) 2026 craighckby-stack
- * 
- * AGI Components Integrated:
- * - EpisodicMemory: Experience-based learning
- * - SelfAwareness: Introspection and metacognition
- * - AGIKernel: Central orchestrator for bootstrap
  */
 
 import { GoogleGenAI } from "@google/genai";
 import { APIGate } from "./apiGate";
 import { StrategyEvolution } from "./evolutionService";
 import { EventBus } from "../core/nexus_core";
-import { EpisodicMemory } from "../core/episodic_memory";
-import { SelfAwareness } from "../core/self_awareness";
 import { SystemPrompts, PromptService } from "./promptService";
+import { robustParseJSON } from "../core/utils";
 
 /**
  * GrogBrain: The central AI orchestrator for DALEK_GROG.
  * Responsible for code evolution, self-mutation, and strategic decision-making.
- * Now integrates AGI components for self-aware evolution.
  */
 export class GrogBrain {
   private ai: GoogleGenAI;
@@ -34,8 +27,6 @@ export class GrogBrain {
     push: (path: string, content: string, message: string) => Promise<void>;
   };
   private eventBus: EventBus;
-  private memory: EpisodicMemory;
-  private awareness: SelfAwareness;
   private context: any = {};
   private geminiFailed: boolean = false;
 
@@ -62,12 +53,6 @@ export class GrogBrain {
         this.addLog(`[APIGate] ${msg}`, color);
       }
     });
-    
-    // Initialize AGI cognitive components
-    this.memory = new EpisodicMemory(eventBus);
-    this.awareness = new SelfAwareness(eventBus, this.memory);
-    
-    this.addLog('[GROG_BRAIN] AGI components initialized: EpisodicMemory, SelfAwareness', 'var(--color-dalek-cyan)');
   }
 
   /**
@@ -96,6 +81,9 @@ export class GrogBrain {
   ): Promise<string> {
     const strategy = this.evolutionEngine.getBestStrategy();
     const model = strategy.modelPreference === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
+
+    // Update APIGate config with current strategy parameters
+    this.apiGate.updateConfig({ maxConcurrency: strategy.concurrency });
 
     const startTime = Date.now();
     try {
@@ -149,7 +137,7 @@ export class GrogBrain {
       round: this.context.round || 1,
       totalRounds: this.context.totalRounds || 5,
       vote: this.context.vote || "Meta/React-Core",
-      context: JSON.stringify(this.context.chainedContext || {}),
+      context: typeof this.context.chainedContext === 'string' ? this.context.chainedContext : JSON.stringify(this.context.chainedContext || {}),
       dna: dnaSignature,
       saturation: this.context.saturationGuidelines || "None",
       dependencyMap: JSON.stringify(this.context.dependencyMap || {}),
@@ -157,7 +145,21 @@ export class GrogBrain {
     });
 
     const result = await this.callAIWithFallback(userPrompt, systemInstruction, false, true);
-    const parsed = JSON.parse(result);
+    const parsed = robustParseJSON(result);
+
+    if (!parsed) {
+      // Fallback if JSON parsing failed
+      const codeBlockMatch = result.match(/```(?:[a-z]*)\n?([\s\S]*?)\n?```/);
+      const extractedCode = codeBlockMatch ? codeBlockMatch[1].trim() : result.trim();
+      return { 
+        improvedCode: extractedCode, 
+        summary: "JSON_PARSE_FAILURE_RECOVERY", 
+        emergentTool: false, 
+        tool: null, 
+        strategicDecision: "RECOVERY_MODE", 
+        priority: 1 
+      };
+    }
 
     await this.eventBus.emit('grog:thought', {
       type: 'evolution',
@@ -175,16 +177,24 @@ export class GrogBrain {
   public scanForEvolution(fileData: { path: string, content: string }[]): { path: string, saturation: number }[] {
     return fileData
       .map(f => {
-        let saturation = 0;
-        if (f.content.includes("Nexus")) saturation += 20;
-        if (f.content.includes("DNA")) saturation += 20;
-        if (f.content.includes("@license")) saturation += 20;
-        if (f.content.length > 1000) saturation += 20;
-        if (f.content.includes("Grog")) saturation += 20;
+        const saturation = this.calculateSaturation(f.content);
         return { path: f.path, saturation };
       })
       .filter(f => f.saturation < 80)
       .sort((a, b) => a.saturation - b.saturation);
+  }
+
+  /**
+   * Calculates the DNA saturation level of a given code content.
+   */
+  public calculateSaturation(content: string): number {
+    let saturation = 0;
+    if (content.includes("Nexus")) saturation += 20;
+    if (content.includes("DNA")) saturation += 20;
+    if (content.includes("@license")) saturation += 20;
+    if (content.length > 1000) saturation += 20;
+    if (content.includes("Grog")) saturation += 20;
+    return saturation;
   }
 
   /**
@@ -233,7 +243,7 @@ export class GrogBrain {
     `;
 
     const result = await this.callAIWithFallback(prompt, "You are a Strategic Thinking Engine.", false, true);
-    return JSON.parse(result);
+    return robustParseJSON(result) || [];
   }
 
   /**
@@ -253,7 +263,7 @@ export class GrogBrain {
         existing = await this.repoOps.fetch('grog/lessons/DEATH_REGISTRY.json');
       } catch (e) {}
       
-      const registry = JSON.parse(existing || "[]");
+      const registry = robustParseJSON(existing || "[]");
       registry.push(deathEntry);
       await this.repoOps.push('grog/lessons/DEATH_REGISTRY.json', JSON.stringify(registry, null, 2), "GROG_BRAIN: Recording system death");
     } catch (e) {
@@ -282,125 +292,5 @@ export class GrogBrain {
     } catch (e) {
       this.addLog("FAILED TO RECORD LESSON.", "var(--color-dalek-red)");
     }
-  }
-
-  // ==================== AGI COGNITIVE METHODS ====================
-
-  /**
-   * Get the episodic memory component
-   */
-  public getMemory(): EpisodicMemory {
-    return this.memory;
-  }
-
-  /**
-   * Get the self-awareness component
-   */
-  public getAwareness(): SelfAwareness {
-    return this.awareness;
-  }
-
-  /**
-   * Perform introspection on current state
-   */
-  public async introspect(): Promise<void> {
-    const result = await this.awareness.introspect();
-    
-    // Log insights
-    result.insights.forEach(insight => {
-      this.addLog(`[INTROSPECTION] ${insight}`, 'var(--color-dalek-cyan)');
-    });
-
-    // Handle anomalies
-    if (result.anomalies.length > 0) {
-      this.addLog(`[INTROSPECTION] ⚠ ${result.anomalies.length} anomalies detected`, 'var(--color-dalek-gold)');
-    }
-
-    // Record this introspection in memory
-    await this.memory.record({
-      type: 'learning',
-      context: { operation: 'introspection' },
-      content: `Introspection: ${result.insights.length} insights, ${result.anomalies.length} anomalies`,
-      metadata: { selfEvaluation: result.selfEvaluation }
-    });
-  }
-
-  /**
-   * Learn from past experiences relevant to current situation
-   */
-  public async recallExperiences(situation: string): Promise<string> {
-    return await this.memory.flashback(situation);
-  }
-
-  /**
-   * Record an experience in episodic memory
-   */
-  public async recordExperience(
-    type: 'success' | 'failure' | 'learning' | 'mutation' | 'evolution' | 'death',
-    context: { file?: string; operation?: string; model?: string },
-    content: string,
-    outcome?: string
-  ): Promise<void> {
-    await this.memory.record({ type, context, content, outcome, metadata: {} });
-  }
-
-  /**
-   * Set an internal goal
-   */
-  public setGoal(description: string, priority: number = 5): string {
-    return this.awareness.setGoal(description, priority);
-  }
-
-  /**
-   * Check if system knows something (belief confidence)
-   */
-  public knows(statement: string): boolean {
-    return this.awareness.knows(statement);
-  }
-
-  /**
-   * Assess capability for a task
-   */
-  public assessCapability(task: string): { capable: boolean; confidence: number; missing: string[] } {
-    return this.awareness.assessCapability(task);
-  }
-
-  /**
-   * Get current memory statistics
-   */
-  public getMemoryStats(): ReturnType<EpisodicMemory['getStats']> {
-    return this.memory.getStats();
-  }
-
-  /**
-   * Get the self-model
-   */
-  public getSelfModel(): ReturnType<SelfAwareness['getSelfModel']> {
-    return this.awareness.getSelfModel();
-  }
-
-  /**
-   * Self-evolve: Propose and apply mutations to own code
-   */
-  public async selfEvolve(): Promise<{ mutated: boolean; changes: string }> {
-    this.addLog('[SELF_EVOLVE] Beginning self-evolution cycle...', 'var(--color-dalek-gold)');
-
-    // First, introspect
-    await this.introspect();
-
-    // Check capability
-    const capability = this.assessCapability('self_modification');
-    if (!capability.capable) {
-      this.addLog(`[SELF_EVOLVE] Cannot self-modify: missing ${capability.missing.join(', ')}`, 'var(--color-dalek-red)');
-      return { mutated: false, changes: `Missing capabilities: ${capability.missing.join(', ')}` };
-    }
-
-    // Get relevant past experiences
-    const experiences = await this.recallExperiences('self mutation evolution improvement');
-    
-    // Record this self-evolution attempt
-    await this.recordExperience('mutation', { operation: 'self_evolve' }, 'Self-evolution cycle initiated');
-
-    return { mutated: true, changes: 'Self-evolution cycle completed. Check memory for details.' };
   }
 }
