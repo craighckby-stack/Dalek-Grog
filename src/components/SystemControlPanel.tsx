@@ -31,6 +31,8 @@ interface SystemControlPanelProps {
   setSiphonedRepos: (repos: string[]) => void;
   pruneRedundantMetadata: () => Promise<void>;
   isPruning: boolean;
+  isAuditing: boolean;
+  runFullSystemAudit: () => Promise<void>;
   saturationGuidelines: string;
   handleSaturationUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isAnalyzingSaturation: boolean;
@@ -302,6 +304,14 @@ export const SystemControlPanel: React.FC<SystemControlPanelProps> = (props) => 
               <span className="text-[8px] text-zinc-400 truncate">{props.currentStrategy?.id || "N/A"}</span>
             </div>
           </div>
+          <button 
+            onClick={() => props.runFullSystemAudit()}
+            disabled={props.isAuditing || props.isRunning}
+            className={`w-full mt-2 py-1.5 border border-dalek-cyan/30 text-[9px] tracking-widest uppercase transition-all flex items-center justify-center gap-2 ${props.isAuditing ? 'animate-pulse text-dalek-cyan border-dalek-cyan' : 'hover:bg-dalek-cyan/10 text-zinc-400 hover:text-dalek-cyan'}`}
+          >
+            <Shield size={10} className={props.isAuditing ? 'animate-spin' : ''} />
+            {props.isAuditing ? 'Auditing System...' : 'Run Full System Audit'}
+          </button>
         </div>
 
         <div className="mt-auto pt-4">

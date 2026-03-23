@@ -1,0 +1,25 @@
+{
+  "evolution_params": {
+    "mutation_rate": 0.15,
+    "crossover_rate": 0.5,
+    "population_size": 10,
+    "selection_threshold": 0.6,
+    "max_generations": 20,
+    "parallel_threads": 3,
+    "precision_mode": true,
+    "resume_mode": true,
+    "saturation_threshold": 0.8,
+    "complexity_limit": 0.2,
+    "architectural_alignment_weight": 0.3,
+    "complexity_reduction_weight": 0.4,
+    "size_efficiency_weight": 0.2,
+    "linting_score_weight": 0.1,
+    "reboot_on_critical_mutation": true,
+    "critical_files": [
+      "GrogBrain.ts",
+      "server.ts",
+      "nexus_core.ts",
+      "FitnessEvaluator.ts"
+    ]
+  }
+}

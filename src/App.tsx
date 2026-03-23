@@ -26,6 +26,7 @@ import { SaturationService } from './evolutors/SaturationService';
 import { EventBus, NexusTask, NexusTaskHeap, NexusPatch, NexusArchitecturalLinter, NexusComplexityAnalyzer, NexusDiagnosticReporter, NexusCompilerHost } from './core/nexus_core';
 import { GithubService } from './services/githubService';
 import { WebSiphonService } from './services/webSiphonService';
+import { systemAuditService } from './services/SystemAuditService';
 import { NEXUS_CORE_TEMPLATE } from './templates/nexus_core_template';
 import * as mammoth from 'mammoth';
 
@@ -81,6 +82,7 @@ export default function App() {
   const [maxRounds, setMaxRounds] = useState(10);
 
   const [isPruning, setIsPruning] = useState(false);
+  const [isAuditing, setIsAuditing] = useState(false);
   const [deathRecords, setDeathRecords] = useState<any[]>([]);
   const [isAnalyzingDeaths, setIsAnalyzingDeaths] = useState(false);
   const [deathAnalysis, setDeathAnalysis] = useState<string | null>(null);
@@ -1527,6 +1529,19 @@ OUTPUT ONLY JSON.`;
     }
   };
 
+  const runFullSystemAudit = async () => {
+    if (isAuditing) return;
+    setIsAuditing(true);
+    try {
+      const files = await fetchRepoFiles();
+      await systemAuditService.runFullAudit(files, addLog);
+    } catch (e) {
+      addLog("FULL SYSTEM AUDIT FAILED.", "var(--color-dalek-red)");
+    } finally {
+      setIsAuditing(false);
+    }
+  };
+
   const syncLicenses = async () => {
     addLog("INITIATING GLOBAL LICENSE SYNCHRONIZATION...", "var(--color-dalek-cyan)");
     try {
@@ -1884,10 +1899,22 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
 
           if (r % 3 === 0 || r === rounds) {
             const baseName = getBaseName(file);
-            this.addLog(`GROG_BRAIN: PUSHING ${file} TO REPOSITORY...`, "var(--color-dalek-gold)");
+            
+            // 1. Local Mutation (Immediate effect in preview)
+            const localSuccess = await mutateLocalFile(file, code);
+            if (localSuccess) {
+              addLog(`GROG_BRAIN: LOCAL MUTATION SUCCESSFUL FOR ${file}.`, "var(--color-dalek-green-dim)");
+              if (file === 'src/evolutors/GrogBrain.ts' || file === 'server.ts') {
+                setIsRebooting(true);
+                setTimeout(() => window.location.reload(), 2000);
+              }
+            }
+
+            // 2. Remote Sync
+            addLog(`GROG_BRAIN: PUSHING ${file} TO REPOSITORY...`, "var(--color-dalek-gold)");
             const pushSuccess = await pushToRepo(file, code, `Meta-123: Lifecycle Instantiation R${r} for ${file} | Vote: ${vote}`);
             if (pushSuccess) {
-              this.addLog(`GROG_BRAIN: SUCCESSFULLY PUSHED ${file}.`, "var(--color-dalek-green)");
+              addLog(`GROG_BRAIN: SUCCESSFULLY PUSHED ${file}.`, "var(--color-dalek-green)");
               await pushToRepo(`meta_${baseName}.json`, JSON.stringify(newMeta, null, 2), `Meta-123: Repo State R${r}`);
               
               // Replication to backup repo
@@ -1896,7 +1923,7 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
                 await pushToRepo(`meta_${baseName}.json`, JSON.stringify(newMeta, null, 2), `REPLICATION R${r}: Meta`, backupRepo, 'main');
               }
             } else {
-              this.addLog(`GROG_BRAIN: FAILED TO PUSH ${file}.`, "var(--color-dalek-red)");
+              addLog(`GROG_BRAIN: FAILED TO PUSH ${file}.`, "var(--color-dalek-red)");
             }
             
             // Small delay to avoid GitHub secondary rate limits
@@ -2646,6 +2673,8 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
               setSiphonedRepos={setSiphonedRepos}
               pruneRedundantMetadata={pruneRedundantMetadata}
               isPruning={isPruning}
+              isAuditing={isAuditing}
+              runFullSystemAudit={runFullSystemAudit}
               saturationGuidelines={saturationGuidelines}
               handleSaturationUpload={handleSaturationUpload}
               isAnalyzingSaturation={isAnalyzingSaturation}
