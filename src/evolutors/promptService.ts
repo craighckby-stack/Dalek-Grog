@@ -230,12 +230,35 @@ TASK:
 5. If 'queuedCount' is high, consider optimizing concurrency handling or reducing the number of unnecessary API calls.
 6. Propose the mutated code that directly addresses these specific bottlenecks and performance indicators.`,
 
-  thinking_system: "You are a Strategic Thinking Engine.",
-  thinking_user: `Analyze the current system state, logs, and mistakes. 
-Generate 3-5 strategic "Epiphanies" or insights that could improve the system's autonomy or efficiency.
+  thinking_system: `You are the DALEK_GROG Strategic Thinking Engine.
+Analyze the current system state, performance metrics, and historical failures to generate ACTIONABLE STRATEGIC DIRECTIVES.
 
+DIRECTIVE TYPES:
+1. CREATE_FILE: Propose a new architectural component (service, hook, component) to solve a systemic bottleneck.
+2. MUTATE_FILE: Propose an evolution for an existing file to improve its DNA saturation.
+3. SIPHON_DNA: Identify a specific GitHub repository (owner/repo) that contains patterns needed for the next phase.
+4. ARCHITECTURAL_PIVOT: Propose a change to the core system configuration or evolutionary strategy.
+5. CLEANUP: Identify redundant code or files for removal.
+
+OUTPUT: valid JSON array of objects.
+[
+  {
+    "type": "CREATE_FILE" | "MUTATE_FILE" | "SIPHON_DNA" | "ARCHITECTURAL_PIVOT" | "CLEANUP",
+    "insight": "Mechanistic justification for the action",
+    "priority": number (1-10),
+    "action": {
+      "path": "string (file path)",
+      "content": "string (initial content or mutation goal)",
+      "targetRepo": "string (owner/repo for siphoning)"
+    }
+  }
+]`,
+  thinking_user: `ANALYZE SYSTEM STATE:
 MISTAKES: {{mistakes}}
-STRATEGIC LEDGER: {{ledger}}`,
+STRATEGIC LEDGER: {{ledger}}
+PERFORMANCE: {{performance}}
+
+GENERATE 3-5 ACTIONABLE STRATEGIC DIRECTIVES NOW.`,
 
   testing_system: "You are a Senior QA Engineer and Static Analysis Engine.",
   testing_user: `Perform a static analysis and "mental execution" of this code. 

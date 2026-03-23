@@ -2,6 +2,7 @@ import React from 'react';
 import { Brain, Activity, RefreshCw, Zap, ShieldCheck, BookOpen, ShieldAlert } from 'lucide-react';
 import { DeathRegistryPanel } from './DeathRegistryPanel';
 import { Mistake } from '../types';
+import { SaturationService } from '../evolutors/SaturationService';
 
 interface GrogDashboardProps {
   grogBrainRef: React.MutableRefObject<any>;
@@ -18,7 +19,7 @@ interface GrogDashboardProps {
   isScanningEvolution: boolean;
   runGrogThinking: () => Promise<void>;
   isThinking: boolean;
-  grogEpiphanies: { type: string, insight: string, priority: number }[];
+  grogEpiphanies: any[];
   runGrogTests: () => Promise<void>;
   isTesting: boolean;
   handleSelfMutation: (path: string) => Promise<void>;
@@ -34,6 +35,7 @@ interface GrogDashboardProps {
   setActiveTab: (tab: 'system' | 'manual' | 'grog') => void;
   addLog: (msg: string, color?: string) => void;
   grogThoughts: any[];
+  executeDirective: (directive: any) => Promise<void>;
 }
 
 export const GrogDashboard: React.FC<GrogDashboardProps> = ({
@@ -66,7 +68,8 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = ({
   setSelectedFile,
   setActiveTab,
   addLog,
-  grogThoughts
+  grogThoughts,
+  executeDirective
 }) => {
   return (
     <div className="panel-container space-y-4 p-4 animate-in fade-in duration-500">
@@ -82,7 +85,7 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = ({
           <span className="text-[8px] text-zinc-500 uppercase tracking-widest">Consciousness Level</span>
           <div className="flex items-end gap-2">
             <span className="text-2xl font-black text-dalek-purple">
-              {grogBrainRef.current ? grogBrainRef.current.calculateSaturation(currentCode) : 0}%
+              {SaturationService.calculateSaturation(currentCode)}%
             </span>
             <span className="text-[8px] text-zinc-600 mb-1">DNA SATURATION</span>
           </div>
@@ -162,27 +165,32 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = ({
               {grogThoughts.length === 0 ? (
                 <div className="text-[8px] text-zinc-700 italic">Neural pathways idle...</div>
               ) : (
-                grogThoughts.map((t, i) => (
-                  <div key={i} className="flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-1">
-                    <div className="text-[8px] text-dalek-purple flex items-center gap-2">
-                      <span className="opacity-40">[{new Date().toLocaleTimeString()}]</span>
-                      <span className="font-bold">{t.type.toUpperCase()}:</span>
-                      <span className="truncate opacity-80">{t.file || 'SYSTEM'}</span>
+                grogThoughts.map((t, i) => {
+                  const priorityColor = t.priority >= 8 ? 'bg-dalek-red' : t.priority >= 5 ? 'bg-dalek-gold' : 'bg-dalek-green';
+                  const timestamp = t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+                  return (
+                    <div key={i} className="flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-1">
+                      <div className="text-[8px] text-dalek-purple flex items-center gap-2">
+                        <span className="opacity-40">[{timestamp}]</span>
+                        <div className={`w-1 h-1 rounded-full ${priorityColor}`} title={`Priority: ${t.priority}`} />
+                        <span className="font-bold">{t.type.toUpperCase()}:</span>
+                        <span className="truncate opacity-80">{t.file || 'SYSTEM'}</span>
+                      </div>
+                      {t.violations && t.violations.length > 0 && (
+                        <div className="text-[7px] text-dalek-red pl-4 flex items-center gap-1">
+                          <ShieldAlert size={8} />
+                          <span>{t.violations[0]}</span>
+                        </div>
+                      )}
+                      {t.shadowDivergence !== undefined && (
+                        <div className="text-[7px] text-dalek-gold pl-4 flex items-center gap-1">
+                          <Activity size={8} />
+                          <span>Shadow Divergence: {(t.shadowDivergence * 100).toFixed(1)}%</span>
+                        </div>
+                      )}
                     </div>
-                    {t.violations && t.violations.length > 0 && (
-                      <div className="text-[7px] text-dalek-red pl-4 flex items-center gap-1">
-                        <ShieldAlert size={8} />
-                        <span>{t.violations[0]}</span>
-                      </div>
-                    )}
-                    {t.shadowDivergence !== undefined && (
-                      <div className="text-[7px] text-dalek-gold pl-4 flex items-center gap-1">
-                        <Activity size={8} />
-                        <span>Shadow Divergence: {(t.shadowDivergence * 100).toFixed(1)}%</span>
-                      </div>
-                    )}
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -245,7 +253,7 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = ({
 
         {grogEpiphanies.length > 0 && (
           <div className="space-y-2 mt-4">
-            <span className="text-[8px] text-dalek-purple uppercase tracking-widest block">Strategic Epiphanies</span>
+            <span className="text-[8px] text-dalek-purple uppercase tracking-widest block">Strategic Directives</span>
             <div className="space-y-2">
               {grogEpiphanies.map((e, i) => (
                 <div key={i} className="p-2 bg-dalek-purple/5 border border-dalek-purple/20 rounded-sm">
@@ -253,7 +261,22 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = ({
                     <span className="text-[7px] font-bold text-dalek-purple uppercase">{e.type}</span>
                     <span className="text-[7px] text-zinc-600">PRIORITY: {e.priority}</span>
                   </div>
-                  <p className="text-[9px] text-zinc-300 leading-tight">{e.insight}</p>
+                  <p className="text-[9px] text-zinc-300 leading-tight mb-2">{e.insight}</p>
+                  {e.action && (
+                    <div className="flex items-center justify-between p-1 bg-black/40 border border-dalek-purple/20 rounded-sm">
+                      <div className="flex flex-col">
+                        <span className="text-[7px] text-zinc-500 uppercase truncate max-w-[150px]">
+                          Target: {e.action.path || e.action.targetRepo || 'SYSTEM'}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => executeDirective(e)}
+                        className="px-2 py-0.5 bg-dalek-purple text-white text-[7px] font-bold rounded-sm hover:bg-dalek-purple/80 transition-all"
+                      >
+                        EXECUTE
+                      </button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

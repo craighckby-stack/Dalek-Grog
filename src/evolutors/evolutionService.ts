@@ -53,13 +53,26 @@ export class StrategyEvolution {
     };
   }
 
-  public recordPerformance(strategyId: string, success: boolean, latency: number) {
+  public recordPerformance(strategyId: string, success: boolean, latency: number, quality: number = 1.0, violations: number = 0) {
     const strategy = this.population.find(s => s.id === strategyId);
     if (strategy) {
-      // Fitness function: success is highly weighted, low latency is better
+      // Fitness function: success is highly weighted, low latency is better, quality is a multiplier
+      // Violations are heavily penalized
       const successWeight = success ? 100 : -200;
       const latencyPenalty = Math.max(0, (5000 - latency) / 100);
-      strategy.fitness += successWeight + latencyPenalty;
+      const violationPenalty = violations * 50;
+      
+      // Ensure quality doesn't zero out the penalty on failure
+      // We use quality as a multiplier for positive gains, but keep penalties absolute
+      let delta = 0;
+      if (success) {
+        delta = (successWeight + latencyPenalty - violationPenalty) * Math.max(0.1, quality);
+      } else {
+        // On failure, we want the full penalty
+        delta = successWeight - violationPenalty;
+      }
+      
+      strategy.fitness += delta;
     }
   }
 

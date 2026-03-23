@@ -111,6 +111,34 @@ async function startServer() {
     }
   });
 
+  // Proxy for GitHub
+  app.post("/api/github/proxy", async (req, res) => {
+    const { url, method, body, headers: customHeaders } = req.body;
+    const token = process.env.GITHUB_TOKEN;
+
+    if (!token) {
+      return res.status(500).json({ error: "GITHUB_TOKEN missing on server" });
+    }
+
+    try {
+      const response = await fetch(url, {
+        method: method || "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `token ${token}`,
+          "User-Agent": "DALEK_GROG_EVOLUTION_ENGINE",
+          ...customHeaders
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      const data = await response.json();
+      res.status(response.status).json(data);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
   // Grog Self-Mutation Vector
   app.get("/api/grog/read", async (req, res) => {
     const { path: filePath } = req.query;
@@ -139,6 +167,10 @@ async function startServer() {
       if (!absolutePath.startsWith(__dirname)) {
         return res.status(403).json({ error: "ACCESS_DENIED: Mutation restricted to project scope." });
       }
+
+      // Ensure parent directory exists
+      const dirPath = path.dirname(absolutePath);
+      await fs.mkdir(dirPath, { recursive: true });
 
       await fs.writeFile(absolutePath, content, "utf-8");
       console.log(`GROK_SELF_MUTATION: Successfully evolved ${filePath}`);

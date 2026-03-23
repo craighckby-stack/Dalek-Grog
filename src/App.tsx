@@ -22,6 +22,7 @@ import { PromptService, SystemPrompts } from './evolutors/promptService';
 import { StrategyEvolution, EvolutionaryStrategy } from './evolutors/evolutionService';
 import { SteganographyService } from './siphons/steganographyService';
 import { GrogBrain } from './evolutors/GrogBrain';
+import { SaturationService } from './evolutors/SaturationService';
 import { EventBus, NexusTask, NexusTaskHeap, NexusPatch, NexusArchitecturalLinter, NexusComplexityAnalyzer, NexusDiagnosticReporter, NexusCompilerHost } from './core/nexus_core';
 import { GithubService } from './services/githubService';
 import { WebSiphonService } from './services/webSiphonService';
@@ -88,7 +89,7 @@ export default function App() {
   const githubServiceRef = useRef<GithubService | null>(null);
   const webSiphonServiceRef = useRef<WebSiphonService | null>(null);
   const [grogThoughts, setGrogThoughts] = useState<any[]>([]);
-  const [grogEpiphanies, setGrogEpiphanies] = useState<{ type: string, insight: string, priority: number }[]>([]);
+  const [grogEpiphanies, setGrogEpiphanies] = useState<any[]>([]);
   const [isThinking, setIsThinking] = useState(false);
   const [isRebooting, setIsRebooting] = useState(false);
 
@@ -472,11 +473,113 @@ export default function App() {
     try {
       const insights = await grogBrainRef.current.think();
       setGrogEpiphanies(insights);
-      addLog(`GROK_THOUGHT_COMPLETE: ${insights.length} STRATEGIC INSIGHTS GENERATED.`, "var(--color-dalek-green)");
+      addLog(`GROK_THOUGHT_COMPLETE: ${insights.length} STRATEGIC DIRECTIVES GENERATED.`, "var(--color-dalek-green)");
     } catch (e) {
       addLog("GROK_THOUGHT_FAILED: NEURAL INTERFERENCE DETECTED.", "var(--color-dalek-red)");
     } finally {
       setIsThinking(false);
+    }
+  };
+
+  const mutateLocalFile = async (filePath: string, content: string) => {
+    try {
+      const response = await fetch('/api/grog/self-mutate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ filePath, content })
+      });
+      const data = await response.json();
+      if (data.status !== 'success') throw new Error(data.error || "Mutation failed");
+      return true;
+    } catch (e) {
+      addLog(`LOCAL_MUTATION_FAILED: ${e instanceof Error ? e.message : 'Unknown'}`, "var(--color-dalek-red)");
+      return false;
+    }
+  };
+
+  const executeDirective = async (directive: any) => {
+    if (!directive.action) return;
+    
+    const { type, action, insight } = directive;
+    addLog(`EXECUTING_DIRECTIVE: ${type} - ${insight.slice(0, 100)}...`, "var(--color-dalek-gold)");
+
+    try {
+      switch (type) {
+        case 'CREATE_FILE':
+        case 'MUTATE_FILE':
+          if (action.path && action.content) {
+            // 1. Local Mutation (Immediate effect in preview)
+            const localSuccess = await mutateLocalFile(action.path, action.content);
+            
+            // 2. Remote Sync (If GitHub is configured)
+            if (githubServiceRef.current) {
+              await pushToRepo(action.path, action.content, `GROG_DIRECTIVE: ${type} - ${insight.slice(0, 50)}`);
+            }
+
+            if (localSuccess) {
+              addLog(`DIRECTIVE_SUCCESS: ${action.path} ${type === 'CREATE_FILE' ? 'CREATED' : 'MUTATED'} LOCALLY.`, "var(--color-dalek-green)");
+              if (action.path === 'src/evolutors/GrogBrain.ts' || action.path === 'server.ts') {
+                setIsRebooting(true);
+                setTimeout(() => window.location.reload(), 2000);
+              }
+            }
+          }
+          break;
+        case 'SIPHON_DNA':
+          if (action.targetRepo) {
+            setTargetRepo(action.targetRepo);
+            addLog(`INITIATING_DNA_SIPHON: ${action.targetRepo}...`, "var(--color-dalek-gold)");
+            
+            if (githubServiceRef.current) {
+              try {
+                const { files, usedBranch } = await githubServiceRef.current.fetchRepoFiles(action.targetRepo);
+                addLog(`SIPHON_DISCOVERED: ${files.length} GENETIC_SEQUENCES IN ${action.targetRepo} (${usedBranch}).`, "var(--color-dalek-gold)");
+                
+                // Siphon top 5 files for analysis (to avoid overwhelming the system)
+                const topFiles = files.slice(0, 5);
+                for (const file of topFiles) {
+                  const content = await githubServiceRef.current.fetchFileContent(file, action.targetRepo, usedBranch);
+                  if (content) {
+                    const siphonPath = `src/siphons/${action.targetRepo.replace('/', '_')}/${file}`;
+                    await mutateLocalFile(siphonPath, content);
+                    addLog(`SIPHONED: ${file} -> ${siphonPath}`, "var(--color-dalek-green-dim)");
+                  }
+                }
+                addLog(`DIRECTIVE_SUCCESS: DNA_SIPHON COMPLETED FROM ${action.targetRepo}.`, "var(--color-dalek-green)");
+              } catch (err) {
+                addLog(`SIPHON_FAILED: ${err instanceof Error ? err.message : 'Unknown'}`, "var(--color-dalek-red)");
+              }
+            } else {
+              addLog("SIPHON_FAILED: GITHUB_SERVICE_NOT_INITIALIZED. CHECK_CREDENTIALS.", "var(--color-dalek-red)");
+            }
+          }
+          break;
+        case 'ARCHITECTURAL_PIVOT':
+          if (action.path && action.content) {
+            // 1. Local Mutation
+            const localSuccess = await mutateLocalFile(action.path, action.content);
+            
+            // 2. Remote Sync
+            if (githubServiceRef.current) {
+              await pushToRepo(action.path, action.content, `GROG_PIVOT: ${insight.slice(0, 50)}`);
+            }
+
+            if (localSuccess) {
+              addLog(`DIRECTIVE_SUCCESS: ARCHITECTURAL_PIVOT APPLIED TO ${action.path} LOCALLY.`, "var(--color-dalek-green)");
+            }
+          } else {
+            addLog("DIRECTIVE_LOGGED: ARCHITECTURAL_PIVOT REQUIRES MANUAL OVERSIGHT.", "var(--color-dalek-gold)");
+          }
+          break;
+        case 'CLEANUP':
+          addLog(`DIRECTIVE_LOGGED: CLEANUP OF ${action.path} REQUIRES MANUAL OVERSIGHT.`, "var(--color-dalek-gold)");
+          // For now, we don't delete files autonomously for safety, but we log the intent.
+          break;
+      }
+      
+      setGrogEpiphanies(prev => prev.filter(e => e !== directive));
+    } catch (e) {
+      addLog(`DIRECTIVE_FAILED: ${e instanceof Error ? e.message : 'Unknown'}`, "var(--color-dalek-red)");
     }
   };
 
@@ -1701,7 +1804,7 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
             if (currentContext.length > 10000) currentContext = currentContext.slice(-10000);
             
             // Saturation Check
-            const currentSaturation = grogBrainRef.current?.calculateSaturation(cleanedCode) || 0;
+            const currentSaturation = SaturationService.calculateSaturation(cleanedCode);
             if (currentSaturation >= 100) {
               addLog(`ROUND ${r}/${rounds} [${file}]: 100% DNA SATURATION ACHIEVED. TERMINATING MUTATION FOR THIS NODE.`, "var(--color-dalek-green)");
               code = cleanedCode;
@@ -2512,6 +2615,7 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
               setActiveTab={setActiveTab}
               addLog={addLog}
               grogThoughts={grogThoughts}
+              executeDirective={executeDirective}
             />
           ) : (
             <SystemControlPanel 

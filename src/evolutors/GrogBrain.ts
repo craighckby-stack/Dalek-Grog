@@ -15,6 +15,7 @@ import { NexusTestRunner } from "../core/NexusTestRunner";
 import { SystemPrompts, PromptService } from "./promptService";
 import { GrogLogger } from "../core/logger";
 import { GrogMemory } from "./GrogMemory";
+import { SaturationService } from "./SaturationService";
 
 export interface GrogContext {
   mistakes?: string[];
@@ -128,7 +129,8 @@ export class GrogBrain {
     systemInstruction: string,
     useSearch: boolean = false,
     forceJson: boolean = false,
-    patterns: any = null,
+    quality: number = 1.0,
+    violations: number = 0,
     temperatureOverride?: number
   ): Promise<string> {
     const strategy = this.evolutionEngine.getBestStrategy();
@@ -150,7 +152,7 @@ export class GrogBrain {
               temperature,
               topP: strategy.topP,
               topK: strategy.topK,
-              maxOutputTokens: 8192, // Increase for large code expansions
+              maxOutputTokens: 8192,
               responseMimeType: forceJson ? "application/json" : "text/plain",
               tools: useSearch ? [{ googleSearch: {} }] : undefined
             }
@@ -183,10 +185,12 @@ export class GrogBrain {
         }
       });
 
-      this.evolutionEngine.recordPerformance(strategy.id, true, Date.now() - startTime);
+      const latency = Date.now() - startTime;
+      this.evolutionEngine.recordPerformance(strategy.id, true, latency, quality, violations);
       return result;
     } catch (error: any) {
-      this.evolutionEngine.recordPerformance(strategy.id, false, Date.now() - startTime);
+      const latency = Date.now() - startTime;
+      this.evolutionEngine.recordPerformance(strategy.id, false, latency, 0.0, violations + 1);
       
       const stats = this.getGateStats();
       const errorMsg = error.message || String(error);
@@ -228,6 +232,12 @@ export class GrogBrain {
       typeInstructions: retryCount > 0 ? "CRITICAL: Previous mutation failed architectural audit. Ensure all exports are preserved and logic is not truncated." : ""
     });
 
+    const dynamicGuidelines = SaturationService.getDynamicSaturationGuidelines(path, content);
+    const manualGuidelines = this.context.saturationGuidelines || "";
+    const mergedGuidelines = manualGuidelines 
+      ? `[MANUAL STRATEGY]: ${manualGuidelines}\n[DYNAMIC METRICS]: ${dynamicGuidelines}`
+      : dynamicGuidelines;
+
     const userPrompt = customPrompt || PromptService.interpolate(prompts.evolution_user, {
       file: path,
       round: this.context.round || 1,
@@ -235,7 +245,7 @@ export class GrogBrain {
       vote: this.context.vote || "Meta/React-Core",
       context: typeof this.context.chainedContext === 'string' ? this.context.chainedContext : JSON.stringify(this.context.chainedContext || {}),
       dna: dnaSignature,
-      saturation: this.getDynamicSaturationGuidelines(path, content),
+      saturation: mergedGuidelines,
       dependencyMap: JSON.stringify(this.context.dependencyMap || {}),
       code: content
     });
@@ -243,7 +253,7 @@ export class GrogBrain {
     // Increase temperature on retries to encourage more creative/different solutions
     const temperatureOverride = retryCount > 0 ? Math.min(1.2, 0.8 + (retryCount * 0.15)) : undefined;
 
-    const result = await this.callAIWithFallback(userPrompt, systemInstruction, false, true, null, temperatureOverride);
+    const result = await this.callAIWithFallback(userPrompt, systemInstruction, false, true, 1.0, 0, temperatureOverride);
     const parsed = robustParseJSON(result);
 
     let improvedCode = "";
@@ -273,74 +283,46 @@ export class GrogBrain {
     }
 
     // Directive 1 & 2: Architectural Guardrails
-    const linterErrors = NexusArchitecturalLinter.check(content, improvedCode);
-    const complexityErrors = NexusComplexityAnalyzer.checkRegression(content, improvedCode);
-    const architecturalViolations = [...linterErrors, ...complexityErrors];
-
-    if (architecturalViolations.length > 0) {
-      const violationReason = architecturalViolations.join(', ');
-      GrogLogger.warn(`ARCHITECTURAL_VIOLATION in ${path} (Attempt ${retryCount + 1}): ${violationReason}`, {
-        stats: this.getGateStats(),
-        strategy: this.evolutionEngine.getBestStrategy(),
-        violations: architecturalViolations,
-        retryCount
-      });
-      
-      await this.recordDeath(`Architectural Violation: ${violationReason}`, `File: ${path}`);
-      
-      // Self-Correction Loop: Retry with stricter prompt and adjusted parameters
-      if (retryCount < GrogBrain.MAX_EVOLUTION_RETRIES) {
-        this.log(`INITIATING SELF-CORRECTION for ${path}... (Reason: ${violationReason})`, "var(--color-dalek-gold)", 'insight');
-        let correctionHint = "CRITICAL: The previous attempt was rejected due to architectural violations.";
-        if (complexityErrors.length > 0) {
-          correctionHint += " REASON: Significant logic reduction (CONTENT_LOSS). You MUST expand the logic and maintain all existing functionality. DO NOT TRUNCATE. Be more verbose and comprehensive.";
-        }
-        if (linterErrors.length > 0) {
-          correctionHint += " REASON: Export loss detected (EXPORT_LOSS). You MUST preserve all public API exports and interfaces.";
-        }
-        
-        const stricterPrompt = `${userPrompt}\n\n${correctionHint}\n\nMAXIMALIST_MODE: ENABLED.`;
-        return this.evolveFile(path, content, retryCount + 1, stricterPrompt);
-      }
-
-      // If critical and retry failed, abort evolution or return original
-      if (linterErrors.some(e => e.includes("EXPORT_LOSS")) || complexityErrors.length > 0) {
-        GrogLogger.error(`ABORTING EVOLUTION: AUDIT_FAILURE PERSISTS in ${path} after ${retryCount + 1} attempts.`, null, {
-          stats: this.getGateStats(),
-          strategy: this.evolutionEngine.getBestStrategy(),
-          violations: architecturalViolations
-        });
-        return { 
-          improvedCode: content, 
-          summary: "EVOLUTION_ABORTED: AUDIT_FAILURE_PERSISTS", 
-          emergentTool: false, 
-          tool: null, 
-          strategicDecision: "ABORT_MUTATION", 
-          priority: 10 
-        };
-      }
+    const validation = await this.validateMutation(path, content, improvedCode, retryCount, userPrompt, (p, c, r, pr) => this.evolveFile(p, c, r, pr));
+    
+    if (validation.aborted) {
+      return { 
+        improvedCode: content, 
+        summary: "EVOLUTION_ABORTED: AUDIT_FAILURE_PERSISTS", 
+        emergentTool: false, 
+        tool: null, 
+        strategicDecision: "ABORT_MUTATION", 
+        priority: 10 
+      };
     }
 
-    // Directive 3: Test-Driven Mutation (TDM)
-    const testResult = await NexusTestRunner.runRegression(path, improvedCode);
-    const aiTestReport = await this.runNativeTests(path, improvedCode);
+    if (validation.retryPromise) return validation.retryPromise;
+
+    // Directive 3: Test-Driven Mutation (TDM) & Shadow Evaluation (Parallel)
+    this.log(`INITIATING MULTI-STAGE EVALUATION for ${path}...`, "var(--color-dalek-gold)", 'insight');
+    const [testResult, aiTestReport, shadowReport] = await Promise.all([
+      NexusTestRunner.runRegression(path, improvedCode),
+      this.runNativeTests(path, improvedCode),
+      this.runShadowEvaluation(path, content, improvedCode)
+    ]);
     
-    if (aiTestReport.report.includes("CRITICAL_BUG") || aiTestReport.report.includes("BREAKING_CHANGE")) {
-      GrogLogger.error(`REGRESSION_TEST_FAILED in ${path}: ${aiTestReport.report.slice(0, 50)}...`, null, {
+    if (!testResult.success || aiTestReport.report.includes("CRITICAL_BUG") || aiTestReport.report.includes("BREAKING_CHANGE")) {
+      const failureReason = !testResult.success ? `Regression Failure: ${testResult.report}` : `AI Test Failure: ${aiTestReport.report.slice(0, 50)}...`;
+      GrogLogger.error(`REGRESSION_TEST_FAILED in ${path}: ${failureReason}`, null, {
         stats: this.getGateStats(),
         strategy: this.evolutionEngine.getBestStrategy(),
-        testReport: aiTestReport.report
+        testReport: aiTestReport.report,
+        regressionReport: testResult.report
       });
-      await this.recordDeath(`Regression Test Failure: ${aiTestReport.report.slice(0, 100)}`, `File: ${path}`);
+      await this.recordDeath(failureReason, `File: ${path}`);
       
       if (retryCount < GrogBrain.MAX_EVOLUTION_RETRIES) {
         this.log(`INITIATING SELF-CORRECTION (TDM) for ${path}...`, "var(--color-dalek-gold)", 'insight');
-        return this.evolveFile(path, content, retryCount + 1);
+        const retryPrompt = `${userPrompt}\n\nCRITICAL: The previous mutation failed regression tests. REASON: ${failureReason}. Please fix the logic.`;
+        return this.evolveFile(path, content, retryCount + 1, retryPrompt);
       }
     }
 
-    // Directive 4: Shadow Evaluation
-    const shadowReport = await this.runShadowEvaluation(path, content, improvedCode);
     if (shadowReport.divergence > 0.5) {
       this.log(`SHADOW_EVALUATION_DIVERGENCE in ${path}: ${(shadowReport.divergence * 100).toFixed(1)}%`, "var(--color-dalek-gold)", 'insight');
       
@@ -355,8 +337,9 @@ export class GrogBrain {
       file: path,
       insight: strategicDecision || "File evolved successfully.",
       priority: priority || 5,
-      violations: architecturalViolations,
-      shadowDivergence: shadowReport.divergence
+      violations: [], // Handled in validation
+      shadowDivergence: shadowReport.divergence,
+      timestamp: new Date().toISOString()
     });
 
     return {
@@ -376,7 +359,7 @@ export class GrogBrain {
   public scanForEvolution(fileData: { path: string, content: string }[]): { path: string, saturation: number }[] {
     return fileData
       .map(f => {
-        const saturation = this.calculateSaturation(f.content);
+        const saturation = SaturationService.calculateSaturation(f.content);
         return { path: f.path, saturation };
       })
       // We prioritize files that are far from the "balanced" 50% saturation mark
@@ -385,65 +368,6 @@ export class GrogBrain {
         const bNeed = Math.abs(50 - b.saturation);
         return bNeed - aNeed;
       });
-  }
-
-  /**
-   * Calculates the DNA saturation level of a given code content.
-   * Dynamically adjusts based on complexity, node count, and technical debt markers.
-   */
-  public calculateSaturation(content: string): number {
-    const metrics = NexusComplexityAnalyzer.analyze(content);
-    const keywords = ['TODO', 'FIXME', 'HACK', 'OPTIMIZE', 'REFACTOR', 'BUG', 'DEPRECATED'];
-    const keywordCount = keywords.reduce((acc, k) => acc + (content.match(new RegExp(k, 'gi')) || []).length, 0);
-    
-    // Complexity-based saturation: higher complexity -> higher saturation (needs more evolution)
-    // We normalize complexity: 50 is considered "high" for a single file in this context
-    const complexitySaturation = Math.min(1, metrics.complexity / 50); 
-    // Density-based saturation: more nodes -> higher saturation
-    // We normalize nodes: 1000 is considered "dense"
-    const nodeSaturation = Math.min(1, metrics.nodes / 1000);
-    
-    // Weighting: 
-    // - Keywords (Technical Debt): 10%
-    // - Complexity (Cyclomatic): 40%
-    // - Node Count (Volume): 50%
-    const saturation = (keywordCount * 0.02) + (complexitySaturation * 0.38) + (nodeSaturation * 0.6);
-    
-    // Return as a percentage (0-100)
-    return Math.min(100, Math.round(saturation * 100));
-  }
-
-  /**
-   * Generates dynamic saturation guidelines based on the file's current state.
-   * Ensures mutations are both ambitious and contextually appropriate.
-   */
-  private getDynamicSaturationGuidelines(path: string, content: string): string {
-    const saturation = this.calculateSaturation(content);
-    const metrics = NexusComplexityAnalyzer.analyze(content);
-    
-    let guidelines = `DYNAMIC_SATURATION_AUDIT for ${path}: ${saturation}%. `;
-    
-    if (saturation < 30) {
-      guidelines += "AMBITIOUS_MODE: ENABLED. The file is relatively simple or clean. You are encouraged to introduce new architectural patterns, abstractions, or significant logic expansions. Be bold.";
-    } else if (saturation < 70) {
-      guidelines += "BALANCED_EVOLUTION: The file has moderate complexity. Focus on refining existing logic, improving performance, and addressing technical debt while maintaining structural integrity.";
-    } else {
-      guidelines += "CONSERVATIVE_REFACTOR: The file is highly saturated or complex. Prioritize stability, modularization, and simplification. Avoid adding unnecessary complexity; focus on consolidation and cleanup.";
-    }
-    
-    if (metrics.complexity > 30) {
-      guidelines += " CRITICAL: High cyclomatic complexity detected. Prioritize splitting large methods and reducing nested logic.";
-    }
-    
-    if (content.includes('TODO') || content.includes('FIXME')) {
-      guidelines += " TASK_FOCUS: Unresolved markers detected. Prioritize implementing missing functionality over architectural shifts.";
-    }
-    
-    if (path.includes('core') || path.includes('nexus')) {
-      guidelines += " ARCHITECTURAL_STABILITY: This is a core system file. Ensure all mutations are strictly backward compatible and follow established Nexus patterns.";
-    }
-    
-    return guidelines;
   }
 
   /**
@@ -464,11 +388,110 @@ export class GrogBrain {
    */
   public async proposeSelfMutation(targetFile: string, currentContent: string, retryCount = 0, customPrompt?: string): Promise<string> {
     const prompts = await PromptService.getPrompts();
+    const performanceContext = this.getPerformanceContext();
+
+    const systemInstruction = prompts.self_mutation_system;
+    const userPrompt = customPrompt || PromptService.interpolate(prompts.self_mutation_user, {
+      targetFile,
+      currentContent,
+      performanceContext,
+      strategicContext: this.memory.getStrategicContext(),
+      mistakes: JSON.stringify(this.context.mistakes?.slice(0, 5) || [])
+    });
+
+    const result = await this.callAIWithFallback(userPrompt, systemInstruction, false, false, 1.0, 0);
+    const mutatedCode = extractCode(result);
+
+    // Directive 1 & 2: Architectural Guardrails for Self-Mutation
+    const validation = await this.validateMutation(targetFile, currentContent, mutatedCode, retryCount, userPrompt, (p, c, r, pr) => this.proposeSelfMutation(p, c, r, pr), 0.2);
+    
+    if (validation.aborted || validation.retryPromise) {
+      return validation.retryPromise ? await validation.retryPromise : currentContent;
+    }
+
+    // Shadow Mode: Test the self-mutation before accepting
+    this.log(`SHADOW_MODE: TESTING SELF-MUTATION for ${targetFile}...`, "var(--color-dalek-green)", 'insight');
+    const shadowTest = await NexusTestRunner.runRegression(targetFile, mutatedCode);
+    
+    if (!shadowTest.success) {
+      this.log(`SHADOW_MODE_FAILURE: ${shadowTest.report}`, "var(--color-dalek-red)", 'failure');
+      await this.recordDeath(`Self-Mutation Shadow Failure: ${shadowTest.report}`, `File: ${targetFile}`);
+      
+      if (retryCount < 1) {
+        const correctionHint = `\n\nCRITICAL: The previous self-mutation failed shadow tests. ERROR: ${shadowTest.report}. Please fix the logic.`;
+        return this.proposeSelfMutation(targetFile, currentContent, retryCount + 1, `${userPrompt}${correctionHint}`);
+      }
+      return currentContent;
+    }
+
+    this.log(`SHADOW_MODE_SUCCESS: Mutation verified for ${targetFile}.`, "var(--color-dalek-green)", 'insight');
+    return mutatedCode;
+  }
+
+  /**
+   * Shared validation logic for mutations.
+   */
+  private async validateMutation(
+    path: string, 
+    oldCode: string, 
+    newCode: string, 
+    retryCount: number, 
+    userPrompt: string,
+    retryFn: (path: string, content: string, retry: number, prompt: string) => Promise<any>,
+    complexityThreshold?: number
+  ): Promise<{ aborted: boolean, retryPromise?: Promise<any> }> {
+    const linterErrors = NexusArchitecturalLinter.check(oldCode, newCode);
+    const complexityErrors = NexusComplexityAnalyzer.checkRegression(oldCode, newCode, complexityThreshold);
+    const architecturalViolations = [...linterErrors, ...complexityErrors];
+
+    if (architecturalViolations.length > 0) {
+      const violationReason = architecturalViolations.join(', ');
+      const strategy = this.evolutionEngine.getBestStrategy();
+      
+      GrogLogger.warn(`ARCHITECTURAL_VIOLATION in ${path} (Attempt ${retryCount + 1}): ${violationReason}`, {
+        stats: this.getGateStats(),
+        strategy,
+        violations: architecturalViolations,
+        retryCount
+      });
+      
+      // Record performance with low quality and high violations
+      this.evolutionEngine.recordPerformance(strategy.id, false, 0, 0.1, architecturalViolations.length);
+      
+      await this.recordDeath(`Architectural Violation: ${violationReason}`, `File: ${path}`);
+      
+      if (retryCount < GrogBrain.MAX_EVOLUTION_RETRIES) {
+        this.log(`INITIATING SELF-CORRECTION for ${path}... (Reason: ${violationReason})`, "var(--color-dalek-gold)", 'insight');
+        let correctionHint = "\n\nCRITICAL: The previous attempt was rejected due to architectural violations.";
+        if (complexityErrors.length > 0) {
+          correctionHint += " REASON: Significant logic reduction (CONTENT_LOSS). You MUST expand the logic and maintain all existing functionality. DO NOT TRUNCATE.";
+        }
+        if (linterErrors.length > 0) {
+          correctionHint += " REASON: Export loss detected (EXPORT_LOSS). You MUST preserve all public API exports.";
+        }
+        
+        const stricterPrompt = `${userPrompt}${correctionHint}\n\nMAXIMALIST_MODE: ENABLED.`;
+        return { aborted: false, retryPromise: retryFn(path, oldCode, retryCount + 1, stricterPrompt) };
+      }
+
+      if (linterErrors.some(e => e.includes("EXPORT_LOSS")) || complexityErrors.length > 0) {
+        this.log(`ABORTING MUTATION: API_SHIELD_TRIGGERED for ${path}`, "var(--color-dalek-red)", 'failure');
+        return { aborted: true };
+      }
+    }
+
+    return { aborted: false };
+  }
+
+  /**
+   * Gathers performance metrics for self-mutation analysis.
+   */
+  private getPerformanceContext(): string {
     const stats = this.getGateStats();
     const bestStrategy = this.evolutionEngine.getBestStrategy();
     const population = this.evolutionEngine.getPopulation();
     
-    const performanceContext = JSON.stringify({
+    return JSON.stringify({
       apiGate: {
         estimatedTokensUsed: stats.estimatedTokensUsed,
         callCount: stats.callCount,
@@ -491,64 +514,18 @@ export class GrogBrain {
       },
       ui: this.context.uiMetrics || {}
     }, null, 2);
-
-    const systemInstruction = prompts.self_mutation_system;
-    const userPrompt = customPrompt || PromptService.interpolate(prompts.self_mutation_user, {
-      targetFile,
-      currentContent,
-      performanceContext,
-      strategicContext: this.memory.getStrategicContext(),
-      mistakes: JSON.stringify(this.context.mistakes?.slice(0, 5) || [])
-    });
-
-    const result = await this.callAIWithFallback(userPrompt, systemInstruction);
-    const mutatedCode = extractCode(result);
-
-    // Directive 1 & 2: Architectural Guardrails for Self-Mutation
-    const linterErrors = NexusArchitecturalLinter.check(currentContent, mutatedCode);
-    const complexityErrors = NexusComplexityAnalyzer.checkRegression(currentContent, mutatedCode, 0.2); // Slightly higher threshold for self-mutation
-    const architecturalViolations = [...linterErrors, ...complexityErrors];
-
-    if (architecturalViolations.length > 0) {
-      GrogLogger.error(`SELF_MUTATION_VIOLATION: ${architecturalViolations[0]}`, null, {
-        stats: this.getGateStats(),
-        strategy: this.evolutionEngine.getBestStrategy(),
-        violations: architecturalViolations
-      });
-      await this.recordDeath(`Self-Mutation Violation: ${architecturalViolations.join(', ')}`, `File: ${targetFile}`);
-      
-      if (retryCount < 1) {
-        this.log(`INITIATING SELF-CORRECTION for self-mutation of ${targetFile}...`, "var(--color-dalek-gold)", 'insight');
-        let correctionHint = "\n\nCRITICAL: The previous self-mutation attempt was rejected due to architectural violations.";
-        if (complexityErrors.length > 0) {
-          correctionHint += " REASON: Significant logic reduction (CONTENT_LOSS). You MUST expand the logic and maintain all existing functionality. DO NOT TRUNCATE.";
-        }
-        if (linterErrors.some(e => e.includes("EXPORT_LOSS"))) {
-          correctionHint += " REASON: Export loss detected. You MUST preserve all public API exports.";
-        }
-        
-        const stricterPrompt = `${userPrompt}${correctionHint}\n\nMAXIMALIST_MODE: ENABLED.`;
-        return this.proposeSelfMutation(targetFile, currentContent, retryCount + 1, stricterPrompt);
-      }
-
-      if (linterErrors.some(e => e.includes("EXPORT_LOSS"))) {
-        this.log("ABORTING SELF-MUTATION: API_SHIELD_TRIGGERED", "var(--color-dalek-red)", 'failure');
-        return currentContent; // Return original to avoid breakage
-      }
-    }
-
-    return mutatedCode;
   }
 
   /**
    * Generates strategic insights based on system state.
    */
-  public async think(): Promise<{ type: string, insight: string, priority: number }[]> {
+  public async think(): Promise<any[]> {
     const prompts = await PromptService.getPrompts();
     const systemInstruction = prompts.thinking_system;
     const prompt = PromptService.interpolate(prompts.thinking_user, {
       mistakes: JSON.stringify(this.context.mistakes?.slice(0, 5) || []),
-      ledger: JSON.stringify(this.context.strategicLedger?.slice(-3) || [])
+      ledger: JSON.stringify(this.context.strategicLedger?.slice(-3) || []),
+      performance: this.getPerformanceContext()
     });
 
     const result = await this.callAIWithFallback(prompt, systemInstruction, false, true);

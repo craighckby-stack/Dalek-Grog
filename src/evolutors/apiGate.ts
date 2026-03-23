@@ -173,6 +173,7 @@ export class APIGate {
           expiresAt: Date.now() + this.config.dedupeWindowMs
         });
 
+        this.releaseSlot();
         return result;
       } catch (error: any) {
         lastError = error;
@@ -184,6 +185,7 @@ export class APIGate {
           // Set a 60s cooldown by default on 429
           this.cooldownUntil = Date.now() + 60_000;
           this.config.log(`QUOTA EXHAUSTED (429): Entering 60s cooldown.`, 'critical', error);
+          this.releaseSlot();
           break; // Don't retry immediately on 429, let the cooldown handle it
         }
 
@@ -195,11 +197,11 @@ export class APIGate {
           await new Promise(resolve => setTimeout(resolve, delay));
         } else {
           this.config.log(`MAX RETRIES EXCEEDED: ${errorMsg.slice(0, 100)}`, 'critical', error);
+          this.releaseSlot();
         }
       }
     }
 
-    this.releaseSlot();
     throw lastError;
   }
 
