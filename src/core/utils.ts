@@ -14,23 +14,40 @@ export const robustParseJSON = (text: string) => {
   if (!text) return null;
   
   const cleanJson = (str: string) => {
+    if (!str) return null;
+    let s = str.trim();
+    
+    // Remove markdown fences if they exist at the very start/end
+    s = s.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
+    
     try {
       // 1. Try standard parse
-      return JSON.parse(str.trim());
+      return JSON.parse(s);
     } catch (e) {
       // 2. Handle common AI issues: trailing commas, unquoted keys, single quotes
       try {
-        let fixed = str.trim()
+        let fixed = s
           // Remove trailing commas before closing braces/brackets
           .replace(/,\s*([}\]])/g, '$1')
           // Handle unquoted keys (basic version)
           .replace(/([{,]\s*)([a-zA-Z0-9_]+)\s*:/g, '$1"$2":')
           // Handle single quoted keys/values (very basic attempt)
           // This is risky but often needed for non-standard JSON
-          .replace(/'/g, '"');
+          .replace(/'/g, '"')
+          // Remove any non-JSON characters before the first { or [ and after the last } or ]
+          .replace(/^[^{[]*/, '')
+          .replace(/[^}\]]*$/, '');
         
         return JSON.parse(fixed);
       } catch (innerE) {
+        // 3. Last ditch effort: try to find a JSON object/array substring
+        const startObj = s.indexOf('{');
+        const endObj = s.lastIndexOf('}');
+        if (startObj !== -1 && endObj !== -1 && endObj > startObj) {
+          try {
+            return JSON.parse(s.substring(startObj, endObj + 1));
+          } catch (e3) { /* ignore */ }
+        }
         return null;
       }
     }
@@ -117,4 +134,13 @@ export const safeBtoa = (str: string) => {
   } catch (e) {
     return btoa(str);
   }
+};
+
+/**
+ * Extracts code from a string, handling markdown code blocks and raw text.
+ */
+export const extractCode = (text: string) => {
+  if (!text) return "";
+  const codeBlockMatch = text.match(/```(?:[a-z]*)\n?([\s\S]*?)\n?```/i);
+  return codeBlockMatch ? codeBlockMatch[1].trim() : text.trim();
 };

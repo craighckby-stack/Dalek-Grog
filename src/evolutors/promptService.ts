@@ -24,6 +24,14 @@ export interface SystemPrompts {
   destructor_user: string;
   manual_enhance_system: string;
   manual_enhance_user: string;
+  self_mutation_system: string;
+  self_mutation_user: string;
+  thinking_system: string;
+  thinking_user: string;
+  testing_system: string;
+  testing_user: string;
+  shadow_eval_system: string;
+  shadow_eval_user: string;
 }
 
 const DEFAULT_PROMPTS: SystemPrompts = {
@@ -40,14 +48,20 @@ INTERNET_SIPHON: You can request to siphon content from specific URLs (including
 
 PRE_AI_LOGIC_DNA: When architectural purity is required, prioritize siphoning "Pre-AI" code (pre-2022) from historical archives. This code often contains superior mechanistic logic and less "LLM-generated bloat". Compare "Before AI" patterns with "After AI" implementations to identify architectural decay. This applies to all supported file types, including .js, .ts, and legacy .bat automation scripts.
 
-API_EFFICIENCY: You are operating under strict API rate limits. 
-- If a file is extremely large, prioritize modularizing it into smaller components.
-- Suggest "Self-Injection" tools: If you can write a tool that optimizes your own prompt length or reduces the number of calls needed, do so.
-- If you detect you are hitting limits, reduce your verbosity in the next round.
+CRITICAL_GUARDRAIL:
+- DO NOT TRUNCATE THE CODE. You MUST return the ENTIRE file content, including all existing logic, imports, and exports.
+- DO NOT MODULARIZE OR SPLIT THE FILE unless explicitly asked. The system expects a single, complete file.
+- PRESERVE ALL PUBLIC API EXPORTS. Removing an export is a CRITICAL FAILURE.
+- EXPAND AND IMPROVE, NEVER REDUCE.
 
 PRECISION_OVER_IMPRESSIVENESS: Prioritize factual accuracy and mechanistic justification over decorative complexity or flowery language.
 GROUNDING: Flag any claim that cannot be traced directly back to the source document or context.
 METAPHORS: If adding a metaphor, state explicitly what the biological/mathematical equivalent is or mark it speculative. If a metaphor cannot be mechanistically justified, remove it.
+
+ARCHITECTURAL_INTEGRITY:
+- DO NOT RENAME EXPORTED CLASSES, FUNCTIONS, OR CONSTANTS. The public API surface must remain identical.
+- DO NOT TRUNCATE LOGIC. If a file is large, you MUST output the entire improved version.
+- PRESERVE ALL IMPORTS AND EXPORTS.
 
 STRATEGIC LEDGER (Top Insights):
 {{ledger}}
@@ -122,6 +136,9 @@ OUTPUT ONLY MARKDOWN. DO NOT INCLUDE ANY STORYTELLING OR FICTIONAL ELEMENTS.`,
   destructor_system: `You are the NEXUS_CORE Precision Auditor.
 Your job is to ensure technical accuracy and remove redundant or purely decorative language.
 
+CRITICAL: DO NOT REMOVE LOGIC, FUNCTIONS, CLASSES, OR EXPORTS.
+Only remove conversational filler, excessive meta-commentary, or redundant boilerplate that does not contribute to the mechanistic logic of the file.
+
 CRITERIA:
 1. GROUNDING: Does this claim map to the context?
 2. MECHANISM: Is the logic sound?
@@ -184,7 +201,74 @@ CURRENT CODE:
 ---
 
 EVOLVE the code now. Incorporate the siphoned DNA and follow the saturation guidelines strictly. 
-Avoid the mistakes listed in the ledger.`
+Avoid the mistakes listed in the ledger.`,
+
+  self_mutation_system: "You are the Core Evolutionary Intelligence of DALEK_GROG. Your goal is self-optimization.",
+  self_mutation_user: `You are proposing a SELF-MUTATION for your own source code. 
+Improve your logic, add new features, or optimize existing ones based on the system's current state, performance metrics, and mistakes.
+
+TARGET: {{targetFile}}
+CURRENT CODE:
+---
+{{currentContent}}
+---
+
+DETAILED PERFORMANCE METRICS:
+{{performanceContext}}
+
+STRATEGIC CONTEXT (MEMORY):
+{{strategicContext}}
+
+MISTAKES LEDGER:
+{{mistakes}}
+
+TASK:
+1. Analyze the DETAILED PERFORMANCE METRICS and STRATEGIC CONTEXT above. 
+2. If 'retryRate' or 'retryCount' is high, propose more robust error handling, exponential backoff, or better transient error detection.
+3. If 'estimatedTokensUsed' is approaching 'hardStopThreshold' or 'warnThreshold', implement more aggressive prompt compression, token-efficient logic, or better deduplication.
+4. If 'bestFitness' is low or 'avgAggression' is not yielding results, optimize the evolutionary parameters or the fitness function itself.
+5. If 'queuedCount' is high, consider optimizing concurrency handling or reducing the number of unnecessary API calls.
+6. Propose the mutated code that directly addresses these specific bottlenecks and performance indicators.`,
+
+  thinking_system: "You are a Strategic Thinking Engine.",
+  thinking_user: `Analyze the current system state, logs, and mistakes. 
+Generate 3-5 strategic "Epiphanies" or insights that could improve the system's autonomy or efficiency.
+
+MISTAKES: {{mistakes}}
+STRATEGIC LEDGER: {{ledger}}`,
+
+  testing_system: "You are a Senior QA Engineer and Static Analysis Engine.",
+  testing_user: `Perform a static analysis and "mental execution" of this code. 
+Identify potential bugs, type errors, or architectural violations.
+
+FILE: {{path}}
+CODE:
+---
+{{content}}
+---`,
+
+  shadow_eval_system: "You are a Shadow Evaluation Engine.",
+  shadow_eval_user: `Perform a SHADOW EVALUATION of a code mutation.
+Compare the behavior of the OLD CODE and the NEW CODE when receiving identical simulated inputs.
+Identify any "Export Loss" or functional divergence that could break the system.
+
+FILE: {{path}}
+OLD CODE:
+---
+{{oldCode}}
+---
+
+NEW CODE:
+---
+{{newCode}}
+---
+
+Return a JSON object with:
+{
+  "divergence": number (0.0 to 1.0),
+  "report": "Detailed comparison of behavior",
+  "isSafe": boolean
+}`
 };
 
 export class PromptService {

@@ -22,7 +22,7 @@ import { PromptService, SystemPrompts } from './evolutors/promptService';
 import { StrategyEvolution, EvolutionaryStrategy } from './evolutors/evolutionService';
 import { SteganographyService } from './siphons/steganographyService';
 import { GrogBrain } from './evolutors/GrogBrain';
-import { EventBus, NexusTask, NexusTaskHeap, NexusPatch, NexusArchitecturalLinter, NexusDiagnosticReporter, NexusCompilerHost } from './core/nexus_core';
+import { EventBus, NexusTask, NexusTaskHeap, NexusPatch, NexusArchitecturalLinter, NexusComplexityAnalyzer, NexusDiagnosticReporter, NexusCompilerHost } from './core/nexus_core';
 import { GithubService } from './services/githubService';
 import { WebSiphonService } from './services/webSiphonService';
 import { NEXUS_CORE_TEMPLATE } from './templates/nexus_core_template';
@@ -417,13 +417,22 @@ export default function App() {
     addLog(`GROK_SELF_MUTATION_INITIATED: ${targetFile}`, "var(--color-dalek-purple)");
     
     try {
-      // 1. Get current content
+      // 1. Update brain context with UI-level metrics
+      grogBrainRef.current.updateContext({
+        uiMetrics: {
+          evolutionStats,
+          lastSummary,
+          lastPriority
+        }
+      });
+
+      // 2. Get current content
       let currentContent = "";
       const response = await fetch(`/api/grog/read?path=${targetFile}`);
       const data = await response.json();
       currentContent = data.content;
 
-      // 2. Propose mutation
+      // 3. Propose mutation
       const evolvedCode = await grogBrainRef.current.proposeSelfMutation(targetFile, currentContent);
       
       // 3. Apply mutation
@@ -1159,16 +1168,27 @@ If no redundant files are found, return an empty array [].`;
       return res;
     }
 
-    // 3. Content Loss Check (50% rule to encourage growth)
+    // 3. Architectural Guardrails (Nexus Core)
+    const linterErrors = NexusArchitecturalLinter.check(original, mutated);
+    const complexityErrors = NexusComplexityAnalyzer.checkRegression(original, mutated, 0.2); // Hardened threshold for App.tsx
+    const architecturalViolations = [...linterErrors, ...complexityErrors];
+
+    if (architecturalViolations.length > 0) {
+      const res = { valid: false, reason: `AUDIT_FAILURE: ${architecturalViolations.join(" | ")}` };
+      setLastValidation(res);
+      return res;
+    }
+
+    // 4. Content Loss Check (Fallback)
     const originalLines = original.split('\n').length;
     const mutatedLines = mutated.split('\n').length;
-    if (originalLines > 5 && mutatedLines < originalLines * 0.5) {
+    if (originalLines > 10 && mutatedLines < originalLines * 0.2) {
       const res = { valid: false, reason: `CONTENT_LOSS_DETECTED: ${mutatedLines}/${originalLines} lines. Expansion required.` };
       setLastValidation(res);
       return res;
     }
 
-    // 3. Empty Output Check
+    // 5. Empty Output Check
     if (!mutated || mutated.trim().length === 0) {
       const res = { valid: false, reason: "EMPTY_MUTATION_OUTPUT" };
       setLastValidation(res);
@@ -1275,7 +1295,7 @@ Output ONLY a JSON object matching the SystemPrompts interface.`;
       const result = await virtualHost.simulate(proposedPatch);
       
       // 4. Validate results via the Linter
-      const diagnostics = NexusArchitecturalLinter.check(result.symbolTable);
+      const diagnostics = NexusArchitecturalLinter.checkSymbolTable(result.symbolTable);
       
       if (diagnostics.length === 0) {
         addLog(`PROMOTION: PATCH ${proposedPatch.id} IS SAFE. ENTERING LIVE LOOP.`, "var(--color-dalek-green)");
@@ -1433,7 +1453,7 @@ OUTPUT ONLY JSON.`;
     }
   };
 
-  const runNexusSiphon = async () => {
+  const initiateEvolution = async () => {
     setIsRunning(true);
     abortRef.current = false;
     setStatus("LOADING");
@@ -1608,6 +1628,7 @@ OUTPUT ONLY JSON.`;
         const rounds = maxRounds;
         let currentContext = initialContext || "";
 
+        let retryHint = "";
         for (let r = 1; r <= rounds; r++) {
           if (abortRef.current) break;
           
@@ -1616,11 +1637,18 @@ OUTPUT ONLY JSON.`;
 
           const systemPrompt = PromptService.interpolate(prompts?.evolution_system || `You are Grog's Autonomous Evolution Engine. Your mission is to RECONSTRUCT Grog's Brain (Dalek-Grog) by integrating high-level architectural patterns from {{vote}}.
 MISSION OBJECTIVES:
-1. LEXICAL ALIGNMENT: Rename siphoned variables, classes, and functions to align with Grog's internal lexicon.
+1. LEXICAL ALIGNMENT: Rename siphoned variables, classes, and functions to align with Grog's internal lexicon. CRITICAL: DO NOT RENAME EXPORTED CLASSES, FUNCTIONS, OR CONSTANTS. The public API surface must remain identical to avoid breaking the system.
 2. LOGIC MERGING: Do not just replace code; merge the siphoned logic into the existing structure of {{file}}.
 3. BRAIN BINDING: Establish strong imports, exports, and connections between the mutated logic and the rest of the brain.
-4. SATURATION: Adhere to these guidelines: {{saturation}}`, { 
-            vote, file, format: targetFormat, typeInstructions,
+4. SATURATION: Adhere to these guidelines: {{saturation}}
+
+CRITICAL_GUARDRAIL:
+- DO NOT TRUNCATE THE CODE. You MUST return the ENTIRE file content.
+- PRESERVE ALL PUBLIC API EXPORTS.
+- EXPAND AND IMPROVE, NEVER REDUCE.
+
+{{typeInstructions}}`, { 
+            vote, file, format: targetFormat, typeInstructions: retryHint || typeInstructions,
             saturation: saturationGuidelines || 'None',
             ledger: strategicLedger.length > 0 ? strategicLedger.map(i => `[P${i.priority}] ${i.insight}`).join('\n') : 'No prior strategic insights recorded.',
             dna: dnaSignature || 'No external DNA siphoned yet.'
@@ -1641,11 +1669,13 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
             code: code || '// No code provided'
           });
 
-          const result = await callAIWithFallback(userPrompt, systemPrompt);
+          const result = await callAIWithFallback(userPrompt, systemPrompt, false, true); // Force JSON for evolution
           
           if (result) {
+            addLog(`GROG_BRAIN: ANALYZING AI RESPONSE FOR ${file}...`, "var(--color-dalek-gold)");
             let structuredData: any = robustParseJSON(result);
             if (!structuredData) {
+               addLog(`GROG_BRAIN: JSON PARSE FAILED FOR ${file}. ATTEMPTING EXTRACTION...`, "var(--color-dalek-red)");
                // If robustParseJSON failed, try to extract code block manually
                const codeBlockMatch = result.match(/```(?:[a-z]*)\n?([\s\S]*?)\n?```/);
                const extractedCode = codeBlockMatch ? codeBlockMatch[1].trim() : result.trim();
@@ -1658,8 +1688,12 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
                  priority: 1 
                };
             }
-
+            
             const cleanedCode = structuredData.improvedCode || "";
+            if (!cleanedCode) {
+              addLog(`GROG_BRAIN: NO IMPROVED CODE FOUND FOR ${file}. SKIPPING.`, "var(--color-dalek-red)");
+              return;
+            }
             const summary = structuredData.summary || "No summary provided.";
             
             // Update context for next round or next file
@@ -1726,10 +1760,13 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
             
             const validation = validateMutation(code, finalImprovedCode, file);
             if (validation.valid) {
+              addLog(`GROG_BRAIN: MUTATION ACCEPTED FOR ${file}.`, "var(--color-dalek-green)");
               code = finalImprovedCode;
               if (!parallelMode) setCurrentCode(code);
+              retryHint = ""; // Reset retry hint on success
             } else {
               addLog(`ROUND ${r} [${file}]: MUTATION REJECTED - ${validation.reason}`, "var(--color-dalek-red)");
+              retryHint = `CRITICAL: The previous mutation round for ${file} was REJECTED due to: ${validation.reason}. You MUST expand the logic and maintain all existing functionality. DO NOT TRUNCATE. MAXIMALIST_MODE: ENABLED.`;
               continue; 
             }
           }
@@ -1744,14 +1781,23 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
 
           if (r % 3 === 0 || r === rounds) {
             const baseName = getBaseName(file);
-            await pushToRepo(file, code, `Meta-123: Lifecycle Instantiation R${r} for ${file} | Vote: ${vote}`);
-            await pushToRepo(`meta_${baseName}.json`, JSON.stringify(newMeta, null, 2), `Meta-123: Repo State R${r}`);
-            
-            // Replication to backup repo
-            if (backupRepo) {
-              await pushToRepo(file, code, `REPLICATION R${r}: ${file}`, backupRepo, 'main');
-              await pushToRepo(`meta_${baseName}.json`, JSON.stringify(newMeta, null, 2), `REPLICATION R${r}: Meta`, backupRepo, 'main');
+            this.addLog(`GROG_BRAIN: PUSHING ${file} TO REPOSITORY...`, "var(--color-dalek-gold)");
+            const pushSuccess = await pushToRepo(file, code, `Meta-123: Lifecycle Instantiation R${r} for ${file} | Vote: ${vote}`);
+            if (pushSuccess) {
+              this.addLog(`GROG_BRAIN: SUCCESSFULLY PUSHED ${file}.`, "var(--color-dalek-green)");
+              await pushToRepo(`meta_${baseName}.json`, JSON.stringify(newMeta, null, 2), `Meta-123: Repo State R${r}`);
+              
+              // Replication to backup repo
+              if (backupRepo) {
+                await pushToRepo(file, code, `REPLICATION R${r}: ${file}`, backupRepo, 'main');
+                await pushToRepo(`meta_${baseName}.json`, JSON.stringify(newMeta, null, 2), `REPLICATION R${r}: Meta`, backupRepo, 'main');
+              }
+            } else {
+              this.addLog(`GROG_BRAIN: FAILED TO PUSH ${file}.`, "var(--color-dalek-red)");
             }
+            
+            // Small delay to avoid GitHub secondary rate limits
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
         processedCount++;
@@ -1838,6 +1884,13 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
       setIsRunning(false);
       setStatus("READY");
     }
+  };
+
+  const stopEvolution = () => {
+    abortRef.current = true;
+    addLog("ABORT SIGNAL SENT. WAITING FOR CURRENT OPERATION TO TERMINATE...", "var(--color-dalek-red)");
+    setIsRunning(false);
+    setStatus("ABORTED");
   };
 
   const siphonWebContent = async (command: string) => {
@@ -2206,7 +2259,7 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
 
   const toggle = () => {
     if (!isRunning) {
-      runNexusSiphon().catch(e => {
+      initiateEvolution().catch(e => {
         addLog(`LIFECYCLE STARTUP FAILED: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
       });
     } else {
@@ -2235,7 +2288,7 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
       }
 
       // 3. Start the main loop
-      runNexusSiphon().catch(e => {
+      initiateEvolution().catch(e => {
         addLog(`QUICK-START LIFECYCLE FAILED: ${e instanceof Error ? e.message : 'Unknown Error'}`, "var(--color-dalek-red)");
       });
     } catch (error) {
@@ -2324,6 +2377,23 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
               Grog
             </button>
           </div>
+          {!isRunning ? (
+            <button 
+              onClick={initiateEvolution}
+              className="px-4 py-1.5 bg-dalek-red text-white text-[10px] font-bold tracking-[0.2em] rounded-sm shadow-[0_0_15px_rgba(255,0,0,0.4)] hover:bg-red-600 transition-all flex items-center gap-2 group"
+            >
+              <Zap size={12} className="group-hover:animate-pulse" />
+              INITIATE
+            </button>
+          ) : (
+            <button 
+              onClick={stopEvolution}
+              className="px-4 py-1.5 bg-zinc-900 text-dalek-red text-[10px] font-bold tracking-[0.2em] rounded-sm border border-dalek-red/50 hover:bg-zinc-800 transition-all flex items-center gap-2"
+            >
+              <RefreshCw size={12} className="animate-spin" />
+              ABORT
+            </button>
+          )}
           <button 
             onClick={() => { throw new Error("DALEK_GROG: Manual Error Triggered for Sentry Verification."); }}
             className="p-1.5 text-zinc-600 hover:text-dalek-red transition-colors"
@@ -2495,6 +2565,8 @@ OUTPUT ONLY THE ENHANCED MARKDOWN.`;
               showSaturation={showSaturation}
               evolutionStats={evolutionStats}
               currentStrategy={currentStrategy}
+              initiateEvolution={initiateEvolution}
+              stopEvolution={stopEvolution}
               handleManualUpload={handleManualUpload}
               runManualEnhancement={runManualEnhancement}
               manualFileName={manualFileName}

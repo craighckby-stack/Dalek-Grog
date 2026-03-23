@@ -54,6 +54,8 @@ interface SystemControlPanelProps {
   showSaturation: boolean;
   evolutionStats: { generation: number, bestFitness: number };
   currentStrategy: any;
+  initiateEvolution: () => Promise<void>;
+  stopEvolution: () => void;
   // Manual Evolution Props
   handleManualUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   runManualEnhancement: (contentOverride?: string, fileNameOverride?: string, autoPush?: boolean) => Promise<void>;
@@ -300,6 +302,26 @@ export const SystemControlPanel: React.FC<SystemControlPanelProps> = (props) => 
               <span className="text-[8px] text-zinc-400 truncate">{props.currentStrategy?.id || "N/A"}</span>
             </div>
           </div>
+        </div>
+
+        <div className="mt-auto pt-4">
+          {!props.isRunning ? (
+            <button 
+              onClick={() => props.initiateEvolution()}
+              className="w-full py-3 bg-dalek-red hover:bg-red-600 text-white font-bold text-xs tracking-[0.2em] rounded-sm shadow-[0_0_15px_rgba(255,0,0,0.3)] transition-all flex items-center justify-center gap-2 group"
+            >
+              <Zap size={14} className="group-hover:animate-pulse" />
+              INITIATE EVOLUTION
+            </button>
+          ) : (
+            <button 
+              onClick={() => props.stopEvolution()}
+              className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 text-dalek-red font-bold text-xs tracking-[0.2em] rounded-sm border border-dalek-red/50 transition-all flex items-center justify-center gap-2 group"
+            >
+              <RefreshCw size={14} className="animate-spin" />
+              ABORT EVOLUTION
+            </button>
+          )}
         </div>
       </div>
     </div>

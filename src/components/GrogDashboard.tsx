@@ -96,6 +96,41 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = ({
         </div>
       </div>
 
+      {grogBrainRef.current && (
+        <div className="bg-black/40 border border-zinc-900 p-3 rounded-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[8px] text-zinc-500 uppercase tracking-widest">API Gate Diagnostics</span>
+            {grogBrainRef.current.getGateStats().isQuotaExhausted && (
+              <span className="text-[8px] text-dalek-red animate-pulse uppercase font-bold">Quota Exhausted</span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-zinc-400">{grogBrainRef.current.getGateStats().callCount}</span>
+              <span className="text-[7px] text-zinc-600 uppercase">Total Calls</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-dalek-cyan">{(grogBrainRef.current.getGateStats().estimatedTokensUsed || 0).toLocaleString()}</span>
+              <span className="text-[7px] text-zinc-600 uppercase">Tokens Used</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-dalek-gold">{grogBrainRef.current.getGateStats().retryCount}</span>
+              <span className="text-[7px] text-zinc-600 uppercase">Retries</span>
+            </div>
+          </div>
+          <div className="h-1 bg-zinc-900 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-dalek-cyan transition-all duration-500" 
+              style={{ width: `${Math.min(100, ((grogBrainRef.current.getGateStats().estimatedTokensUsed || 0) / 1000000) * 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[7px] text-zinc-600 uppercase">
+            <span>Budget Usage</span>
+            <span>{(((grogBrainRef.current.getGateStats().estimatedTokensUsed || 0) / 1000000) * 100).toFixed(1)}%</span>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
@@ -128,10 +163,24 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = ({
                 <div className="text-[8px] text-zinc-700 italic">Neural pathways idle...</div>
               ) : (
                 grogThoughts.map((t, i) => (
-                  <div key={i} className="text-[8px] text-dalek-purple flex items-center gap-2 animate-in fade-in slide-in-from-left-1">
-                    <span className="opacity-40">[{new Date().toLocaleTimeString()}]</span>
-                    <span className="font-bold">{t.type.toUpperCase()}:</span>
-                    <span className="truncate opacity-80">{t.file || 'SYSTEM'}</span>
+                  <div key={i} className="flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-1">
+                    <div className="text-[8px] text-dalek-purple flex items-center gap-2">
+                      <span className="opacity-40">[{new Date().toLocaleTimeString()}]</span>
+                      <span className="font-bold">{t.type.toUpperCase()}:</span>
+                      <span className="truncate opacity-80">{t.file || 'SYSTEM'}</span>
+                    </div>
+                    {t.violations && t.violations.length > 0 && (
+                      <div className="text-[7px] text-dalek-red pl-4 flex items-center gap-1">
+                        <ShieldAlert size={8} />
+                        <span>{t.violations[0]}</span>
+                      </div>
+                    )}
+                    {t.shadowDivergence !== undefined && (
+                      <div className="text-[7px] text-dalek-gold pl-4 flex items-center gap-1">
+                        <Activity size={8} />
+                        <span>Shadow Divergence: {(t.shadowDivergence * 100).toFixed(1)}%</span>
+                      </div>
+                    )}
                   </div>
                 ))
               )}
