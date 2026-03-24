@@ -111,67 +111,61 @@ To ensure the reconstruction is structurally sound, establish the following new 
 
 **STATUS:** `BLUEPRINT READY` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `PENDING START`
 
-[EXTERNAL DNA: craighckby-stack/Test-1]
-As a Master Architect, I have analyzed the repository fragments from `craighckby-stack/Test-1`. The codebase reveals a highly structured, rigid, and deeply integrated system heavily reliant on the **Google Genkit framework**. It enforces strict adherence to pre-defined "constitutional" rules, robust observability, and immutable architectural boundaries.
-
-Here is the extracted core architecture and DNA signature.
+[EXTERNAL DNA: google/generative-ai-js]
+Based on the provided repository configuration and history, here is the extraction of the **Core Architectural Patterns** and **DNA Signature** for `google/generative-ai-js`.
 
 ---
 
-### 🧬 DNA SIGNATURE: `GOOGLE-GENKIT-V1-ULTIMATE-REVISED`
+### 1. Core Architectural Patterns
 
-The system's identity and operational parameters are strictly defined in its telemetry and metadata configurations. It operates under an uncompromising directive of architectural compliance.
+#### **The "Manager-Session" Dualism**
+The SDK differentiates between **stateless resource management** and **stateful interaction**:
+*   **Resource Managers:** Classes like `GoogleAIFileManager` and `GoogleAICacheManager` handle CRUD-like operations for external assets (files, cached content).
+*   **Interaction Sessions:** `ChatSession` maintains conversational state, abstracting the complexity of history management and role-sequencing from the user.
 
-*   **Engine & Identity:** `DALEK_CAAN_v3.1_SIPHON_ENGINE` (Version 7.0.0-FINAL)
-*   **Integrity Hash:** `SHA256:DALEK_CAAN_v7.0_EVOLVED_ROUNDED7`
-*   **Schema Version:** `GENKIT_NEXUS_V1.2_EVOLVED`
-*   **Core Directive:** `MUTATE_ROUND_7_COMPLETE`
-*   **Architectural Precision:** `MAXIMUM` (Absolute Precision Mode)
-*   **Nexus Core Synapse:** `ATOMIC_FLOW_PRECISION`
-*   **Compliance Protocol:** Strict HHH (Helpful, Honest, Harmless) compliance.
-*   **System Tagline:** *"The pattern is complete. Architecture is law. Deviation is exterminated."*
+#### **Request Orchestration Layer**
+The architecture relies heavily on a centralized `makeRequest` pattern (referenced in the changelog) that has been evolved to be:
+*   **Highly Configurable:** Universal `RequestOptions` support across all methods (timeouts, `baseUrl`, `apiVersion`, `custom headers`).
+*   **Signal-Aware:** Integration of `AbortSignal` across asynchronous methods for lifecycle control.
+*   **Environment Agnostic:** Support for `apiClient` overrides to allow the SDK to run in diverse JS environments (Node, Browser, Edge).
+
+#### **Subpath-Based Modularization**
+The repository uses a "Subpath Export" strategy to separate concerns and minimize bundle sizes:
+*   `@google/generative-ai`: Core generative functions.
+*   `@google/generative-ai/server`: Privileged operations (like file uploads and caching) intended for backend environments.
+*   *Historical Shift:* The migration from `/files` to `/server` suggests a consolidation towards environment-based boundaries rather than feature-based boundaries.
 
 ---
 
-### 🏗️ CORE ARCHITECTURAL PATTERNS
+### 2. DNA Signature (Development Philosophy)
 
-#### 1. Constitutional Gatekeeper & Evaluation Pattern
-The system employs a strict, multi-tiered evaluation logic before any action is executed or persisted. 
-*   **Mechanism:** `ConstitutionalGovernance` and `AdaptiveSamplingEngine` classes act as sentinels. Every input (`inputJson`) is validated against a rigorous schema (`dnaSignatureSchema`).
-*   **Fidelity & Conformity Gates:** Cognitive actions are intercepted by evaluators (`fidelityEvaluator`, `siphonGovernanceEvaluator`) which calculate drift and fidelity metrics. If the fidelity drops below specific thresholds (e.g., `> 0.95` for APPROVED, `> 0.9` for Loop conformity), the action is flagged, rejected, or quarantined.
+#### **"Type-First" Safety Protocol**
+The codebase treats TypeScript not as a layer, but as the specification:
+*   **Discriminated Unions:** Used extensively for Schema definitions to ensure that if a `type` is set, only valid corresponding fields are accessible.
+*   **Interface Enforcement:** Explicitly prefers `interface` over `type` and strictly forbids `default exports` to ensure predictable, name-stable imports.
+*   **Strict Primitives:** Custom ESLint rules ban generic types like `Function` or `Object`, forcing developers to define precise shapes.
 
-#### 2. Orchestration & Fallback Pattern
-The architecture separates business logic from control flow using a Master Orchestrator.
-*   **Mechanism:** `governanceMasterOrchestrator` manages the lifecycle of events.
-*   **Resilience:** The system utilizes an explicit fallback loop (`invokeFallback(actionId, inputJson)`). If validation or evaluation fails, the orchestrator emits a failure event (`action.failed`) and routes the payload to a designated fallback handler, ensuring system stability without catastrophic crashing.
+#### **Aggressive Evolution (Pre-1.0 Velocity)**
+The DNA shows a "fail fast, refactor faster" mentality:
+*   Frequent breaking changes in minor versions (e.g., fixing typos in properties like `groundingSupports`).
+*   Rapid deprecation of inefficient patterns (e.g., moving from `functionCall()` to `functionCalls()`).
+*   Active response to the underlying API’s volatility, reflected in the frequent updates to `finishReason` and `HARM_CATEGORY` enums.
 
-#### 3. Strict Boundary Enforcement (Zod Validation)
-Data integrity is enforced at the network and inter-process boundaries using Zod.
-*   **Mechanism:** Heavy integration of `@genkit-ai/zod-validation` and explicit use of `ZodParser` in the TS engine.
-*   **Typing as Architecture:** Types are treated as runtime boundaries rather than just compile-time suggestions (`dnaSignatureSchema`, `alignmentMetricsSchema`, `governanceOutputSchema`). Outputs read from repositories are re-validated before being processed further.
+#### **Developer Ergonomics (DX) Over Internal Purity**
+The SDK frequently includes "helper" logic to bridge the gap between raw API responses and usable JS objects:
+*   Automatic handling of UTF-8 chunking for streams.
+*   Internal validation of chat history (e.g., checking role order and parts arrays).
+*   Obscuring API keys in error messages to prevent accidental credential leakage in logs.
 
-#### 4. The Siphon Architecture (Plugin-Driven AI)
-The system wraps Genkit's Vertex AI model (`gemini-1.5-pro`) with a highly customized plugin architecture.
-*   **Mechanism:** Dynamic Prompt Injection (`@genkit-ai/dotprompt`) coupled with logic injection (`genkit.inject_foundation_code`).
-*   **Efficiency:** Uses a custom `@genkit-ai/siphon-efficiency-plugin` configured to maintain a baseline `0.99` "siphon efficiency," suggesting a continuous monitoring of resource or semantic throughput.
+---
 
-#### 5. Abstracted Repository & Persistence Pattern
-The system completely abstracts data storage from the governance and evaluation layers.
-*   **Mechanism:** `governanceRepository` / `Repository.ts` handles I/O operations (`read`, `write`, `writeData`). Evaluators do not touch the database directly; they hand off validated outputs to the repository for persistence.
+### 3. Structural Constraints (Linter/Config DNA)
 
-#### 6. Maximum Visibility Telemetry Pattern (Observability)
-Tracing and logging are elevated to first-class citizens, deeply embedded into the operational flows.
-*   **Mechanism:** "Maximum Trace Visibility" utilizing `Genkit Trace Store` with `native-action-spans`.
-*   **Context Passing:** Employs a `genkit-context-native` strategy for trace IDs, bundled with custom logging abstractions (`siphonLogger`) that trap and categorized exceptions (`InvalidActionError`, `EvaluationError`, `OutputValidationError`).
+*   **No "Test-Bleed":** Extremely strict rules against leaving `it.only` or `describe.skip` in the codebase, ensuring the CI/CD pipeline always runs the full suite.
+*   **Zero Magic Coercion:** Explicitly forbids `parseInt` and `parseFloat` in favor of type-safe coercion methods.
+*   **Functional Purity in Utils:** Enforces arrow callbacks for anonymous functions but allows named functions for recursion/readability.
+*   **Automated Release Governance:** Uses `@changesets` to enforce that every PR is accompanied by a versioning intent, automating the generation of the `CHANGELOG.md`.
 
-### 🔄 FLOW ORCHESTRATION TOPOLOGY
-
-The orchestration relies on multi-step flows executing deterministically:
-1.  **Generation (`ai.run`):** VertexAI/Gemini generates a candidate output based on DOT prompts.
-2.  **Fidelity Evaluation (`constitutionalPrompt.generate`):** Compares candidate against Architectural DNA.
-3.  **Siphon Gate (`siphonCore.evaluate`):** Hard boolean/threshold logic (e.g., `metrics.fidelity > 0.95`).
-4.  **Governance Loop (`siphonGovernanceLoop`):** Final conformity check prior to yielding `APPROVED`, `REVISION_REQUIRED`, or `QUARANTINED` status. 
-5.  **Persistence / Fallback:** Saves to the Repository if successful; triggers Orchestrator fallbacks if metrics fail. 
-
-### 💡 MASTER ARCHITECT'S ASSESSMENT
-This repository represents a **Zero-Trust AI Orchestration Engine**. It assumes that Large Language Models (LLMs) will naturally drift or hallucinate, and counters this by encasing the AI in an unyielding wrapper of Zod schemas, deterministic flow logic, and hard-coded mathematical gates. It is a highly defensive, enterprise-grade architecture tailored for strict compliance and safety.
+### 4. Evolutionary Status
+**Status:** *Legacy/Foundational.*
+The repository is currently in a "Maintenance/Deprecation" phase. Its DNA has been "sequenced" and improved to form the new **Google Gen AI SDK** (`@google/generative-ai` -> `@google/generative-ai-js` legacy vs the new unified SDK). The architectural lessons learned here—specifically regarding stream handling and discriminated union schemas—form the backbone of the successor.
