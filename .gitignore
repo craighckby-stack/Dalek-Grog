@@ -1,6 +1,143 @@
+# Governance & Locks
+.architectural_voting_lock
+neural-fuel-cooldown.lock
+.grog_evolution_status
+.governance_gate.lock
+.saturation_attainment.json
+reincarnation_sequence.active
+
+# Neural Memory & State
+grog/memory/EXTINCTION_LEDGER.json
+grog/memory/MISTAKE_LEDGER.local.json
+grog/memory/TEMPORAL_DRIFT.json
+grog/memory/reincarnation_checkpoint.bin
+grog/memory/context_window_shards/
+grog/memory/vector_pattern_cache.idx
+grog/memory/neural_nexus_state.bin
+
+# Evolution & Mutation Artifacts
+grog/evolution/snapshots/
+grog/evolution/rounds/*
+!grog/evolution/rounds/.keep
+grog/evolution/mutation_vectors/
+grog/evolution/dna_compression_temp/
+
+# Siphon Loop & DNA Signatures
+grog/siphon/temp/
+grog/siphon/siphon_manifest.json
+grog/dna/signatures/*.tmp.json
+grog/dna/signatures/working_copy.dna
+grog/dna/conflict_resolution_logic.tmp
+
+# Google Genkit Framework
+.genkit/flows/
+.genkit/traces/
+.genkit/cache/
+.genkit/plugins/
+.genkit/*.lock
+.genkit/telemetry/
+dotprompt/.cache/
+dotprompt/compiled/
+
+# Vertex AI & Google Cloud
+.vertexai/
+.google-cloud/
+vertex-ai-grounding-cache/
+reasoning-engine-artifacts/
+context-caching-indices/
+.gcloud/
+cloud-ai-platform-*.zip
+ground_truth_data/*.csv
+!ground_truth_data/schema.json
+
+# API Gate & Throttling
+grog/api-gate/cache/
+grog/api-gate/throttling_latencies.json
+grog/api-gate/circuit_breaker_status.bin
+neural_fuel_reserve_usage.log
+
+# Forensics & Audit Logs
+grog/forensics/*.log
+grog/forensics/traces/
+grog/forensics/diffs/
+grog/forensics/mutation_audit_*.json
+grog/forensics/heresy_detection_report.xml
+grog/forensics/dna_comparison_matrix.csv
+
+# Plugin Runtime State
+grog/plugins/active/*.state
+grog/plugins/cache/
+grog/plugins/runtime_manifest.json
+grog/plugins/hot_swap_temp/
+
+# Dependencies & Package Managers
 node_modules/
-dist/
+jspm_packages/
+web_modules/
+.pnp/
+.pnp.js
+.yarn/cache/
+.yarn/unplugged/
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnpm-debug.log*
+
+# Environment & Credentials
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.vault
+*.env.json
+.env.example.transformed
+.env.backup
+*.pem
+*.key
+service-account-*.json
+grog/keys/*.json
+!grog/keys/public.key
+
+# Build & Compilation Outputs
+dist/
+build/
+out/
+.next/
+.nuxt/
+.serverless/
+.fusebox/
+.razzle/
 .vite/
-*.log
+.parcel-cache/
+.cache/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+*.js.map
+*.d.ts.map
+
+# OS-Specific Files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Testing & Coverage
+coverage/
+.nyc_output/
+*.lcov
+.stryker-tmp/
+cypress/screenshots/
+cypress/videos/
+
+# Global Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log.gz
