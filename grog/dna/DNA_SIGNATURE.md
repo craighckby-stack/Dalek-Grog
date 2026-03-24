@@ -112,50 +112,57 @@ To ensure the reconstruction is structurally sound, establish the following new 
 **STATUS:** `BLUEPRINT READY` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `PENDING START`
 
 [EXTERNAL DNA: Qiskit/qiskit]
-This architectural extraction identifies the structural DNA of the **Qiskit** ecosystem based on its contribution and governance protocols.
-
-### 1. Core Architectural Patterns
-
-#### A. Hybrid Performance-Critical Core (The "Polyglot" Pattern)
-Qiskit employs a **Python-wrapped Rust** architecture. 
-*   **The Logic:** Python serves as the high-level API for user accessibility and rapid prototyping, while Rust handles the computationally expensive quantum circuit transpilation and simulation logic.
-*   **Implication:** The build system is non-trivial, requiring a hybrid toolchain (`pip` + `cargo`) and explicit "editable" recompilation steps for Rust components to ensure development-cycle synchronization.
-
-#### B. Decentralized Documentation Strategy
-The architecture distinguishes between **Conceptual Guides** and **API References**.
-*   **Pattern:** Guide-level documentation (tutorials, migrations) is decoupled from the source code and hosted centrally (IBM Quantum Cloud), while API-level documentation is co-located with the source code using `autosummary`.
-*   **Signature:** This ensures that technical implementation details (API) stay version-locked with the code, while educational material can be updated independently of the release cycle.
-
-#### C. Deterministic Changelog Generation (Reno-Driven)
-Unlike projects that manually edit a `CHANGELOG.md`, Qiskit uses **reno**, a git-based release notes tool.
-*   **Pattern:** Release notes are treated as code artifacts. Every significant PR *must* include a unique reno file.
-*   **Benefit:** This eliminates merge conflicts on a single changelog file and automates the generation of release notes at the time of tagging.
-
-#### D. Explicit Resource Trade-off Configuration
-The repository exposes architectural toggles like `QISKIT_NO_CACHE_GATES`.
-*   **Pattern:** **Configurable Performance Trade-offs.** The architecture allows developers to choose between memory overhead (caching) and execution speed.
-*   **Observation:** This reflects a "Scientific Computing" DNA where the developer is trusted with low-level memory/performance tuning.
+This architectural extraction identifies the core patterns and "DNA" of the **Qiskit** repository based on the provided governance and contribution metadata.
 
 ---
 
-### 2. DNA Signature (The "Qiskit Way")
+### 1. Core Architectural Patterns
 
-#### 🧬 High-Stakes Governance (The "Gatekeeper" DNA)
-The repository operates with a "Zero-Tolerance for Informality" policy. 
-*   **Signal:** The PR template warns that failure to respect the template or disclosure of AI tools results in immediate closure. 
-*   **Reasoning:** As a foundational library for quantum computing, the cost of an error or unvetted IP (via AI) is exceptionally high.
+#### A. Hybrid Performance-Abstraction Pattern (Python/Rust Polyglot)
+Qiskit employs a "Python for Ergonomics, Rust for Performance" architecture.
+*   **The Pattern:** High-level API design and user workflows are handled in Python, while "core routines" requiring high-concurrency or low-level memory management are implemented in Rust.
+*   **Integration Method:** Uses an editable install workflow where Python picks up changes dynamically, but Rust requires a specialized compilation step (`build_rust --inplace`).
+*   **Performance Toggling:** Uses environment variables (e.g., `QISKIT_NO_CACHE_GATES`) to allow developers to tune the tradeoff between memory overhead and runtime speed.
 
-#### 🧬 Tooling-Enforced Consistency (The "Tox/Cargo" DNA)
-Qiskit doesn't rely on "human" style guides; it relies on automated enforcement.
-*   **Signature:** The use of `tox` as a unified entry point for `black` (Python) and `cargo fmt` (Rust) ensures that the polyglot codebase maintains a singular visual identity.
+#### B. Automated Release-Note Generation (Reno Pattern)
+Instead of a manual `CHANGELOG.md`, Qiskit uses a distributed release note system.
+*   **The Pattern:** Changes are documented at the source (the PR) using `reno`. This ensures that release notes are version-controlled alongside the code that triggers them, preventing "documentation lag."
 
-#### 🧬 Legal & Ethical Rigor (The "IBM/Enterprise" DNA)
-*   **Signature:** Mandatory **CLA (Contributor License Agreement)** and **AI Disclosure** requirements. 
-*   **Indication:** This DNA is enterprise-backed. Every line of code must have a clear provenance and legal right-to-distribute, which is critical for industrial quantum applications.
+#### C. Isolated Environment & Validation Pattern
+The architecture mandates strict environmental isolation to prevent "it works on my machine" syndrome.
+*   **The Pattern:** Standardization on `venv` and `tox`. 
+*   **Dual-Layer Testing:** Testing is split into the Python test suite, Rust component tests (including calling Python from Rust), and specialized **Snapshot Testing** for visual/diagrammatic outputs (essential for quantum circuits).
 
-#### 🧬 Community-Centric Scoping
-*   **Signature:** Categorization of issues into `good first issue`, `help wanted`, and `short project`.
-*   **Indication:** The architecture is designed to be a "Productive Ecosystem." It explicitly scopes work for different levels of the "contributor funnel," ensuring the project isn't just maintained by a core team but is architected for mass-collaboration.
+#### D. Decoupled Documentation Architecture
+The documentation is split by "Context" rather than just "Files."
+*   **API-Centric:** Documentation containing `/api/` (generated from docstrings and `autosummary`) lives within the code repo.
+*   **Guide-Centric:** Conceptual guides and tutorials are offloaded to a dedicated `Qiskit/documentation` repository, keeping the main repo's footprint focused on logic.
 
-### Summary for Integration
-When integrating with or extending Qiskit, one must adopt a **"Rust-accelerated, Reno-documented, and CLA-compliant"** mindset. The architecture is not just the code; it is a rigid pipeline designed to transform scientific research into stable, enterprise-grade software.
+---
+
+### 2. The DNA Signature (Identity Markers)
+
+The "DNA" of Qiskit reflects a high-maturity, enterprise-grade open-source project with a heavy focus on legal compliance and performance rigor.
+
+#### I. High-Stakes Integrity (The "AI Disclosure" Marker)
+Qiskit is one of the few major repositories to explicitly mandate **AI Tool Disclosure**. 
+*   **DNA Trait:** Extreme transparency. Failing to name the AI tool (e.g., "Copilot with GPT-5") results in immediate PR closure. This indicates a high sensitivity to IP provenance and the legalities of generated code.
+
+#### II. Enterprise Governance in Open Source
+The project utilizes IBM-level legal standards (CLA requirements) but maintains community accessibility.
+*   **DNA Trait:** Rigorous Gatekeeping. The "⚠️" warnings in the PR template and the requirement for a "concise and explanatory title" suggest a project that prioritizes maintainer bandwidth and auditability over "low-friction" entry.
+
+#### III. The "Quantum-Ready" Lifecycle
+The development cycle is not just about "fixing bugs" but managing the evolution of a nascent scientific field.
+*   **DNA Trait:** Formalized Deprecation. The explicit section on "Adding deprecation warnings" and the use of labels like `short project` (for hackathons/internships) show a project designed to support both long-term stability and rapid academic experimentation.
+
+#### IV. Robust Tooling Stack
+*   **Languages:** Python (Primary), Rust (Performance).
+*   **Automation:** `tox`, `black` (formatting), `cargo fmt`, `reno`.
+*   **Legal:** CLA, AI Disclosure.
+*   **Testing:** `pytest`, Snapshot testing, Cross-language tests (Rust -> Python).
+
+---
+
+### 3. Summary for a Master Architect
+Qiskit is a **Polyglot Monolith-Core** repository. It follows a "Strict Contribution/Fluid Execution" philosophy. Its architecture is designed to hide the complexity of quantum physics and high-performance Rust internals behind a clean, documented Python interface, while its governance model is designed to protect the project's intellectual property and long-term maintainability through aggressive automation and disclosure requirements.
