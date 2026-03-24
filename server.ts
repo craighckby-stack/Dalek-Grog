@@ -27,27 +27,35 @@ async function startServer() {
 
   // Proxy for GitHub
   app.post("/api/github/proxy", async (req, res) => {
-    const { url, method, body, headers: clientHeaders } = req.body;
+    const { url, method, body, headers: customHeaders } = req.body;
     const token = process.env.GITHUB_TOKEN;
 
     if (!token) {
       return res.status(500).json({ error: "GITHUB_TOKEN missing on server" });
     }
 
+    if (!url) {
+      return res.status(400).json({ error: "URL REQUIRED" });
+    }
+
     try {
       const response = await fetch(url, {
         method: method || "GET",
         headers: {
-          ...clientHeaders,
-          "Authorization": `token ${token}`,
           "Content-Type": "application/json",
-          "User-Agent": "Dalek-Caan-App",
+          "Authorization": `token ${token}`,
+          "User-Agent": "DALEK_GROG_EVOLUTION_ENGINE",
+          ...customHeaders
         },
         body: body ? JSON.stringify(body) : undefined,
       });
 
-      const data = await response.json();
-      res.status(response.status).json(data);
+      const data = await response.json().catch(() => null);
+      if (data) {
+        res.status(response.status).json(data);
+      } else {
+        res.status(response.status).send();
+      }
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
@@ -111,33 +119,6 @@ async function startServer() {
     }
   });
 
-  // Proxy for GitHub
-  app.post("/api/github/proxy", async (req, res) => {
-    const { url, method, body, headers: customHeaders } = req.body;
-    const token = process.env.GITHUB_TOKEN;
-
-    if (!token) {
-      return res.status(500).json({ error: "GITHUB_TOKEN missing on server" });
-    }
-
-    try {
-      const response = await fetch(url, {
-        method: method || "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `token ${token}`,
-          "User-Agent": "DALEK_GROG_EVOLUTION_ENGINE",
-          ...customHeaders
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-
-      const data = await response.json();
-      res.status(response.status).json(data);
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
 
   // Grog Self-Mutation Vector
   app.get("/api/grog/read", async (req, res) => {

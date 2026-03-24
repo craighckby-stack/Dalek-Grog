@@ -102,9 +102,10 @@ export class APIGate {
     // 0. Quota cooldown check
     if (this.isQuotaExhausted && Date.now() < this.cooldownUntil) {
       const remaining = Math.ceil((this.cooldownUntil - Date.now()) / 1000);
-      const error = new Error('API_GATE_QUOTA_EXHAUSTED');
-      this.config.log(`QUOTA EXHAUSTED: Cooling down for ${remaining}s...`, 'critical', error);
-      throw error;
+      this.config.log(`QUOTA EXHAUSTED: Waiting ${remaining}s for cooldown...`, 'warn');
+      await new Promise(resolve => setTimeout(resolve, this.cooldownUntil - Date.now()));
+      this.isQuotaExhausted = false;
+      this.config.log('QUOTA COOLDOWN EXPIRED: Resuming operations.', 'info');
     } else if (this.isQuotaExhausted) {
       this.isQuotaExhausted = false;
       this.config.log('QUOTA COOLDOWN EXPIRED: Resuming operations.', 'info');
@@ -186,7 +187,11 @@ export class APIGate {
           this.cooldownUntil = Date.now() + 60_000;
           this.config.log(`QUOTA EXHAUSTED (429): Entering 60s cooldown.`, 'critical', error);
           this.releaseSlot();
-          break; // Don't retry immediately on 429, let the cooldown handle it
+          
+          // Throw custom error for GrogBrain to handle
+          const quotaError = new Error('API_GATE_QUOTA_EXHAUSTED');
+          (quotaError as any).originalError = error;
+          throw quotaError;
         }
 
         // Handle other transient errors with backoff

@@ -152,7 +152,7 @@ export class GrogBrain {
               temperature,
               topP: strategy.topP,
               topK: strategy.topK,
-              maxOutputTokens: 8192,
+              maxOutputTokens: 16384,
               responseMimeType: forceJson ? "application/json" : "text/plain",
               tools: useSearch ? [{ googleSearch: {} }] : undefined
             }
@@ -174,7 +174,7 @@ export class GrogBrain {
                 temperature,
                 topP: strategy.topP,
                 topK: strategy.topK,
-                maxOutputTokens: 8192,
+                maxOutputTokens: 16384,
                 responseMimeType: forceJson ? "application/json" : "text/plain",
                 tools: useSearch ? [{ googleSearch: {} }] : undefined
               }

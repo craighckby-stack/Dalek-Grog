@@ -30,11 +30,11 @@ export class GithubService {
     this.branch = branch;
   }
 
-  private async proxyFetch(url: string, method: string = "POST", body?: any) {
+  private async proxyFetch(url: string, method: string = "GET", body?: any) {
     const res = await fetch("/api/github/proxy", {
-      method,
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url, ...body })
+      body: JSON.stringify({ url, method, body })
     });
 
     if (!res.ok) {
@@ -110,8 +110,7 @@ export class GithubService {
       }
 
       // 2. Push update
-      await this.proxyFetch(`https://api.github.com/repos/${repo}/contents/${path}`, "POST", {
-        method: "PUT",
+      await this.proxyFetch(`https://api.github.com/repos/${repo}/contents/${path}`, "PUT", {
         message,
         content: safeBtoa(content),
         sha,
@@ -131,8 +130,7 @@ export class GithubService {
   public async deleteFromRepo(path: string, message: string, repo: string = this.repo, branch: string = this.branch): Promise<boolean> {
     try {
       const existing = await this.proxyFetch(`https://api.github.com/repos/${repo}/contents/${path}?ref=${branch}`);
-      await this.proxyFetch(`https://api.github.com/repos/${repo}/contents/${path}`, "POST", {
-        method: "DELETE",
+      await this.proxyFetch(`https://api.github.com/repos/${repo}/contents/${path}`, "DELETE", {
         message,
         sha: existing.sha,
         branch

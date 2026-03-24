@@ -965,7 +965,7 @@ OUTPUT ONLY JSON.`;
       addLog("GROG_BRAIN NOT INITIALIZED.", "var(--color-dalek-red)");
       return null;
     }
-    return await grogBrainRef.current.callAIWithFallback(prompt, systemInstruction, useSearch, forceJson, grogPatterns);
+    return await grogBrainRef.current.callAIWithFallback(prompt, systemInstruction, useSearch, forceJson);
   };
 
   const restoreFromBranch = async () => {
