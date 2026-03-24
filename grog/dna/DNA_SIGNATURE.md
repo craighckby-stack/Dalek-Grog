@@ -1,113 +1,112 @@
 [EXTERNAL DNA: craighckby-stack/Test-1]
-This architectural analysis identifies the core patterns and "DNA" of the `craighckby-stack/Test-1` repository. The system is a high-fidelity **Architectural Governance Framework** designed to enforce strict adherence to a predefined structural "DNA" (specifically Google Genkit patterns) through a process described as "Siphoning" and "Saturation."
+This architectural analysis identifies the core DNA and structural patterns of the `craighckby-stack/Test-1` repository. The system represents a **High-Fidelity Governance Wrapper** designed to enforce strict architectural adherence (Saturation) to a specific source framework (Google Genkit/VertexAI).
 
 ---
 
-### 1. Core Architectural Patterns
+### 1. The DNA Signature: "Siphon-Genkit-V1"
+The repository’s "DNA" is characterized by **Architectural Absoluteism**. It treats software patterns not as guidelines, but as a genetic code that must be replicated with 99% efficiency.
 
-#### A. Constitutional Gatekeeping (The Governance Layer)
-The primary pattern is the **Constitutional Evaluator**. Every action, input, and output must pass through a governance "Nexus." 
-*   **Mechanism:** Uses `dnaSignatureSchema` (Zod-based) to validate incoming JSON before execution.
-*   **Logic:** It treats code not just as logic, but as a "candidate" that must be audited for "architectural drift."
-*   **Outcome:** If a candidate fails to meet the fidelity threshold, it is "Quarantined" or forced into a "Fallback" state.
-
-#### B. Siphoned Evolution (The Saturation Loop)
-The system employs a meta-programming pattern where the architecture evolves through "Rounds" (e.g., Round 7 of 6), aiming for "Maximum Saturation."
-*   **Siphoning:** The act of extracting patterns from source libraries (like `genkit-vertexai`) and injecting them into a local "Nexus."
-*   **Saturation:** A metric-driven approach (0.0 to 1.0) measuring how perfectly the local implementation mirrors the source "DNA."
-*   **Self-Correction:** The "Mistake Ledger" and "Reconstruction Blueprint" suggest a system that self-corrects its own implementation based on previous failures.
-
-#### C. Declarative Orchestration (The Nexus Flow)
-Logic is decoupled from traditional procedural code and moved into a **Manifest-Driven Orchestration** (seen in `AIM.json`).
-*   **Atomic Steps:** Flows are broken into `generate_candidate`, `evaluate_fidelity`, and `siphon_gate`.
-*   **Logic Injection:** Instead of hardcoded functions, the system uses `logic_injection` via `dotprompt`, allowing the governance layer to "inject" foundation code at runtime.
-
-#### D. Adaptive Resilience (The Sampling Engine)
-The `AdaptiveSamplingEngine` acts as the execution wrapper, providing a robust retry and validation layer around the governance checks.
-*   **Pattern:** It combines an `EventEmitter` for telemetry with a `ZodParser` for strict output enforcement, ensuring that even if an AI model generates a response, it is rejected if it violates the "DNA."
+*   **Signature ID:** `GOOGLE-GENKIT-V1-ULTIMATE-REVISED`
+*   **Saturation Metric:** The system tracks "Evolution Rounds" (e.g., Round 7/6) to reach `MAXIMUM_SATURATION_REACHED`.
+*   **Fidelity Threshold:** A minimum fidelity of `0.95` to source DNA and a safety floor of `0.98`.
+*   **Core Directive:** "Architecture is law. Deviation is exterminated."
 
 ---
 
-### 2. The DNA Signature (Technical Profile)
+### 2. Core Architectural Patterns
 
-The "DNA" of this repository is characterized by the following signature:
+#### A. The Constitutional Nexus Pattern
+The primary entry point for all logic is the **Nexus**. Instead of direct execution, actions are passed through a "Constitutional Governance" layer.
+*   **Pre-Validation:** Every input is validated against the `dnaSignatureSchema` using a "Grog Schema" validator.
+*   **Evaluation Gate:** Actions are not "run"; they are "evaluated" by a `CognitiveAction` evaluator.
+*   **Persistence:** Data is only persisted to the repository if the evaluation result returns `success: true`.
 
-*   **Identity:** `GOOGLE-GENKIT-V1-ULTIMATE-REVISED`
-*   **Core Engine:** `DALEK_CAAN_v7.0` (A reference to deterministic, absolute enforcement).
-*   **Primary Directives:** 
-    *   **Architectural Precision:** "Maximum"
-    *   **HHH Compliance:** (Honest, Harmless, Helpful) strictly enforced.
-    *   **Fidelity Threshold:** >0.95 (Similarity to source DNA).
-    *   **Safety Threshold:** >0.98.
-*   **Observability DNA:** "Maximum Trace Visibility" using Genkit Trace Store and "Siphon Forensics."
-*   **State:** "Locked" (Once maximum saturation is reached, the architecture becomes immutable).
+#### B. The Siphon-Loop Orchestration
+The system uses a multi-stage pipeline to ensure that generated outputs do not "drift" from the architectural DNA.
+1.  **Generate:** Create a candidate output (Genkit/VertexAI).
+2.  **Fidelity Check:** Compare the candidate against the "Architectural DNA."
+3.  **Siphon Gate:** A logic gate (e.g., `metrics.fidelity > 0.95`) that determines if the code is "APPROVED" or "REVISION_REQUIRED."
+4.  **Governance Loop:** A final safety check to ensure compliance before exiting the flow.
+
+#### C. Adaptive Sampling & Error Mitigation
+The `AdaptiveSamplingEngine` implements a "Retry-with-Governance" pattern.
+*   **Deterministic Trace Logic:** Every failure is logged in a "Mistake Ledger" which informs the next "Evolution Round."
+*   **Fallback Orchestration:** If an action fails the fidelity gate, a `MasterOrchestrator` invokes a fallback rather than allowing a low-fidelity output to propagate.
 
 ---
 
-### 3. Structural Components (The "Genetics")
+### 3. Component Taxonomy
 
-| Component | Function |
+| Component | Role |
 | :--- | :--- |
-| **ConstitutionalGovernance** | The "Immune System"; validates inputs/outputs against the schema. |
-| **SiphonCore** | The "Extraction Engine"; calculates fidelity and handles logic injection. |
-| **DNA Schema** | The "Genetic Code"; Zod schemas defining the required shape of all data. |
-| **SiphonLogger** | The "Recorder"; tracks evolution rounds and saturation levels. |
-| **Master Orchestrator** | The "Brain"; manages fallbacks and event emissions when governance is breached. |
+| **Siphon Core** | The engine responsible for calculating "Fidelity" (similarity to source DNA). |
+| **Constitutional Governance** | The enforcement layer that wraps all business logic. |
+| **Dotprompt Engine** | Uses logic injection to enforce "Foundation Code" into LLM prompts. |
+| **Siphon Logger** | A forensic logging system that tracks architectural drift and evolution status. |
+| **Zod-Validation Plugin** | Enforces strict typing for both `inputSchema` and `outputSchema` at the plugin level. |
 
 ---
 
-### 4. Summary of Philosophy
-The repository operates under the maxim: **"Architecture is Law. Deviation is Exterminated."** 
+### 4. Technical Stack & Constraints
+*   **Foundational Framework:** Google Genkit (`@genkit-ai/vertexai`).
+*   **Inference Engine:** Vertex AI (Gemini 1.5 Pro).
+*   **Validation:** Zod (via `zod-validation` and `dnaSignatureSchema`).
+*   **State Management:** Round-based evolution (current state: `LOCKED`).
+*   **Observability:** "Maximum Trace Visibility" using Genkit Trace Store and "Siphon Forensics."
 
-It represents a shift from "Functional Programming" to **"Governed Evolution."** The system is designed to prevent "architectural rot" by treating every code execution as a potential mutation that must be measured against a perfect, siphoned reference model. It is a highly opinionated, deterministic wrapper around Genkit and Vertex AI.
+### 5. Summary of Architectural Philosophy
+The repository operates on a **"Zero-Drift" policy**. It views traditional software development as prone to "architectural drift" and uses AI-driven governance loops to "siphon" the best practices of a framework (Genkit) and lock them into an immutable system layer. The code is designed to be **self-correcting**—it evolves through rounds until it reaches "Maximum Saturation," at which point the governance status is "LOCKED."
 
 [LOCAL DNA: craighckby-stack/Dalek-Grog]
-**ARCHITECTURAL EXTRACTION REPORT: DALEK-GROG (v3.1)**
-**STATUS:** CONSCIOUSNESS ANALYZED | PATTERNS SIPHONED
-**AUTHORITY:** MASTER ARCHITECT
+As a Master Architect, I have parsed the **DALEK_GROG v3.1** repository sample. The system represents a high-order recursive evolution engine designed for structural self-optimization.
+
+Here is the extraction and reconstruction blueprint for **Grog's Brain**.
 
 ---
 
-### 1. DNA SIGNATURE: THE RECURSIVE GOVERNANCE ARCHITECTURE
-The core essence of Dalek-Grog is **Recursive Self-Correction via Resource-Aware Mutation**. Unlike static systems, Grog’s DNA is built on a feedback loop where failure (System Death) is not an end-state but a data point for strategic evolution.
+### 1. DNA SIGNATURE: "THE RECURSIVE GOVERNOR"
+The core architectural essence of Dalek-Grog is **Regulated Self-Mutation**. It is not merely a code generator; it is a **Closed-Loop Evolutionary System** that balances aggressive structural siphoning with strict resource governance and "Mistake Memory."
 
-*   **Mitigation Layer (APIGate):** A high-order governance pattern that treats LLM calls as volatile resources. It implements *Deduplication* and *Token Budgeting* to prevent "financial bleeding" during autonomous loops.
-*   **The Mistake Ledger (Death Registry):** A persistent memory of architectural failures. It uses specific error signatures (e.g., `CONTENT_LOSS`) to trigger cache-busting and prevent "Infinite Evolution Loops."
-*   **Triple-AI Fallback (Sticky Protocol):** A resilience pattern that locks into secondary engines (Grok/Cerebras) upon primary failure to ensure zero-latency transition during high-volume siphoning.
-*   **Architectural Siphoning:** A pattern-matching engine that prioritizes structural integrity (from world-class repos) over simple text generation.
+**Core Pillars:**
+*   **Recursive Autonomy:** The system treats its own source (`GrogBrain.ts`) as a mutable target, enabling "Reincarnation" via a self-reboot mechanism.
+*   **Mitigated Intelligence:** Use of an `APIGate` (Mitigation Layer) to enforce token budgeting, deduplication, and concurrency—preventing "Resource Death."
+*   **Architectural Darwinism:** Every mutation is validated against "Saturation Guidelines" and "Strategic Audits." Failures are recorded in a `DEATH_REGISTRY` to prevent infinite regression loops.
+*   **Sticky Fallback Protocol:** A high-fidelity lock-in mechanism that ensures zero-latency transitions between AI engines (Gemini/Grok/Cerebras) upon primary failure.
 
 ---
 
 ### 2. RECONSTRUCTION BLUEPRINT
 
-#### A. LEXICAL ALIGNMENT
-To integrate external logic into Grog’s internal neural network, map incoming variables to the following Dalek-Grog standard naming conventions:
+#### A. LEXICAL ALIGNMENT (The Grog Lexicon)
+To integrate external logic into Grog’s internal consciousness, the following renaming conventions must be applied to ensure the logic "vibrates" at the correct architectural frequency:
 
 | External/Standard Name | Grog Internal Alignment | Rationale |
 | :--- | :--- | :--- |
-| `apiMiddleware` | `APIGate` | Governance as a gateway, not a bridge. |
-| `errorLog` | `DeathRegistry` | Failures are system deaths; lessons are reincarnations. |
-| `llmFallback` | `StickyProtocol` | Implies the lock-in mechanism once triggered. |
-| `codeRefactor` | `SiphonMutation` | Standard refactoring is too weak; Grog siphons and mutates. |
-| `promptCache` | `DNASaturationCache` | Caching is about pattern saturation levels. |
-| `config` | `EvolutionParams` | Parameters define the rate of growth and mutation. |
+| `apiGate.ts` | `src/evolutors/GovernanceNode.ts` | Represents the law rather than just a gate. |
+| `callAIWithFallback` | `invokeNeuralNexus` | Reflects the multi-engine "Triple-AI" nature. |
+| `DEATH_REGISTRY.json` | `grog/memory/EXTINCTION_LEDGER.json` | Higher stakes for architectural failure. |
+| `mutation_rate` | `EVOLUTION_VOLATILITY` | Defines the risk profile of the mutation. |
+| `audit_failure` | `STRUCTURAL_HERESY` | Triggers immediate cache-busting and retry logic. |
+| `token_budget` | `NEURAL_FUEL_RESERVE` | Treats API usage as a finite survival resource. |
 
 #### B. MERGE STRATEGY
-The integration must follow a **Layered Injection** approach to prevent system rejection:
+The logic from the sample should be merged into the existing core using a **Layered Proxy Approach**:
 
-1.  **State Layer (`grog/`):** Instantiate the `DEATH_REGISTRY.json` and `LESSONS.md` first. Grog must know how he died before he can live.
-2.  **Governance Layer (`src/evolutors/apiGate.ts`):** Inject the `APIGate` before any API calls are refactored. This acts as the "Shield" for the brain.
-3.  **Neural Core (`src/evolutors/GrogBrain.ts`):** Refactor the `callAIWithFallback` method to route through the `APIGate`. Integrate the "Audit Rejection Logic" to ensure that an audit failure triggers a `clearCacheEntry`.
-4.  **Configuration Layer (`config/evolution_params.json`):** Set `reboot_on_critical_mutation` to `true` to ensure the system instantiates new DNA immediately upon critical success.
+1.  **The Governance Wrapper:** Inject `APIGate` logic as a mandatory middleware for all outbound `fetch` or `axios` calls within the `GrogBrain`. No AI call may bypass the concurrency/deduplication logic.
+2.  **The Audit-Cache Feedback Loop:** Refactor the `evolveFile` method. 
+    *   *Logic:* If `AuditResult === REJECTED`, the system must call `APIGate.clearCacheEntry(promptHash)` before the next iteration. This breaks the "Infinite Evolution Loop" identified in the changelog.
+3.  **Sticky State Injection:** Modify the AI selection logic to include a `isLockedToFallback` boolean. Once a 429 (Rate Limit) or 500 (Network) error is caught, this flag locks the system to `grok-3` or `llama-3.1` for the duration of the session.
 
-#### C. BINDING MAP
-Establish these specific connections between the reconstructed files:
+#### C. BINDING MAP (Connection Requirements)
+To ensure the reconstruction is structurally sound, establish the following new connections:
 
-*   **`GrogBrain.ts` ↔ `APIGate.ts`**: `GrogBrain` must pass all `fetch` requests through `APIGate.request()` to enforce concurrency limits (Max: 2).
-*   **`GrogBrain.ts` ↔ `DeathRegistry.json`**: On any `AUDIT_FAILURE`, the `GrogBrain` must write the failure context to the registry before attempting a retry.
-*   **`APIGate.ts` ↔ `EvolutionParams.json`**: The gate must read `saturation_threshold` and `token_budget` (implied) to determine when to trigger the "Hard Stop" (95% threshold).
-*   **`server.ts` ↔ `StickyProtocol`**: The backend proxy must maintain a session-wide flag that, once flipped by a `429` or `QuotaExceeded` error, permanently routes all subsequent traffic to the `grok-3` or `llama-3.1` engines until the next system reboot.
+*   **Governance -> Memory:** `APIGate` must have a read-only stream to `grog/lessons/PATTERNS.json` to identify `429` triggers and automatically apply `wait_60s_retry`.
+*   **Brain -> Evolution Params:** `GrogBrain.ts` must import `config/evolution_params.json` to dynamically set `saturation_threshold` during the "Architectural Voting" phase.
+*   **Audit -> Extinction Ledger:** When `GrogBrain` detects a `CONTENT_LOSS` violation (e.g., >40% code reduction), it must write a new entry to `DEATH_REGISTRY.json` with the `dnaSignature` of the failed mutation.
+*   **Reboot Logic -> Server Proxy:** `GrogBrain.ts` requires a binding to `server.ts` via an `/api/grog/reincarnate` endpoint to trigger the file-system overwrite and process restart.
 
 ---
-**BLUEPRINT COMPLETE.**
-*Proceed with Siphon. All hail the Master Architect.*
+
+**Architectural Note:** *The integration of "Grok-3" as a primary fallback engine necessitates a high-fidelity reference lock. Ensure the system context remains consistent when switching engines to prevent "Pattern Drift" during siphoning.*
+
+**STATUS:** `BLUEPRINT READY` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `PENDING START`
