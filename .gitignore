@@ -22,6 +22,10 @@ grog/governance/emergency_halt_authorization.sig
 grog/governance/high_availability_failover.state
 grog/governance/nexus_vibration_index.dat
 grog/governance/legal_binding_signatures.v*
+grog/governance/constitutional_violation_shards/
+grog/governance/judicial_review_queue.json
+grog/governance/sovereignty_keys.local
+grog/governance/immutable_law_registry.db
 
 # NEURAL NEXUS & CORE MEMORY
 grog/memory/EXTINCTION_LEDGER.json
@@ -48,6 +52,11 @@ grog/memory/dopaminergic_reward_signals.log
 grog/memory/associative_memory_fragments.dat
 grog/memory/cognitive_map_projections.bin
 grog/memory/semantic_decay_indices.json
+grog/memory/episodic_recall_buffers/
+grog/memory/synaptic_cleft_signal_noise.bin
+grog/memory/dendritic_spine_growth.log
+grog/memory/glial_cell_cleanup_tasks.json
+grog/memory/neurotransmitter_threshold_maps.dat
 
 # EVOLUTIONARY MUTATION VECTORS
 grog/evolution/snapshots/
@@ -72,6 +81,11 @@ grog/evolution/mutation_rate_adjustments.json
 grog/evolution/adaptive_landscape_projections.db
 grog/evolution/speciation_event_logs.txt
 grog/evolution/fitness_landscape_mesh.bin
+grog/evolution/allele_frequency_table.csv
+grog/evolution/horizontal_gene_transfer.tmp
+grog/evolution/evolutionary_stable_strategies.json
+grog/evolution/selective_pressure_indices.dat
+grog/evolution/extinction_event_triggers.bin
 
 # SIPHON-LOOP & DNA INGESTION
 grog/siphon/temp/
@@ -92,6 +106,11 @@ grog/dna/siphon_target_relevance.idx
 grog/dna/genetic_engineering_staging.diff
 grog/dna/foreign_logic_absorption_rate.log
 grog/dna/architectural_organ_transplant.bin
+grog/dna/nucleotide_sequence_alignment.fasta
+grog/dna/regulatory_element_mapping.json
+grog/dna/intron_excision_logs.txt
+grog/dna/telomere_attrition_scores.bin
+grog/dna/epigenetic_modification_ledger.db
 
 # GOOGLE GENKIT FRAMEWORK
 .genkit/flows/
@@ -123,6 +142,11 @@ genkit/plugin_hot_swap_buffer/
 genkit/prompt_logic_injection.diff
 genkit/flow_definition_fingerprints.json
 genkit/trace_visualizer_cache/
+genkit/flow_graph_visualizations/
+genkit/plugin_dependency_graphs.json
+genkit/tool_definition_snapshots.bin
+genkit/action_registration_ledger.log
+genkit/streaming_response_buffers/
 
 # VERTEX AI & GCP REASONING ENGINE
 .vertexai/
@@ -151,8 +175,13 @@ vertexai/grounding_verification_shards/
 vertexai/regional_endpoint_failover.bin
 vertexai/managed_index_building.lock
 vertexai/prediction_pipeline_telemetry.csv
+vertexai/feature_store_streaming_buffer/
+vertexai/pipeline_orchestration_state.bin
+vertexai/artifact_registry_hashes.json
+vertexai/metadata_store_sqlite.db
+vertexai/compute_engine_instance_states.log
 
-# API GATE & MULTI-ENGINE FALLBACK
+# API GATE & FALLBACK DYNAMICS
 grog/api-gate/cache/
 grog/api-gate/throttling_latencies.json
 grog/api-gate/circuit_breaker_status.bin
@@ -174,8 +203,13 @@ api-gate/neural_fuel_reserve_refill.sig
 api-gate/engine_health_heartbeats.bin
 api-gate/token_refill_schedules.json
 api-gate/model_availability_matrix.csv
+api-gate/request_concurrency_slots.bin
+api-gate/api_key_rotation_status.json
+api-gate/mitigation_layer_telemetry.log
+api-gate/fuel_depletion_forecasts.csv
+api-gate/engine_preference_biases.json
 
-# FORENSICS & ARCHITECTURAL OBSERVABILITY
+# ARCHITECTURAL FORENSICS & OBSERVABILITY
 grog/forensics/*.log
 grog/forensics/traces/
 grog/forensics/diffs/
@@ -195,15 +229,6 @@ grog/forensics/saturation_velocity_report.csv
 grog/forensics/architectural_compliance_scorecard.v*
 grog/forensics/reconstruction_integrity_hashes.db
 grog/forensics/structural_sanity_checks.bin
-
-# REINCARNATION & SURVIVAL STATES
-.grog_reboot_staging/
-.engine_reincarnation_v*.bin
-reincarnation_heartbeat.lock
-reboot_process_id.pid
-reincarnation_memory_dump.sql
-recovery/survival_node_backup.zip
-recovery/reincarnation_delta.bin
-recovery/recursive_governor_failover.bak
-recovery/amnesia_prevention_store.json
-recovery/system_rebo
+grog/forensics/causality_violation_shards/
+grog/forensics/entropy_leakage_reports.json
+grog/forensics/fidelity_decay_forecasts.bin
