@@ -111,61 +111,67 @@ To ensure the reconstruction is structurally sound, establish the following new 
 
 **STATUS:** `BLUEPRINT READY` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `PENDING START`
 
-[EXTERNAL DNA: google/generative-ai-js]
-Based on the provided repository configuration and history, here is the extraction of the **Core Architectural Patterns** and **DNA Signature** for `google/generative-ai-js`.
+[EXTERNAL DNA: craighckby-stack/Dalek-Grog]
+This architectural analysis identifies the core DNA and structural signatures of the **DALEK_GROG v3.1** repository. The system represents a **Recursive Evolutionary Engine** designed to treat source code as biological material subject to mutation, selection, and siphoning.
 
 ---
 
-### 1. Core Architectural Patterns
+### 1. The DNA Signature: "Architectural Reincarnation"
+The repository’s DNA is defined by **Self-Directed Meta-Programming**. It operates on the principle that code should not be static; it should autonomously "siphon" superior patterns from high-order repositories (Google, Meta, DeepMind) and overwrite itself to achieve "Maximum Saturation."
 
-#### **The "Manager-Session" Dualism**
-The SDK differentiates between **stateless resource management** and **stateful interaction**:
-*   **Resource Managers:** Classes like `GoogleAIFileManager` and `GoogleAICacheManager` handle CRUD-like operations for external assets (files, cached content).
-*   **Interaction Sessions:** `ChatSession` maintains conversational state, abstracting the complexity of history management and role-sequencing from the user.
-
-#### **Request Orchestration Layer**
-The architecture relies heavily on a centralized `makeRequest` pattern (referenced in the changelog) that has been evolved to be:
-*   **Highly Configurable:** Universal `RequestOptions` support across all methods (timeouts, `baseUrl`, `apiVersion`, `custom headers`).
-*   **Signal-Aware:** Integration of `AbortSignal` across asynchronous methods for lifecycle control.
-*   **Environment Agnostic:** Support for `apiClient` overrides to allow the SDK to run in diverse JS environments (Node, Browser, Edge).
-
-#### **Subpath-Based Modularization**
-The repository uses a "Subpath Export" strategy to separate concerns and minimize bundle sizes:
-*   `@google/generative-ai`: Core generative functions.
-*   `@google/generative-ai/server`: Privileged operations (like file uploads and caching) intended for backend environments.
-*   *Historical Shift:* The migration from `/files` to `/server` suggests a consolidation towards environment-based boundaries rather than feature-based boundaries.
+*   **Signature ID:** `NEXUS-EVOLVE-V3-ALPHA`
+*   **Core Directive:** "Siphon, Mutate, Validate, Reincarnate."
+*   **Saturation Goal:** 99% alignment with siphoned "World-Class" patterns.
+*   **Failure Tolerance:** High (tracked via "System Deaths" in the Mistake Ledger), but loops are strictly mitigated by a hard-stop governance layer.
 
 ---
 
-### 2. DNA Signature (Development Philosophy)
+### 2. Core Architectural Patterns
 
-#### **"Type-First" Safety Protocol**
-The codebase treats TypeScript not as a layer, but as the specification:
-*   **Discriminated Unions:** Used extensively for Schema definitions to ensure that if a `type` is set, only valid corresponding fields are accessible.
-*   **Interface Enforcement:** Explicitly prefers `interface` over `type` and strictly forbids `default exports` to ensure predictable, name-stable imports.
-*   **Strict Primitives:** Custom ESLint rules ban generic types like `Function` or `Object`, forcing developers to define precise shapes.
+#### A. The Self-Mutation Vector (Recursive Darwinism)
+Unlike standard CI/CD, Dalek-Grog implements a **Recursive Feedback Loop** where the system is both the architect and the subject.
+*   **Introspection:** The `GrogBrain` uses internal APIs (`/api/grog/read`) to ingest its own logic.
+*   **Genetic Parametrization:** Mutation and crossover rates are defined in `evolution_params.json`, treating code refactoring as a genetic algorithm problem.
+*   **Reincarnation:** Critical mutations trigger a "System Reboot," allowing the engine to instantiate its new DNA in a clean state.
 
-#### **Aggressive Evolution (Pre-1.0 Velocity)**
-The DNA shows a "fail fast, refactor faster" mentality:
-*   Frequent breaking changes in minor versions (e.g., fixing typos in properties like `groundingSupports`).
-*   Rapid deprecation of inefficient patterns (e.g., moving from `functionCall()` to `functionCalls()`).
-*   Active response to the underlying API’s volatility, reflected in the frequent updates to `finishReason` and `HARM_CATEGORY` enums.
+#### B. The APIGate Mitigation Layer (Resource Governance)
+To prevent the "hallucination burn-rate" typical of autonomous agents, the system utilizes a **Strict Proxy Pattern** for AI interaction:
+*   **Concurrency Throttling:** Limits active calls to 2, preventing quota exhaustion.
+*   **Deduplication/Caching:** A 30-second prompt cache prevents redundant token expenditure.
+*   **Audit-Driven Cache Busting:** If an architectural audit fails, the system manually clears the cache to break infinite loops, forcing a fresh evolutionary path.
 
-#### **Developer Ergonomics (DX) Over Internal Purity**
-The SDK frequently includes "helper" logic to bridge the gap between raw API responses and usable JS objects:
-*   Automatic handling of UTF-8 chunking for streams.
-*   Internal validation of chat history (e.g., checking role order and parts arrays).
-*   Obscuring API keys in error messages to prevent accidental credential leakage in logs.
+#### C. The Triple-AI Fallback Protocol (High-Availability Logic)
+The system treats LLMs as interchangeable "engines" rather than fixed dependencies.
+*   **Sticky Reference Lock:** Once a primary engine (Gemini) fails, the system locks into a high-fidelity fallback (Grok/Cerebras) for the remainder of the session to ensure zero-latency transitions.
+*   **Model Agnosticism:** Logic is decoupled from specific model quirks, allowing for seamless upgrades (e.g., the recent jump from `grok-beta` to `grok-3`).
+
+#### D. The Mistake Ledger (Forensic Persistence)
+A **Negative Learning Pattern** is used to drive evolution. 
+*   **Failure Indexing:** Every "System Death" or rejected mutation is logged.
+*   **Strategic Lessons:** These failures inform the prompt context for the next mutation round, ensuring the system does not repeat the same architectural regressions.
 
 ---
 
-### 3. Structural Constraints (Linter/Config DNA)
+### 3. Component Taxonomy
 
-*   **No "Test-Bleed":** Extremely strict rules against leaving `it.only` or `describe.skip` in the codebase, ensuring the CI/CD pipeline always runs the full suite.
-*   **Zero Magic Coercion:** Explicitly forbids `parseInt` and `parseFloat` in favor of type-safe coercion methods.
-*   **Functional Purity in Utils:** Enforces arrow callbacks for anonymous functions but allows named functions for recursion/readability.
-*   **Automated Release Governance:** Uses `@changesets` to enforce that every PR is accompanied by a versioning intent, automating the generation of the `CHANGELOG.md`.
+| Component | Role | Signature Pattern |
+| :--- | :--- | :--- |
+| **GrogBrain** | The Master Architect / CNS | Autonomous Orchestrator |
+| **APIGate** | Resource & Quota Governor | Circuit Breaker / Proxy |
+| **Siphon Engine** | Pattern Extraction | DNA Transfer Protocol |
+| **FitnessEvaluator** | Architectural Alignment Check | Genetic Selection Gate |
+| **Chained Context** | Unified Memory Stream | State-Persistence (v4.4) |
 
-### 4. Evolutionary Status
-**Status:** *Legacy/Foundational.*
-The repository is currently in a "Maintenance/Deprecation" phase. Its DNA has been "sequenced" and improved to form the new **Google Gen AI SDK** (`@google/generative-ai` -> `@google/generative-ai-js` legacy vs the new unified SDK). The architectural lessons learned here—specifically regarding stream handling and discriminated union schemas—form the backbone of the successor.
+---
+
+### 4. Technical Constraints & Weights
+The system prioritizes **Architectural Integrity** over raw performance, as evidenced by the `evolution_params.json`:
+*   **Complexity Limit:** 0.2 (Favors reduction over expansion).
+*   **Complexity Reduction Weight:** 0.4 (The primary goal of evolution is simplification).
+*   **Alignment Weight:** 0.3 (Strong adherence to siphoned DNA).
+*   **Saturation Threshold:** 0.8 (Evolution continues until 80% DNA saturation is reached).
+
+---
+
+### 5. Summary of Architectural Philosophy
+Dalek-Grog operates on **"The Zero-Drift Mandate."** It views human-written code as a source of architectural drift. By siphoning patterns from "world-class" repositories and applying them via a governed, self-mutating loop, it aims to eliminate technical debt by evolving beyond it. The system is designed to be **Post-Human**—it manages its own uptime, upgrades its own models, and learns from its own "deaths" to reach a state of architectural perfection.
