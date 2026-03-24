@@ -1,4 +1,4 @@
-# Governance & Meta-Locks
+# GOVERNANCE & META-LOCKS
 .architectural_voting_lock
 .grog_evolution_status
 .governance_gate.lock
@@ -13,8 +13,17 @@ grog/governance/consensus_voting_map.json
 grog/governance/veto_registry.log
 grog/governance/high_fidelity_agreement.sig
 grog/governance/governance_node_heartbeat.pid
+grog/governance/cognitive_evaluation_locks/
+grog/governance/fidelity_threshold.override
+grog/governance/architectural_absolutism.log
+grog/governance/election_quorum_voters.bin
+grog/governance/manifesto_drift_delta.patch
+grog/governance/emergency_halt_authorization.sig
+grog/governance/high_availability_failover.state
+grog/governance/nexus_vibration_index.dat
+grog/governance/legal_binding_signatures.v*
 
-# Neural & Synaptic State
+# NEURAL NEXUS & CORE MEMORY
 grog/memory/EXTINCTION_LEDGER.json
 grog/memory/MISTAKE_LEDGER.local.json
 grog/memory/TEMPORAL_DRIFT.json
@@ -31,8 +40,16 @@ grog/memory/attention_head_biases.bin
 grog/memory/context_caching_manifest.v*
 grog/memory/neuron_activation_maps/
 grog/memory/latent_space_projections.bin
+grog/memory/hyper_dimensional_embeddings.db
+grog/memory/synaptic_pruning_events.log
+grog/memory/long_term_potentiation_shards.bin
+grog/memory/neuroplasticity_index.json
+grog/memory/dopaminergic_reward_signals.log
+grog/memory/associative_memory_fragments.dat
+grog/memory/cognitive_map_projections.bin
+grog/memory/semantic_decay_indices.json
 
-# Evolutionary Mutation Vectors
+# EVOLUTIONARY MUTATION VECTORS
 grog/evolution/snapshots/
 grog/evolution/rounds/*
 !grog/evolution/rounds/.keep
@@ -46,8 +63,17 @@ grog/evolution/saturation_convergence.log
 grog/evolution/offspring_candidates/
 grog/evolution/mutation_delta_shards/
 grog/evolution/recombination_buffer/
+grog/evolution/survival_fitness_graphs/
+grog/evolution/generational_culling.csv
+grog/evolution/evolutionary_bottleneck.bin
+grog/evolution/chromosomal_crossover_temp.bin
+grog/evolution/genetic_drift_analysis.v*
+grog/evolution/mutation_rate_adjustments.json
+grog/evolution/adaptive_landscape_projections.db
+grog/evolution/speciation_event_logs.txt
+grog/evolution/fitness_landscape_mesh.bin
 
-# Siphon-Loop & DNA
+# SIPHON-LOOP & DNA INGESTION
 grog/siphon/temp/
 grog/siphon/siphon_manifest.json
 grog/siphon/dna_shredder_output/
@@ -59,8 +85,15 @@ grog/dna/structural_alignment_report.json
 grog/dna/siphon_depth_metrics.bin
 grog/dna/cross_repo_comparison_shards/
 grog/dna/logic_siphon_buffer.bin
+grog/dna/abstract_syntax_tree_dumps/
+grog/dna/lexical_alignment_maps.json
+grog/dna/dna_purification_filter.bin
+grog/dna/siphon_target_relevance.idx
+grog/dna/genetic_engineering_staging.diff
+grog/dna/foreign_logic_absorption_rate.log
+grog/dna/architectural_organ_transplant.bin
 
-# Genkit Framework
+# GOOGLE GENKIT FRAMEWORK
 .genkit/flows/
 .genkit/traces/
 .genkit/cache/
@@ -81,8 +114,17 @@ dotprompt/generated/
 genkit/otlp_export_buffer/
 genkit/flow_execution_trace_*.json
 genkit/reflection_api_temp/
+genkit/cognitive_action_evaluations/
+genkit/zod_validation_dumps/
+genkit/schema_enforcement_logs/
+genkit/flow_state_snapshots/
+genkit/telemetry_aggregation_shards.bin
+genkit/plugin_hot_swap_buffer/
+genkit/prompt_logic_injection.diff
+genkit/flow_definition_fingerprints.json
+genkit/trace_visualizer_cache/
 
-# Vertex AI & GCP Reasoning
+# VERTEX AI & GCP REASONING ENGINE
 .vertexai/
 .google-cloud/
 vertex-ai-grounding-cache/
@@ -100,8 +142,17 @@ vertexai/vector_search_index_shards/
 vertexai/regional_failover_status.json
 vertexai/hyperparameter_tuning_shards/
 vertexai/context_caching_metadata.db
+vertexai/model_garden_cache/
+vertexai/enterprise_slas_enforcement.log
+vertexai/tensor_processing_unit_profiling/
+vertexai/endpoint_traffic_split_stats.json
+vertexai/custom_training_container_logs/
+vertexai/grounding_verification_shards/
+vertexai/regional_endpoint_failover.bin
+vertexai/managed_index_building.lock
+vertexai/prediction_pipeline_telemetry.csv
 
-# API Gate & Neural Fuel
+# API GATE & MULTI-ENGINE FALLBACK
 grog/api-gate/cache/
 grog/api-gate/throttling_latencies.json
 grog/api-gate/circuit_breaker_status.bin
@@ -114,8 +165,17 @@ api-gate/latency_adder_map.json
 api-gate/neural_fuel_cooldown.lock
 api-gate/parallel_racing_latencies.csv
 api-gate/engine_selection_voting.bin
+api-gate/llama_3_1_fallback_buffer.bin
+api-gate/grok_3_emergency_lock.active
+api-gate/cerebras_inference_cache/
+api-gate/racing_winner_telemetry.log
+api-gate/cost_governance_budget.json
+api-gate/neural_fuel_reserve_refill.sig
+api-gate/engine_health_heartbeats.bin
+api-gate/token_refill_schedules.json
+api-gate/model_availability_matrix.csv
 
-# Forensics & Audit
+# FORENSICS & ARCHITECTURAL OBSERVABILITY
 grog/forensics/*.log
 grog/forensics/traces/
 grog/forensics/diffs/
@@ -127,8 +187,16 @@ grog/forensics/otlp_telemetry_stream.bin
 grog/forensics/architectural_drift_visualizer/
 grog/forensics/zero_drift_violations.log
 grog/forensics/causal_trace_graphs/
+grog/forensics/saturation_purity_index.log
+grog/forensics/audit_trail_compression/
+grog/forensics/forensic_memory_reconstruction.bin
+grog/forensics/anomaly_detection_signals.json
+grog/forensics/saturation_velocity_report.csv
+grog/forensics/architectural_compliance_scorecard.v*
+grog/forensics/reconstruction_integrity_hashes.db
+grog/forensics/structural_sanity_checks.bin
 
-# Reincarnation & Self-Healing
+# REINCARNATION & SURVIVAL STATES
 .grog_reboot_staging/
 .engine_reincarnation_v*.bin
 reincarnation_heartbeat.lock
@@ -136,116 +204,6 @@ reboot_process_id.pid
 reincarnation_memory_dump.sql
 recovery/survival_node_backup.zip
 recovery/reincarnation_delta.bin
-
-# Plugin Activation & Validation
-grog/plugins/active/*.state
-grog/plugins/cache/
-grog/plugins/runtime_manifest.json
-grog/plugins/hot_swap_temp/
-grog/plugins/zod_validation_errors.json
-grog/plugins/schema_evolution_history.log
-grog/plugins/plugin_integrity_signatures.json
-grog/plugins/activation_matrix.bin
-
-# Vector Pattern & Semantic Storage
-grog/patterns/vector_index/
-grog/patterns/semantic_hash_table.bin
-grog/patterns/successful_dna_catalog.json
-grog/patterns/heresy_pattern_rejects.idx
-grog/patterns/pattern_frequency_weights.json
-
-# Saturation Telemetry
-grog/telemetry/saturation/
-grog/telemetry/fidelity_convergence/
-grog/telemetry/drift_detection/
-grog/telemetry/quantum_uncertainty_index.log
-grog/telemetry/saturation_plateau_report.json
-
-# Credentials & Environment
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-.env.vault
-*.env.json
-.env.example.transformed
-.env.backup
-*.pem
-*.key
-service-account-*.json
-grog/keys/*.json
-!grog/keys/public.key
-.credentials/
-secrets.yaml
-
-# Dependencies & Build Outputs
-node_modules/
-jspm_packages/
-web_modules/
-.pnp/
-.pnp.js
-.yarn/cache/
-.yarn/unplugged/
-.yarn/build-state.yml
-.yarn/install-state.gz
-.pnpm-debug.log*
-package-lock.json.backup
-yarn.lock.tmp
-dist/
-build/
-out/
-.next/
-.nuxt/
-.serverless/
-.fusebox/
-.razzle/
-.vite/
-.parcel-cache/
-.cache/
-.eslintcache
-.stylelintcache
-*.tsbuildinfo
-*.js.map
-*.d.ts.map
-*.compiled.js
-
-# OS & IDE Artifacts
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-Desktop.ini
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# Testing & Coverage
-coverage/
-.nyc_output/
-*.lcov
-.stryker-tmp/
-cypress/screenshots/
-cypress/videos/
-__snapshots__/
-junit.xml
-test-results/
-
-# Global Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-logs/
-*.log.gz
-combined_evolution.log
-
-# Quarantine
-grog/quarantine/heretical_files/
-grog/quarantine/drift_violators/
-grog/quarantine/low_fi
+recovery/recursive_governor_failover.bak
+recovery/amnesia_prevention_store.json
+recovery/system_rebo
