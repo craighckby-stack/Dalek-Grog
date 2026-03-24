@@ -21,3 +21,512 @@ null
 [2026-03-24T10:14:58.772Z] INITIATING PRE-FLIGHT DISCOVERY: SYNCING WITH craighckby-stack/Dalek-Grog (main)...
 [2026-03-24T10:14:59.061Z] REPO DISCOVERY FAILED: COULD NOT DISCOVER FILES IN ANY BRANCH (main/master/develop).
 [2026-03-24T10:14:59.061Z] QUICK-START FAILED: NO FILES DISCOVERED.
+
+[UPDATE: 2026-03-24T12:19:21.419Z] [SIPHONED: freeCodeCamp/freeCodeCamp, Google/Genkit, google/generative-ai-js, craighckby-stack/Test-1, craighckby-stack/Dalek-Grog, Qiskit/qiskit]
+[2026-03-24T10:51:05.830Z] [APIGate] GATE CLOSE: +9953 tokens. Running total: 540,015
+[2026-03-24T10:51:05.830Z] GROG_BRAIN: ANALYZING AI RESPONSE FOR README.md...
+[2026-03-24T10:51:05.833Z] AI SUGGESTED DNA SOURCE FOR README.md: Qiskit/qiskit.
+[2026-03-24T10:51:05.833Z] INITIATING EXTERNAL DNA SIPHON FROM Qiskit/qiskit INTO GROG'S BRAIN...
+[2026-03-24T10:51:05.833Z] INITIATING EXTERNAL DNA SIPHON FROM Qiskit/qiskit...
+[2026-03-24T10:51:05.833Z] INITIATING WEB SIPHON: LIVE -> https://qiskit.org/documentation/apidoc/transpiler.html
+[2026-03-24T10:51:05.833Z] INITIATING WEB SIPHON: LIVE -> https://qiskit.org/documentation/apidoc/transpiler.html
+[2026-03-24T10:51:05.833Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:51:05.842Z] [APIGate] GATE OPEN: ~2886 input tokens. Active slots: 1/4
+[2026-03-24T10:51:06.458Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T10:51:09.976Z] WEB SIPHON SUCCESSFUL: 15093 chars retrieved.
+[2026-03-24T10:51:09.977Z] WEB SIPHON SUCCESSFUL: 15093 chars retrieved.
+[2026-03-24T10:51:15.083Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:51:15.085Z] [APIGate] GATE OPEN: ~3795 input tokens. Active slots: 2/4
+[2026-03-24T10:51:16.208Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T10:51:16.852Z] [APIGate] GATE CLOSE: +3754 tokens. Running total: 543,769
+[2026-03-24T10:51:16.854Z] ROUND 1 [README.md]: MUTATION REJECTED - AUDIT_FAILURE: EXPORT_LOSS: Public API surface has been truncated. Export 'getUsers' was removed. | CONTENT_LOSS: Significant logic reduction detected (Critical). (49.1% reduction).
+[2026-03-24T10:51:16.854Z] ROUND 2/10 [README.md]: Siphoning patterns...
+[2026-03-24T10:51:16.855Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:51:16.856Z] [APIGate] GATE OPEN: ~8323 input tokens. Active slots: 2/4
+[2026-03-24T10:51:17.604Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T10:51:17.741Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async siphonExternalDNA (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1827:25)
+> METRICS: Tokens=543,769, Calls=93, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=8157, Model=pro, Temp=1.04
+[2026-03-24T10:51:17.741Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async siphonExternalDNA (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1827:25)
+> METRICS: Tokens=543,769, Calls=93, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7907, Model=pro, Temp=1.04
+[2026-03-24T10:51:17.741Z] EXTERNAL DNA SIPHON FAILED: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T10:51:19.248Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=93, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7907, Model=pro, Temp=1.04
+[2026-03-24T10:51:19.249Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=93, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7657, Model=pro, Temp=1.04
+[2026-03-24T10:51:19.249Z] FILE PROCESSING FAILURE [README.md]: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T10:51:19.249Z] COMMENCING NEXUS_CORE WARM-UP FOR Screenshot_20260323_204303_Chrome.jpg...
+[2026-03-24T10:51:19.250Z] CHAINING CONTEXT DETECTED FOR Screenshot_20260323_204303_Chrome.jpg.
+[2026-03-24T10:51:19.250Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:51:19.250Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T10:52:19.252Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T10:52:19.254Z] [APIGate] GATE OPEN: ~250 input tokens. Active slots: 1/4
+[2026-03-24T10:52:23.369Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T10:52:27.936Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=94, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7657, Model=pro, Temp=1.04
+[2026-03-24T10:52:27.937Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=94, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7407, Model=pro, Temp=1.04
+[2026-03-24T10:52:27.937Z] AI QUOTA EXCEEDED FOR Screenshot_20260323_204303_Chrome.jpg: USING RANDOM ARCHITECTURAL VOTE.
+[2026-03-24T10:52:27.937Z] SYSTEM VOTE FOR Screenshot_20260323_204303_Chrome.jpg: microsoft/TypeScript SELECTED FOR MUTATION.
+[2026-03-24T10:52:27.937Z] FETCHING ORIGINAL CONTENT FOR Screenshot_20260323_204303_Chrome.jpg...
+[2026-03-24T10:52:28.710Z] ORIGINAL CONTENT RETRIEVED FOR Screenshot_20260323_204303_Chrome.jpg (75797 chars).
+[2026-03-24T10:52:28.711Z] ROUND 1/10 [Screenshot_20260323_204303_Chrome.jpg]: Siphoning patterns...
+[2026-03-24T10:52:28.713Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:52:28.713Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T10:53:27.936Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T10:53:27.946Z] [APIGate] GATE OPEN: ~25351 input tokens. Active slots: 1/4
+[2026-03-24T10:53:37.283Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T10:53:54.812Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=95, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7407, Model=pro, Temp=1.04
+[2026-03-24T10:53:54.812Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=95, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7157, Model=pro, Temp=1.04
+[2026-03-24T10:53:54.813Z] FILE PROCESSING FAILURE [Screenshot_20260323_204303_Chrome.jpg]: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T10:53:54.813Z] COMMENCING NEXUS_CORE WARM-UP FOR TEST/EMG Core Analysis System.pdf...
+[2026-03-24T10:53:54.813Z] CHAINING CONTEXT DETECTED FOR TEST/EMG Core Analysis System.pdf.
+[2026-03-24T10:53:54.813Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:53:54.813Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T10:54:54.812Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T10:54:54.814Z] [APIGate] GATE OPEN: ~249 input tokens. Active slots: 1/4
+[2026-03-24T10:55:28.811Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T10:56:31.104Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=96, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=7157, Model=pro, Temp=1.04
+[2026-03-24T10:56:31.104Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=96, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6907, Model=pro, Temp=1.04
+[2026-03-24T10:56:31.104Z] AI QUOTA EXCEEDED FOR TEST/EMG Core Analysis System.pdf: USING RANDOM ARCHITECTURAL VOTE.
+[2026-03-24T10:56:31.104Z] SYSTEM VOTE FOR TEST/EMG Core Analysis System.pdf: microsoft/TypeScript SELECTED FOR MUTATION.
+[2026-03-24T10:56:31.105Z] FETCHING ORIGINAL CONTENT FOR TEST/EMG Core Analysis System.pdf...
+[2026-03-24T10:56:35.203Z] ORIGINAL CONTENT RETRIEVED FOR TEST/EMG Core Analysis System.pdf (231197 chars).
+[2026-03-24T10:56:35.204Z] ROUND 1/10 [TEST/EMG Core Analysis System.pdf]: Siphoning patterns...
+[2026-03-24T10:56:35.206Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:56:35.206Z] [APIGate] QUOTA EXHAUSTED: Waiting 56s for cooldown...
+[2026-03-24T10:57:31.106Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T10:57:31.126Z] [APIGate] GATE OPEN: ~64199 input tokens. Active slots: 1/4
+[2026-03-24T10:58:32.973Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T10:59:34.822Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=97, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6907, Model=pro, Temp=1.04
+[2026-03-24T10:59:34.823Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=97, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6657, Model=pro, Temp=1.04
+[2026-03-24T10:59:34.823Z] FILE PROCESSING FAILURE [TEST/EMG Core Analysis System.pdf]: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T10:59:34.823Z] COMMENCING NEXUS_CORE WARM-UP FOR TEST/readme.md...
+[2026-03-24T10:59:34.823Z] CHAINING CONTEXT DETECTED FOR TEST/readme.md.
+[2026-03-24T10:59:34.823Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T10:59:34.824Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T11:00:34.827Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:00:34.830Z] [APIGate] GATE OPEN: ~244 input tokens. Active slots: 1/4
+[2026-03-24T11:01:36.791Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:02:37.457Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=98, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6657, Model=pro, Temp=1.04
+[2026-03-24T11:02:37.457Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=98, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6407, Model=pro, Temp=1.04
+[2026-03-24T11:02:37.457Z] AI QUOTA EXCEEDED FOR TEST/readme.md: USING RANDOM ARCHITECTURAL VOTE.
+[2026-03-24T11:02:37.457Z] SYSTEM VOTE FOR TEST/readme.md: Anthropic/Constitutional-AI SELECTED FOR MUTATION.
+[2026-03-24T11:02:37.457Z] FETCHING ORIGINAL CONTENT FOR TEST/readme.md...
+[2026-03-24T11:02:39.934Z] ORIGINAL CONTENT RETRIEVED FOR TEST/readme.md (5 chars).
+[2026-03-24T11:02:39.934Z] ROUND 1/10 [TEST/readme.md]: Siphoning patterns...
+[2026-03-24T11:02:39.936Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:02:39.936Z] [APIGate] QUOTA EXHAUSTED: Waiting 58s for cooldown...
+[2026-03-24T11:03:37.456Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:03:37.459Z] [APIGate] GATE OPEN: ~6425 input tokens. Active slots: 1/4
+[2026-03-24T11:04:39.622Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:05:40.424Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=99, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6407, Model=pro, Temp=1.04
+[2026-03-24T11:05:40.425Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=99, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6157, Model=pro, Temp=1.04
+[2026-03-24T11:05:40.425Z] FILE PROCESSING FAILURE [TEST/readme.md]: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T11:05:40.425Z] COMMENCING NEXUS_CORE WARM-UP FOR config/evolution_params.json...
+[2026-03-24T11:05:40.425Z] CHAINING CONTEXT DETECTED FOR config/evolution_params.json.
+[2026-03-24T11:05:40.426Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:05:40.426Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T11:06:40.423Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:06:40.425Z] [APIGate] GATE OPEN: ~247 input tokens. Active slots: 1/4
+[2026-03-24T11:07:42.453Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:08:43.135Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=100, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=6157, Model=pro, Temp=1.04
+[2026-03-24T11:08:43.136Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=100, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5907, Model=pro, Temp=1.04
+[2026-03-24T11:08:43.136Z] AI QUOTA EXCEEDED FOR config/evolution_params.json: USING RANDOM ARCHITECTURAL VOTE.
+[2026-03-24T11:08:43.136Z] SYSTEM VOTE FOR config/evolution_params.json: OpenAI/Triton SELECTED FOR MUTATION.
+[2026-03-24T11:08:43.136Z] FETCHING ORIGINAL CONTENT FOR config/evolution_params.json...
+[2026-03-24T11:08:44.593Z] ORIGINAL CONTENT RETRIEVED FOR config/evolution_params.json (628 chars).
+[2026-03-24T11:08:44.593Z] ROUND 1/10 [config/evolution_params.json]: Siphoning patterns...
+[2026-03-24T11:08:44.593Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:08:44.593Z] [APIGate] QUOTA EXHAUSTED: Waiting 59s for cooldown...
+[2026-03-24T11:09:43.135Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:09:43.139Z] [APIGate] GATE OPEN: ~6564 input tokens. Active slots: 1/4
+[2026-03-24T11:10:44.120Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:11:44.921Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=101, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5907, Model=pro, Temp=1.04
+[2026-03-24T11:11:44.922Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=101, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5657, Model=pro, Temp=1.04
+[2026-03-24T11:11:44.922Z] FILE PROCESSING FAILURE [config/evolution_params.json]: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T11:11:44.923Z] COMMENCING NEXUS_CORE WARM-UP FOR grog/dna/DNA_SIGNATURE.md...
+[2026-03-24T11:11:44.923Z] CHAINING CONTEXT DETECTED FOR grog/dna/DNA_SIGNATURE.md.
+[2026-03-24T11:11:44.923Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:11:44.923Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T11:12:44.920Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:12:44.922Z] [APIGate] GATE OPEN: ~247 input tokens. Active slots: 1/4
+[2026-03-24T11:13:46.678Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:14:47.273Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=102, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5657, Model=pro, Temp=1.04
+[2026-03-24T11:14:47.274Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=102, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5407, Model=pro, Temp=1.04
+[2026-03-24T11:14:47.274Z] AI QUOTA EXCEEDED FOR grog/dna/DNA_SIGNATURE.md: USING RANDOM ARCHITECTURAL VOTE.
+[2026-03-24T11:14:47.274Z] SYSTEM VOTE FOR grog/dna/DNA_SIGNATURE.md: Firebase/Lifecycle SELECTED FOR MUTATION.
+[2026-03-24T11:14:47.274Z] FETCHING ORIGINAL CONTENT FOR grog/dna/DNA_SIGNATURE.md...
+[2026-03-24T11:14:49.766Z] ORIGINAL CONTENT RETRIEVED FOR grog/dna/DNA_SIGNATURE.md (12351 chars).
+[2026-03-24T11:14:49.767Z] ROUND 1/10 [grog/dna/DNA_SIGNATURE.md]: Siphoning patterns...
+[2026-03-24T11:14:49.768Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:14:49.768Z] [APIGate] QUOTA EXHAUSTED: Waiting 58s for cooldown...
+[2026-03-24T11:15:47.273Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:15:47.277Z] [APIGate] GATE OPEN: ~9512 input tokens. Active slots: 1/4
+[2026-03-24T11:16:49.981Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:17:50.865Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=103, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5407, Model=pro, Temp=1.04
+[2026-03-24T11:17:50.866Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=103, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5157, Model=pro, Temp=1.04
+[2026-03-24T11:17:50.866Z] FILE PROCESSING FAILURE [grog/dna/DNA_SIGNATURE.md]: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T11:17:50.866Z] COMMENCING NEXUS_CORE WARM-UP FOR grog/lessons/DEATH_REGISTRY.json...
+[2026-03-24T11:17:50.867Z] CHAINING CONTEXT DETECTED FOR grog/lessons/DEATH_REGISTRY.json.
+[2026-03-24T11:17:50.867Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:17:50.867Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T11:18:50.865Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:18:50.867Z] [APIGate] GATE OPEN: ~248 input tokens. Active slots: 1/4
+[2026-03-24T11:19:52.128Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:20:52.746Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=104, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=5157, Model=pro, Temp=1.04
+[2026-03-24T11:20:52.747Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=104, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=4907, Model=pro, Temp=1.04
+[2026-03-24T11:20:52.747Z] AI QUOTA EXCEEDED FOR grog/lessons/DEATH_REGISTRY.json: USING RANDOM ARCHITECTURAL VOTE.
+[2026-03-24T11:20:52.747Z] SYSTEM VOTE FOR grog/lessons/DEATH_REGISTRY.json: DeepMind/AlphaCode SELECTED FOR MUTATION.
+[2026-03-24T11:20:52.748Z] FETCHING ORIGINAL CONTENT FOR grog/lessons/DEATH_REGISTRY.json...
+[2026-03-24T11:20:55.413Z] ORIGINAL CONTENT RETRIEVED FOR grog/lessons/DEATH_REGISTRY.json (1203 chars).
+[2026-03-24T11:20:55.414Z] ROUND 1/10 [grog/lessons/DEATH_REGISTRY.json]: Siphoning patterns...
+[2026-03-24T11:20:55.415Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:20:55.415Z] [APIGate] QUOTA EXHAUSTED: Waiting 58s for cooldown...
+[2026-03-24T11:21:53.291Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:21:53.296Z] [APIGate] GATE OPEN: ~6713 input tokens. Active slots: 1/4
+[2026-03-24T11:23:19.474Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:24:22.108Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=105, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=4907, Model=pro, Temp=1.04
+[2026-03-24T11:24:22.109Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1512:28)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=105, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=4657, Model=pro, Temp=1.04
+[2026-03-24T11:24:22.109Z] FILE PROCESSING FAILURE [grog/lessons/DEATH_REGISTRY.json]: API_GATE_QUOTA_EXHAUSTED
+[2026-03-24T11:24:22.109Z] COMMENCING NEXUS_CORE WARM-UP FOR grog/lessons/LESSONS.md...
+[2026-03-24T11:24:22.109Z] CHAINING CONTEXT DETECTED FOR grog/lessons/LESSONS.md.
+[2026-03-24T11:24:22.109Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:24:22.109Z] [APIGate] QUOTA EXHAUSTED: Waiting 60s for cooldown...
+[2026-03-24T11:25:22.099Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:25:22.102Z] [APIGate] GATE OPEN: ~246 input tokens. Active slots: 1/4
+[2026-03-24T11:26:24.429Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:27:27.702Z] [CRITICAL] [APIGate] QUOTA EXHAUSTED (429): Entering 60s cooldown.
+> REASON: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+> STACK: ApiError: {"error":{"code":429,"message":"You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. ","status":"RESOURCE_EXHAUSTED"}}
+    at throwErrorIfNotOK (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11093:24)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:10812:7
+    at async Models.generateContent (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/node_modules/.vite/deps/@google_genai.js?v=036dc9d7:11944:16)
+    at async https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:106:38
+    at async APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:92:24)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=106, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=4657, Model=pro, Temp=1.04
+[2026-03-24T11:27:27.703Z] [CRITICAL] GROG_BRAIN: API QUOTA EXHAUSTED. ENTERING COOLDOWN.
+> REASON: API_GATE_QUOTA_EXHAUSTED
+> STACK: Error: API_GATE_QUOTA_EXHAUSTED
+    at APIGate.gate (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/apiGate.ts:115:30)
+    at async GrogBrain.callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/evolutors/GrogBrain.ts:83:22)
+    at async callAIWithFallback (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:812:12)
+    at async processSingleFile (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1409:34)
+    at async initiateEvolution (https://ais-dev-beiipet3pmbi2ih5l32vzb-483535245139.asia-southeast1.run.app/src/App.tsx:1680:23)
+> METRICS: Tokens=543,769, Calls=106, Retries=0, Queued=0
+> STRATEGY: ID=gen0-ind9, Gen=0, Fitness=4407, Model=pro, Temp=1.04
+[2026-03-24T11:27:27.703Z] AI QUOTA EXCEEDED FOR grog/lessons/LESSONS.md: USING RANDOM ARCHITECTURAL VOTE.
+[2026-03-24T11:27:27.703Z] SYSTEM VOTE FOR grog/lessons/LESSONS.md: microsoft/TypeScript SELECTED FOR MUTATION.
+[2026-03-24T11:27:27.703Z] FETCHING ORIGINAL CONTENT FOR grog/lessons/LESSONS.md...
+[2026-03-24T11:27:30.129Z] ORIGINAL CONTENT RETRIEVED FOR grog/lessons/LESSONS.md (138 chars).
+[2026-03-24T11:27:30.130Z] ROUND 1/10 [grog/lessons/LESSONS.md]: Siphoning patterns...
+[2026-03-24T11:27:30.132Z] [APIGate] CONFIG UPDATED: maxConcurrency=4
+[2026-03-24T11:27:30.133Z] [APIGate] QUOTA EXHAUSTED: Waiting 58s for cooldown...
+[2026-03-24T11:28:28.291Z] [APIGate] QUOTA COOLDOWN EXPIRED: Resuming operations.
+[2026-03-24T11:28:28.296Z] [APIGate] GATE OPEN: ~6459 input tokens. Active slots: 1/4
+[2026-03-24T11:29:40.508Z] GROG_BRAIN: PRO MODEL FAILED. FALLING BACK TO FLASH...
+[2026-03-24T11:30:22.315Z] ABORT SIGNAL SENT. WAITING FOR CURRENT OPERATION TO TERMINATE...
