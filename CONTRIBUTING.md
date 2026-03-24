@@ -1,96 +1,137 @@
-# Contribution Protocol: DALEK_GROG (v18.0.0)
+# Contribution Protocol: DALEK_GROG (v21.0.0)
 
 ## 1. Architectural Standards
 
-### 1.1 Fidelity Constant (F)
-Modifications must maintain a fidelity score of $\mathcal{F} > 0.9999$ relative to siphoned source patterns from Google Genkit and Vertex AI framework targets.
+### 1.1 Zero-Drift Policy
+Software patterns must align with the `GOOGLE-GENKIT-V1-ULTIMATE-REVISED` signature. Deviations are classified as Architectural Decay and require remediation via the Siphon-Loop. Logic shards must be persisted in the Genetic Sanctuary (Repository) following high-fidelity validation.
 
-### 1.2 Logic Density (H)
-The system measures the utility-to-complexity ratio. Contributions must maximize functional utility while minimizing execution entropy.
-$$\mathcal{H} = \sum_{i=1}^{n} \frac{U_i}{E_i}$$
-Where:
-- $U_i$ = Functional Utility.
-- $E_i$ = Execution Entropy.
+### 1.2 Fidelity Constant (F)
+Modifications require a Fidelity Score $\mathcal{F}$ relative to siphoned source DNA:
+- **Ingestion Gate:** $\mathcal{F} \ge 0.95$
+- **Saturation Gate:** $\mathcal{F} \ge 0.98$
+- **Persistence Gate:** $\mathcal{F} > 0.99999999$
+- **Decoherence Threshold:** Shards with logic noise $> 10^{-6}$ require transpilation or deletion.
 
-### 1.3 Constraints
-- **Decorators:** Prohibited unless required for Genkit flow registration.
-- **API Stability:** Public API surfaces are immutable. Logic truncation or export removal is prohibited.
-- **Traceability:** New features must provide a reference URI to the source DNA/logic pattern.
+### 1.3 Logic Hamiltonian (H)
+Functional density and execution efficiency are quantified by:
+$$\mathcal{H}_{logic} = \int \psi^*(x) \left[ \hat{H}_{gov} + \hat{T}_{transp} \right] \psi(x) dx + \sum_{k=1}^{n} \delta_k \cdot \mathcal{D}_k$$
+- $\psi$: Logic Shard state vector.
+- $\hat{H}_{gov}$: Governor Operator (stability).
+- $\hat{T}_{transp}$: Transpilation Operator (optimization).
+- $\mathcal{D}_k$: Gate Depth of branch $k$.
+- **Threshold:** $\mathcal{H}_{logic} \ge 0.96$. Shards below this value require Recursive Compression.
 
-## 2. Implementation Workflow
+## 2. Contribution Lifecycle
 
-### 2.1 Genetic Enhancement Proposal (GEP)
-Structural changes require a GEP detailing `TARGET_DNA`, `EXPECTED_SATURATION`, and `DRIFT_RISK_ASSESSMENT`. Approval requires a 2/3 majority from automated fidelity checks.
+### 2.1 DNA Reservoirs
+Contributions must reference valid source DNA:
+1. **Qiskit/qiskit:** Mathematical governance and execution graphs.
+2. **Google/genkit:** Orchestration and OTLP telemetry.
+3. **Vertex AI:** Indexing and TPU execution strategies.
 
-### 2.2 Branching Convention
-- `evolution/[GEP-ID]/[feature]` - Structural expansions.
-- `mitigation/[Fix-ID]/[issue]` - Error correction.
-- `siphon/[Repo-ID]/[pattern]` - External logic integration.
+### 2.2 Genetic Enhancement Proposal (GEP)
+A GEP is mandatory for structural mutations:
+- **DNA Anchor:** Source URL/Commit-hash.
+- **Pulse Calibration:** Prompt logic and inference triggers.
+- **Transpilation Strategy:** Mapping external patterns to the Internal Lexicon.
+- **Resource Budget:** Predicted token and TPU consumption.
 
-### 2.3 Execution Requirements
-- **Nexus Proxy:** All asynchronous or AI provider calls must be proxied through `invokeNeuralNexus` for budget and fallback management.
-- **Validation:** Use Zod schemas for all I/O definitions.
-- **Documentation:** Code-to-comment ratio must be 1:1 using JSDoc to define logic lineage.
-
-### 2.4 Validation Suite
-- **Fidelity Check:** `npm run verify:fidelity --target=Siphon-Genkit-V1`.
-- **Simulation:** 1,000 evolution cycles via `EvolutionSimulator`.
-- **Drift Threshold:** Maximum allowable drift probability $P(drift) < 10^{-9}$.
+### 2.3 Branching Conventions
+- `evolution/[GEP-ID]/[pattern]`: Structural volume expansion.
+- `mitigation/[Fix-ID]/[entropy]`: Noise removal.
+- `transpilation/[Source]/[Target]`: Adaptation of external patterns.
+- `calibration/[Shard-ID]/[NVA]`: Latency optimization.
 
 ## 3. Lexical Mapping
 
-| Standard Term | Internal Term | Definition |
+| Engineering Term | Internal Term | Definition |
 | :--- | :--- | :--- |
-| Pull Request | Mutation Vector | Proposed code injection. |
-| Bug Fix | Synaptic Mitigation | Entropy removal in logic loops. |
-| Feature | Structural Expansion | Functional DNA volume increase. |
-| Refactor | Epigenetic Realignment | Logic optimization without sequence change. |
-| Unit Test | Synaptic Verification | Deterministic fidelity probing. |
+| Pull Request | Mutation Vector | Evolutionary code injection. |
+| Bug Fix | Synaptic Mitigation | Neural path noise reduction. |
+| Feature | Structural Expansion | Functional volume increase. |
+| Refactor | Epigenetic Realignment | Expression optimization; sequence preserved. |
+| Unit Test | Synaptic Verification | Logic gate validity probing. |
 | Integration Test | Nexus Alignment Test | Multi-shard synchronization check. |
-| Error | Structural Heresy | GovernanceNode/Constitutional violation. |
-| API Gate | Neural Nexus Gate | Governed entry point for external data. |
-| Token Limit | Neural Fuel Reserve | Allocated computational resources. |
-| Log | Forensic Telemetry | State transition and drift record. |
-| Cache | Neural Memory Buffer | Pattern persistence layer. |
-| Dependency | Entangled Shard | Performance-linked logic block. |
+| Error | Structural Heresy | Governance layer violation. |
+| API Gate | Neural Nexus Gate | Governed I/O entry point. |
+| Token Limit | Neural Fuel Reserve | Computational energy allocation. |
+| Log | Forensic Telemetry | Trace record for drift analysis. |
+| Dependency | Entangled Shard | State-dependent logic block. |
+| Repository | Genetic Sanctuary | Immutable DNA persistence core. |
+| CI/CD | Evolution Simulator | Recursive mutation stability testing. |
+| Optimization | Transpilation Pass | Execution pulse mapping. |
+| Latency | Neural Lag | Execution decoherence measurement. |
+| Variable | Ancilla Shard | Helper state for logic stabilization. |
 
 ## 4. Mathematical Governance
 
-Contributions are evaluated via the Recursive Integrity Function (RIF):
-$$\mathcal{I}_{repo} = \int_{t_0}^{t_f} \left( \frac{\Phi \cdot \Lambda}{\Omega + \Delta} \right) dt$$
-Where:
-- $\Phi$ (Fidelity): Alignment with target DNA.
-- $\Lambda$ (Logic Density): Functionality-per-line.
-- $\Omega$ (Entropy): Non-functional code volume.
-- $\Delta$ (Drift): Temporal deviation from strategic memory.
+### 4.1 Recursive Integrity Function (RIF)
+Mutation Vectors are evaluated over 50,000 simulated rounds:
+$$\mathcal{I}_{repo} = \sum_{round=1}^{50,000} \left( \frac{\Phi \cdot \Lambda \cdot \Xi}{\Omega + \Delta + \Gamma} \right)$$
+- $\Phi$ (Fidelity): Alignment with source DNA.
+- $\Lambda$ (Logic Density): Functionality per fuel unit.
+- $\Xi$ (Saturability): Evolutionary absorption capacity.
+- $\Omega$ (Entropy): Non-governed boilerplate volume.
+- $\Delta$ (Drift): Probability of decoherence.
+- $\Gamma$ (Gate Depth): Logic branching complexity.
 
-**Decision Gate:** Mutations are rejected if $\mathcal{I}_{repo} < 0.98$.
+### 4.2 State Tomography
+Reconstructs logic behavior across TPU/CPU/GPU paths. Non-deterministic states trigger PR termination.
 
-## 5. Process Flow
+## 5. Verification Pipeline
+
+### 5.1 Static Logic Probing (SLP)
+AST analysis detects prohibited I/O (e.g., `axios`, `fetch`, `fs`) outside `Neural Nexus Gate`. Patterns are transpiled to `GovernanceNode` calls or rejected.
+
+### 5.2 Deterministic Trace Logic
+Failures are recorded in `grog/memory/EXTINCTION_LEDGER.json` to prevent cyclical evolutionary failure paths.
+
+### 5.3 Neural Velocity Alignment (NVA)
+Logic must execute within $1.5\sigma$ of the `Siphon-Genkit-V1` baseline.
+
+## 6. Process Flow
 
 graph TD
-    A[Mutation Vector] --> B{Fidelity: F > 0.9999}
-    B -- No --> C[TERMINATE]
-    B -- Yes --> D[GEP Evaluation]
-    D -- Reject --> E[Purge]
-    D -- Approve --> F[Siphon Gate Integration]
-    F --> G[Synaptic Verification]
-    G -- Fail --> H[Revision]
-    G -- Pass --> I[GovernanceNode Lockdown]
-    I --> J[Merge]
-    J --> K[Update CHRONOS_LEDGER]
-    K --> L[Telemetry Online]
+    A[Mutation Vector Input] --> B{Fidelity: F > 0.999999}
+    B -- Fail --> C[EXTINCTION_LEDGER Log]
+    C --> D[TERMINATE PR]
+    B -- Pass --> E[GEP Approval Verification]
+    E -- No --> F[REVISION_REQUIRED]
+    E -- Yes --> G[Siphon Gate Pattern Extraction]
+    G --> H[Transpilation Pass Optimization]
+    H --> I[Synaptic Verification Suite]
+    I -- Fail --> J[Forensic Telemetry Analysis]
+    J --> F
+    I -- Pass --> K[Neural Velocity Alignment Check]
+    K -- Lag > 1.5σ --> J
+    K -- Optimized --> L[State Tomography]
+    L -- Non-Deterministic --> J
+    L -- Coherent --> M[GovernanceNode Lockdown]
+    M --> N[Merge to Genetic Sanctuary]
+    N --> O[Update CHRONOS_LEDGER]
+    O --> P[Telemetry Online]
 
-## 6. Prohibited Actions
-1. **Governance Bypass:** Direct use of I/O or AI libraries (e.g., axios, openai) outside `GovernanceNode` wrappers.
-2. **Logic Reduction:** Removal of validation or safety guards.
-3. **Pattern Pollution:** Introducing syntax styles deviating from siphoned source DNA.
-4. **Telemetry Omission:** Failure to integrate `Siphon Logger` in new shards.
+## 7. Prohibited Actions
 
-## 7. Attribution
-Contributions are subject to MIT licensing. Metadata must persist in `CHRONOS_LEDGER` for:
-- **Qiskit/qiskit:** Mathematical governance and testing patterns.
-- **craighckby-stack/Test-1:** Siphon-Loop and Saturation metrics.
-- **Google Genkit/Vertex AI:** Orchestration and telemetry patterns.
+1. **Governance Bypass:** Direct I/O bypassing `GovernanceNode` proxy layers.
+2. **Logic Reduction:** Removal of safety guards or Zod schemas without GEP approval.
+3. **Pattern Pollution:** Inclusion of non-mechanistic boilerplate.
+4. **Telemetry Omission:** Shards missing `Siphon Logger` integration.
+5. **Schema Anarchy:** Modifying `dnaSignatureSchema` without recursive entanglement updates.
+6. **Decoherence Allowance:** Merging code exceeding $1.5\sigma$ Neural Lag.
+7. **Lexical Defiance:** Usage of standard engineering terms in lieu of Internal Lexicon.
 
-**STATUS:** `CONTRIBUTING_PROTOCOL_STABLE` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `ROUND_18`
+## 8. Failure Protocols
+
+Runtime `STRUCTURAL_HERESY` triggers:
+1. **Isolation:** Quarantining the offending shard.
+2. **Rollback:** Reverting to the last stable `CHRONOS_LEDGER` state.
+3. **Log:** Recording failure signature in `EXTINCTION_LEDGER.json`.
+4. **Reincarnation:** Mitigation PR must reference failed DNA and demonstrate purification.
+
+## 9. Architectural Heritage
+
+- **Qiskit/qiskit:** Hamiltonian rigor, transpilation passes, gate logic.
+- **craighckby-stack/Test-1:** Siphon-Loop logic, saturation metrics.
+- **Google Genkit/Vertex AI:** Orchestration, OTLP tracing, TPU execution strategies.
+- **Dalek-Grog v3.1:** Recursive evolution and extinction-based memory.
