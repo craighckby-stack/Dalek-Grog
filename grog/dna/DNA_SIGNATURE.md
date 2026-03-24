@@ -112,70 +112,67 @@ To ensure the reconstruction is structurally sound, establish the following new 
 **STATUS:** `BLUEPRINT READY` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `PENDING START`
 
 [EXTERNAL DNA: google/generative-ai-js]
-This architectural analysis identifies the core DNA and structural patterns of the `google/generative-ai-js` repository based on the provided configuration and historical metadata.
+Based on the provided repository files for `google/generative-ai-js`, here is the extraction of its **Core Architectural Patterns** and **DNA Signature**.
 
 ---
 
-### 1. Architectural DNA Signature
-The repository follows a **"Strict Type-Safe SDK"** signature. Its DNA is characterized by a transition from a lightweight API wrapper to a complex, multi-environment (Browser/Node/Server) toolkit.
+### 1. Core Architectural Patterns
 
-*   **Type Governance:** Extreme emphasis on TypeScript rigor. It avoids "magic" types in favor of explicit interfaces and discriminated unions to mirror complex JSON schemas.
-*   **Module Philosophy:** **Explicit over Implicit.** The rejection of `default exports` and the enforcement of `no-public` (explicit accessibility) indicates a codebase designed for long-term maintenance and clear IDE discoverability.
-*   **Environment Agnostic but Specialized:** The DNA shows a clear split between core logic (Browser/Node compatible) and specialized "Server" sub-paths for restricted operations like file management.
+#### **The "Manager-Session" Orchestration**
+The SDK follows a pattern where high-level **Managers** (stateless factories) produce stateful **Sessions** or handle specific resource domains.
+*   **GenerativeModel:** The central entry point for configuring model parameters.
+*   **ChatSession:** Encapsulates conversational state, managing history and sequence validation internally.
+*   **Resource Managers:** Dedicated managers for non-inference tasks, specifically `GoogleAIFileManager` and `GoogleAICacheManager`.
 
----
+#### **Sub-path Modularization (Environment Separation)**
+To support both Browser and Node.js environments while maintaining a small footprint, the architecture uses **entry-point sub-paths**:
+*   `@google/generative-ai`: Core SDK (Isomorphic).
+*   `@google/generative-ai/server`: Node-only capabilities (e.g., File API, Cache management).
+*   *Pattern:* This avoids "leaking" Node.js dependencies (like `fs` or `Buffer`) into browser bundles.
 
-### 2. Core Architectural Patterns
+#### **Options-Through-Flow (Configuration Injection)**
+A pervasive pattern where a `RequestOptions` or `SingleRequestOptions` object is passed through every layer of the call stack (from `GenerativeModel` → `ChatSession` → `makeRequest`).
+*   **Capability:** This allows per-request overrides for `baseUrl`, `timeout`, `customHeaders`, and `AbortSignal`.
 
-#### A. Entry-Point Segmentation (Subpath Pattern)
-The project utilizes subpath exports (e.g., `@google/generative-ai/server`) to manage environment-specific dependencies.
-*   **Logic:** Keeps the browser bundle small by moving heavy logic (like `GoogleAIFileManager` or `GoogleAICacheManager`) into a `/server` path.
-*   **Evolution:** The CHANGELOG reveals a shift from `/files` to a more unified `/server` subpath, indicating a consolidation of privileged operations.
-
-#### B. Configuration-Driven Request Pipeline
-The architectural core revolves around a `makeRequest` abstraction that is highly configurable via a `RequestOptions` pattern.
-*   **Pattern:** Instead of positional arguments, methods accept a structured `RequestOptions` object (containing `baseUrl`, `apiVersion`, `timeout`, and `customHeaders`).
-*   **Safety:** The migration from API keys in query parameters to headers demonstrates a security-first evolution.
-
-#### C. Type-Driven API Modeling (Discriminated Unions)
-A major architectural pivot occurred in version 0.22.0 to use **Discriminated Unions** for schemas.
-*   **Pattern:** The `type` field in a schema dictates which other fields are valid.
-*   **Impact:** This moves validation from runtime checks to compile-time guarantees, essential for an SDK handling complex GenAI JSON inputs.
-
-#### D. The "Manager" Resource Pattern
-The SDK utilizes specialized Manager classes (`GoogleAIFileManager`, `GoogleAICacheManager`) rather than cluttering the main `GenerativeModel` instance.
-*   **Separation of Concerns:** `GenerativeModel` handles inference; `Managers` handle lifecycle and persistence.
+#### **Discriminated Union Type Safety**
+As seen in the CHANGELOG (v0.22.0), the SDK transitioned to **Discriminated Unions** for schemas and request types.
+*   *Implementation:* Using a `type` field to narrow the available properties in an interface. This mirrors the underlying JSON-Schema requirements of the Gemini API.
 
 ---
 
-### 3. Quality & Governance Logic
+### 2. DNA Signature (The "Google-JS" Way)
 
-#### A. The "No-Default" Rule
-The ESLint configuration strictly enforces `import/no-default-export`.
-*   **Reasoning:** Named exports ensure that when a developer renames a function/class in the SDK, the change propagates clearly to the consumer, preventing the ambiguity common in large-scale JS ecosystems.
+The code exhibits a specific "DNA" characterized by high strictness and standard Google internal engineering practices:
 
-#### B. Asynchronous Control Flow
-The adoption of `AbortSignal` (via `SingleRequestOptions`) across all async methods (v0.16.0) is a core pattern.
-*   **Architectural Goal:** Ensures the SDK is "web-native" and compatible with modern UI frameworks where component unmounting must cancel pending LLM streams to save resources.
+#### **Named Exports vs. Default Exports**
+*   **Rule:** `.eslintrc.js` explicitly forbids `import/no-default-export`. 
+*   **Philosophy:** Every architectural component must be a named entity to improve grep-ability, tree-shaking, and explicit API surface definition.
 
-#### C. Versioning & Release Rigor
-Using `@changesets/cli` indicates a **Semi-Automated Release Cycle**.
-*   **Pattern:** Developer-authored `.changeset` files dictate the version bump (Patch/Minor/Major) based on semantic impact rather than just commit messages.
+#### **Interface Dominance**
+*   **Rule:** `@typescript-eslint/consistent-type-definitions` is set to `"interface"`.
+*   **Philosophy:** Prefers interfaces over type aliases for extensibility and better IDE performance in large-scale TS projects.
+
+#### **Strict Test Hygiene**
+*   **Rule:** The linter strictly forbids `it.only`, `describe.only`, and `xit`.
+*   **Philosophy:** "Green-light" CI/CD integrity. Developers are prevented from accidentally committing "focused" tests that skip the rest of the suite.
+
+#### **Safe Type Coercion**
+*   **Rule:** Prohibits global `parseInt` and `parseFloat` in favor of a custom `tsstyle#type-coercion` pattern.
+*   **Philosophy:** Avoids the "hidden traps" of JS type casting (like `parseInt`'s radix behavior) by forcing more explicit or safer alternatives.
 
 ---
 
-### 4. Evolutionary Trajectory (The "Deprecation Logic")
-The `README` reveals a critical architectural realization: the "v1" SDK (this repo) reached its complexity limit and is being superseded by a "unified" SDK (`js-genai`).
+### 3. Evolutionary Trends (From the Changelog)
 
-*   **Legacy DNA:** Focused specifically on the Gemini API.
-*   **Future DNA:** Moving toward a multi-modal "Google Gen AI" umbrella that handles Gemini, Veo, and Imagen within a single architectural framework.
+*   **REST to Header-based Auth:** Moved from query-parameter API keys to Header-based authentication early (v0.1.3), indicating a shift towards enterprise security standards.
+*   **Streaming Stability:** Heavy focus on UTF-8 chunking and "hanging stream" prevention, suggesting the SDK serves as a robust buffer for the volatile nature of Server-Sent Events (SSE).
+*   **Deprecation Path:** The `README` indicates this SDK is now a "legacy bridge." The architecture served its purpose as a specialized wrapper but is being unified into `js-genai`, suggesting a move from **specialized SDKs** to **unified platform SDKs**.
 
-### Summary Table: Architectural Constraints
-
-| Constraint | Enforcement Mechanism | Architectural Purpose |
-| :--- | :--- | :--- |
-| **Naming Consistency** | `naming-convention` (PascalCase) | Predictable API Surface |
-| **Resource Management** | `Managers` & `Subpaths` | Memory and Bundle Optimization |
-| **Error Handling** | Custom `Error` classes | Programmatic recovery from API failures |
-| **Schema Validation** | Discriminated Unions | Alignment with JSON-Schema standards |
-| **Release Integrity** | `changesets` | Accurate semantic versioning in a fast-moving API |
+### Summary Table
+| Feature | Pattern/Signature |
+| :--- | :--- |
+| **State Management** | Stateful `ChatSession` vs Stateless `GenerativeModel` |
+| **Environments** | Dual-nature (Browser/Node) via sub-path exports |
+| **Versioning** | Changesets-driven automated semantic versioning |
+| **Code Style** | Google TS Style (No default exports, strict interfaces) |
+| **API Handling** | Pervasive configuration pass-through (`RequestOptions`) |
