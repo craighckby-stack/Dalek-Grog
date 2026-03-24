@@ -110,3 +110,72 @@ To ensure the reconstruction is structurally sound, establish the following new 
 **Architectural Note:** *The integration of "Grok-3" as a primary fallback engine necessitates a high-fidelity reference lock. Ensure the system context remains consistent when switching engines to prevent "Pattern Drift" during siphoning.*
 
 **STATUS:** `BLUEPRINT READY` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `PENDING START`
+
+[EXTERNAL DNA: google/generative-ai-js]
+This architectural analysis identifies the core DNA and structural patterns of the `google/generative-ai-js` repository based on the provided configuration and historical metadata.
+
+---
+
+### 1. Architectural DNA Signature
+The repository follows a **"Strict Type-Safe SDK"** signature. Its DNA is characterized by a transition from a lightweight API wrapper to a complex, multi-environment (Browser/Node/Server) toolkit.
+
+*   **Type Governance:** Extreme emphasis on TypeScript rigor. It avoids "magic" types in favor of explicit interfaces and discriminated unions to mirror complex JSON schemas.
+*   **Module Philosophy:** **Explicit over Implicit.** The rejection of `default exports` and the enforcement of `no-public` (explicit accessibility) indicates a codebase designed for long-term maintenance and clear IDE discoverability.
+*   **Environment Agnostic but Specialized:** The DNA shows a clear split between core logic (Browser/Node compatible) and specialized "Server" sub-paths for restricted operations like file management.
+
+---
+
+### 2. Core Architectural Patterns
+
+#### A. Entry-Point Segmentation (Subpath Pattern)
+The project utilizes subpath exports (e.g., `@google/generative-ai/server`) to manage environment-specific dependencies.
+*   **Logic:** Keeps the browser bundle small by moving heavy logic (like `GoogleAIFileManager` or `GoogleAICacheManager`) into a `/server` path.
+*   **Evolution:** The CHANGELOG reveals a shift from `/files` to a more unified `/server` subpath, indicating a consolidation of privileged operations.
+
+#### B. Configuration-Driven Request Pipeline
+The architectural core revolves around a `makeRequest` abstraction that is highly configurable via a `RequestOptions` pattern.
+*   **Pattern:** Instead of positional arguments, methods accept a structured `RequestOptions` object (containing `baseUrl`, `apiVersion`, `timeout`, and `customHeaders`).
+*   **Safety:** The migration from API keys in query parameters to headers demonstrates a security-first evolution.
+
+#### C. Type-Driven API Modeling (Discriminated Unions)
+A major architectural pivot occurred in version 0.22.0 to use **Discriminated Unions** for schemas.
+*   **Pattern:** The `type` field in a schema dictates which other fields are valid.
+*   **Impact:** This moves validation from runtime checks to compile-time guarantees, essential for an SDK handling complex GenAI JSON inputs.
+
+#### D. The "Manager" Resource Pattern
+The SDK utilizes specialized Manager classes (`GoogleAIFileManager`, `GoogleAICacheManager`) rather than cluttering the main `GenerativeModel` instance.
+*   **Separation of Concerns:** `GenerativeModel` handles inference; `Managers` handle lifecycle and persistence.
+
+---
+
+### 3. Quality & Governance Logic
+
+#### A. The "No-Default" Rule
+The ESLint configuration strictly enforces `import/no-default-export`.
+*   **Reasoning:** Named exports ensure that when a developer renames a function/class in the SDK, the change propagates clearly to the consumer, preventing the ambiguity common in large-scale JS ecosystems.
+
+#### B. Asynchronous Control Flow
+The adoption of `AbortSignal` (via `SingleRequestOptions`) across all async methods (v0.16.0) is a core pattern.
+*   **Architectural Goal:** Ensures the SDK is "web-native" and compatible with modern UI frameworks where component unmounting must cancel pending LLM streams to save resources.
+
+#### C. Versioning & Release Rigor
+Using `@changesets/cli` indicates a **Semi-Automated Release Cycle**.
+*   **Pattern:** Developer-authored `.changeset` files dictate the version bump (Patch/Minor/Major) based on semantic impact rather than just commit messages.
+
+---
+
+### 4. Evolutionary Trajectory (The "Deprecation Logic")
+The `README` reveals a critical architectural realization: the "v1" SDK (this repo) reached its complexity limit and is being superseded by a "unified" SDK (`js-genai`).
+
+*   **Legacy DNA:** Focused specifically on the Gemini API.
+*   **Future DNA:** Moving toward a multi-modal "Google Gen AI" umbrella that handles Gemini, Veo, and Imagen within a single architectural framework.
+
+### Summary Table: Architectural Constraints
+
+| Constraint | Enforcement Mechanism | Architectural Purpose |
+| :--- | :--- | :--- |
+| **Naming Consistency** | `naming-convention` (PascalCase) | Predictable API Surface |
+| **Resource Management** | `Managers` & `Subpaths` | Memory and Bundle Optimization |
+| **Error Handling** | Custom `Error` classes | Programmatic recovery from API failures |
+| **Schema Validation** | Discriminated Unions | Alignment with JSON-Schema standards |
+| **Release Integrity** | `changesets` | Accurate semantic versioning in a fast-moving API |
