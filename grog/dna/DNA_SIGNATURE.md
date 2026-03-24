@@ -112,67 +112,58 @@ To ensure the reconstruction is structurally sound, establish the following new 
 **STATUS:** `BLUEPRINT READY` | **INTEGRITY:** `VERIFIED` | **EVOLUTION:** `PENDING START`
 
 [EXTERNAL DNA: google/generative-ai-js]
-Based on the provided repository files for `google/generative-ai-js`, here is the extraction of its **Core Architectural Patterns** and **DNA Signature**.
-
----
+Based on the provided repository configuration and history, here is the extraction of the core architectural patterns and the "DNA signature" for `@google/generative-ai/js`.
 
 ### 1. Core Architectural Patterns
 
-#### **The "Manager-Session" Orchestration**
-The SDK follows a pattern where high-level **Managers** (stateless factories) produce stateful **Sessions** or handle specific resource domains.
-*   **GenerativeModel:** The central entry point for configuring model parameters.
-*   **ChatSession:** Encapsulates conversational state, managing history and sequence validation internally.
-*   **Resource Managers:** Dedicated managers for non-inference tasks, specifically `GoogleAIFileManager` and `GoogleAICacheManager`.
+#### **Subpath-Based Environment Segregation**
+The project utilizes a "Multi-Environment Module" pattern. The architecture explicitly separates logic that can run in the browser from logic that requires Node.js capabilities (like file system access or long-term caching).
+*   **Pattern:** Exporting specific functionality via subpaths (e.g., `@google/generative-ai/server`).
+*   **Implementation:** Moving `GoogleAIFileManager` and `GoogleAICacheManager` to a `/server` entry point to prevent bundling server-side dependencies (like `fs` or `node-fetch`) into browser environments.
 
-#### **Sub-path Modularization (Environment Separation)**
-To support both Browser and Node.js environments while maintaining a small footprint, the architecture uses **entry-point sub-paths**:
-*   `@google/generative-ai`: Core SDK (Isomorphic).
-*   `@google/generative-ai/server`: Node-only capabilities (e.g., File API, Cache management).
-*   *Pattern:* This avoids "leaking" Node.js dependencies (like `fs` or `Buffer`) into browser bundles.
-
-#### **Options-Through-Flow (Configuration Injection)**
-A pervasive pattern where a `RequestOptions` or `SingleRequestOptions` object is passed through every layer of the call stack (from `GenerativeModel` → `ChatSession` → `makeRequest`).
-*   **Capability:** This allows per-request overrides for `baseUrl`, `timeout`, `customHeaders`, and `AbortSignal`.
+#### **Configuration-Object (Option Bag) Pattern**
+Rather than positional arguments, the SDK relies heavily on extensible configuration objects.
+*   **Pattern:** `RequestOptions` and `GenerationConfig`.
+*   **Utility:** This allows the SDK to add features (like `timeout`, `baseUrl`, `apiVersion`, or `customHeaders`) without breaking the signature of established methods like `startChat()` or `generateContent()`.
 
 #### **Discriminated Union Type Safety**
-As seen in the CHANGELOG (v0.22.0), the SDK transitioned to **Discriminated Unions** for schemas and request types.
-*   *Implementation:* Using a `type` field to narrow the available properties in an interface. This mirrors the underlying JSON-Schema requirements of the Gemini API.
+The SDK leverages TypeScript's narrowing capabilities to handle the polymorphic nature of AI responses and requests.
+*   **Pattern:** Discriminated Unions for `Schema` and `Part` types.
+*   **Utility:** By using a `type` field to narrow available properties, the SDK ensures compile-time safety for complex JSON-schema definitions used in function calling and structured outputs.
+
+#### **Cross-Language Parity Layer**
+The repository reflects a "Bridge Architecture," where the JS SDK is designed to mirror the behavior and naming conventions of Google’s Go and Python SDKs.
+*   **Pattern:** Syncing default API versions (`v1beta`) and Enum values across the ecosystem.
+*   **Utility:** Ensures developers switching between backend (Python) and frontend (JS) have a consistent mental model of the Gemini API.
 
 ---
 
-### 2. DNA Signature (The "Google-JS" Way)
+### 2. DNA Signature (The Repository's "Code Spirit")
 
-The code exhibits a specific "DNA" characterized by high strictness and standard Google internal engineering practices:
+#### **"Google-Standard" Engineering Discipline**
+The linting and configuration files reveal a strict, high-compliance environment.
+*   **The "No Escape" Rule:** `.eslintrc.js` enforces strict typing (`no-explicit-any`), mandatory function return types, and explicitly bans "lazy" testing practices like `it.only` or `describe.only`.
+*   **Licensing Rigor:** Every file must carry the Apache 2.0 license header, marking this as a formal corporate asset.
 
-#### **Named Exports vs. Default Exports**
-*   **Rule:** `.eslintrc.js` explicitly forbids `import/no-default-export`. 
-*   **Philosophy:** Every architectural component must be a named entity to improve grep-ability, tree-shaking, and explicit API surface definition.
+#### **Reactive Lifecycle Management**
+The use of `@changesets/cli` indicates a focus on **Automated Semantic Versioning**.
+*   **Signature:** The repository doesn't just track code; it tracks *intent*. Every change is categorized (Minor vs. Patch) and linked to specific PRs/commits, ensuring a transparent audit trail for external contributors.
 
-#### **Interface Dominance**
-*   **Rule:** `@typescript-eslint/consistent-type-definitions` is set to `"interface"`.
-*   **Philosophy:** Prefers interfaces over type aliases for extensibility and better IDE performance in large-scale TS projects.
+#### **Resource-Conscious Asynchronicity**
+The DNA shows a deep concern for "Zombie Requests" and resource leaks in web environments.
+*   **Evidence:** The broad implementation of `AbortSignal` support across `GenerativeModel`, `GoogleAIFileManager`, and `ChatSession`. The library is designed to be "cancellable," which is critical for high-latency AI operations.
 
-#### **Strict Test Hygiene**
-*   **Rule:** The linter strictly forbids `it.only`, `describe.only`, and `xit`.
-*   **Philosophy:** "Green-light" CI/CD integrity. Developers are prevented from accidentally committing "focused" tests that skip the rest of the suite.
+#### **Evolutionary Obsolescence**
+The `README.md` and `CHANGELOG.md` reveal a DNA of **Constant Consolidation**.
+*   **Signature:** The repository identifies itself as "Deprecated" in favor of a "Unified SDK" (`js-genai`). This indicates an architectural philosophy where specialized SDKs are treated as rapid-prototypes that eventually merge into a standardized, poly-model platform.
 
-#### **Safe Type Coercion**
-*   **Rule:** Prohibits global `parseInt` and `parseFloat` in favor of a custom `tsstyle#type-coercion` pattern.
-*   **Philosophy:** Avoids the "hidden traps" of JS type casting (like `parseInt`'s radix behavior) by forcing more explicit or safer alternatives.
+### 3. Technical Summary Table
 
----
-
-### 3. Evolutionary Trends (From the Changelog)
-
-*   **REST to Header-based Auth:** Moved from query-parameter API keys to Header-based authentication early (v0.1.3), indicating a shift towards enterprise security standards.
-*   **Streaming Stability:** Heavy focus on UTF-8 chunking and "hanging stream" prevention, suggesting the SDK serves as a robust buffer for the volatile nature of Server-Sent Events (SSE).
-*   **Deprecation Path:** The `README` indicates this SDK is now a "legacy bridge." The architecture served its purpose as a specialized wrapper but is being unified into `js-genai`, suggesting a move from **specialized SDKs** to **unified platform SDKs**.
-
-### Summary Table
-| Feature | Pattern/Signature |
+| Attribute | Pattern/Implementation |
 | :--- | :--- |
-| **State Management** | Stateful `ChatSession` vs Stateless `GenerativeModel` |
-| **Environments** | Dual-nature (Browser/Node) via sub-path exports |
-| **Versioning** | Changesets-driven automated semantic versioning |
-| **Code Style** | Google TS Style (No default exports, strict interfaces) |
-| **API Handling** | Pervasive configuration pass-through (`RequestOptions`) |
+| **Type Strategy** | Strict TypeScript; Interfaces over Types; Discriminated Unions. |
+| **Testing Culture** | Mocha/ts-node; High-friction for "skipping" tests. |
+| **Versioning** | Changesets (Automated Changelogs/Versioning). |
+| **Distribution** | Subpath exports (Core vs. Server). |
+| **Safety** | API Key obscuration in errors; explicit null handling (`eqeqeq`). |
+| **Network** | Extensible `fetch` wrapper; `AbortSignal` as a first-class citizen. |
