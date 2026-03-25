@@ -1,5 +1,10 @@
 ## Status
-DALEK_GROG v3.6 — Active Development
+
+switching to test-1
+
+bones are there. 
+
+DALEK_GROG v1 
 
 Core evolution engine operational. 
 MIT Licensed.
