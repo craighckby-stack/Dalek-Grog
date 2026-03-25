@@ -46,7 +46,7 @@ export class StrategyEvolution {
       temperature: Math.random() * 0.5 + 0.7, // 0.7 to 1.2
       topP: Math.random() * 0.2 + 0.8, // 0.8 to 1.0
       topK: Math.floor(Math.random() * 20) + 40, // 40 to 60
-      modelPreference: Math.random() > 0.5 ? 'flash' : 'pro',
+      modelPreference: Math.random() > 0.8 ? 'pro' : 'flash',
       aggressionLevel: Math.random(),
       fitness: 0,
       generation

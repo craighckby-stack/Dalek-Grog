@@ -36,6 +36,7 @@ import { GrogDashboard } from './components/GrogDashboard';
 import { SystemControlPanel } from './components/SystemControlPanel';
 
 export default function App() {
+  const isRunningRef = useRef(false);
   const [isRunning, setIsRunning] = useState(false);
   const [status, setStatus] = useState('INIT');
   const [round, setRound] = useState(0);
@@ -1572,6 +1573,8 @@ OUTPUT ONLY JSON.`;
   };
 
   const initiateEvolution = async () => {
+    if (isRunningRef.current) return;
+    isRunningRef.current = true;
     setIsRunning(true);
     abortRef.current = false;
     setStatus("LOADING");
@@ -2000,17 +2003,17 @@ TASK: Apply the Reconstruction Blueprint to {{file}}. Merge, rename, and bind th
     await manualUpdateReadme();
     
     // Final Log Push
-    await pushLogToRepo();
-
     if (!abortRef.current) {
       addLog("BATCH PROCESS COMPLETE: ALL TARGETS TRANSITIONED TO STEADY STATE.", "var(--color-dalek-cyan)");
-      await pushLogToRepo();
     }
+    await pushLogToRepo();
+
     fetchRepoFiles().catch(() => {}); // Refresh file list
 
     } catch (error) {
       addLog(`CRITICAL LIFECYCLE FAILURE: ${error instanceof Error ? error.message : 'Unknown Error'}`, "var(--color-dalek-red)");
     } finally {
+      isRunningRef.current = false;
       setIsRunning(false);
       setStatus("READY");
     }

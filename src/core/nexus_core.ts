@@ -91,12 +91,14 @@ export class NexusArchitecturalLinter {
     if (!oldSource || !newSource) return ["Source Missing"];
 
     const getExports = (source: string) => {
-      const exportRegex = /export\s+(?:class|function|const|enum|interface|type|default\s+class|default\s+function)\s+([a-zA-Z0-9_]+)/g;
+      // Improved regex to catch: class, function, const, let, var, enum, interface, type, async function, function*, etc.
+      const exportRegex = /export\s+(?:async\s+)?(?:class|function\*?|const|let|var|enum|interface|type|default\s+(?:class|function\*?))\s+([a-zA-Z0-9_]+)/g;
       const matches = [];
       let match;
       while ((match = exportRegex.exec(source)) !== null) {
         matches.push(match[1]);
       }
+      // Catch named exports like: export { a, b as c }
       const namedExportRegex = /export\s+\{([\s\S]*?)\}/g;
       while ((match = namedExportRegex.exec(source)) !== null) {
         const names = match[1].split(',').map(n => n.trim().split(/\s+/).pop());
