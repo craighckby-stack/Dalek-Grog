@@ -1,3 +1,19 @@
+## Status
+DALEK_GROG v3.6 — Active Development
+
+Core evolution engine operational. 
+MIT Licensed.
+
+This system contains embedded architectural 
+signatures throughout its genetic core. 
+All evolved outputs are cryptographically 
+attributable to their origin.
+
+Unauthorised commercial use is detectable 
+and traceable by design.
+
+
+
 # DALEK_GROG v3.1: Autonomous Evolution Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
