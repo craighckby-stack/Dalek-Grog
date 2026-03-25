@@ -1,21 +1,4 @@
-## Status
 
-switching to test-1
-
-bones are there. 
-
-DALEK_GROG v1 
-
-Core evolution engine operational. 
-MIT Licensed.
-
-This system contains embedded architectural 
-signatures throughout its genetic core. 
-All evolved outputs are cryptographically 
-attributable to their origin.
-
-Unauthorised commercial use is detectable 
-and traceable by design.
 
 
 
