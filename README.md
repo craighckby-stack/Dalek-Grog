@@ -1,3 +1,20 @@
+Grog evolved itself right out of the tool that built it google studio hit limit of construction.
+
+
+🤷
+
+free has its downfalls.
+
+not bad for $0 invested.
+
+
+
+
+
+
+
+
+
 # DALEK_GROG v3.1: Autonomous Evolution Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
