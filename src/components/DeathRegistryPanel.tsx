@@ -9,11 +9,11 @@ interface DeathRecord {
 }
 
 interface DeathRegistryPanelProps {
-  onAnalyze: () => Promise<string>;
+  onAnalyze: () => Promise<string | null>;
   isAnalyzing: boolean;
   analysisResult: string | null;
   records: DeathRecord[];
-  onRefresh: () => void;
+  onRefresh: () => Promise<void>;
 }
 
 export const DeathRegistryPanel: React.FC<DeathRegistryPanelProps> = ({

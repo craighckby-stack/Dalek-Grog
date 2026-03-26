@@ -7,7 +7,7 @@ interface ManualControlPanelProps {
   setExternalDnaRepo: (repo: string) => void;
   isRunning: boolean;
   isAnalyzingDNA: boolean;
-  siphonExternalDNA: () => Promise<void>;
+  siphonExternalDNA: (repoName?: string, skipLoading?: boolean) => Promise<string | null>;
   handleDNAUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setSiphonedRepos: (repos: string[]) => void;
   pruneRedundantMetadata: () => Promise<void>;
@@ -24,7 +24,7 @@ interface ManualControlPanelProps {
   manualFileContent: string;
   manualEnhancedCode: string | null;
   isEnhancingManual: boolean;
-  pushToRepo: (path: string, content: string, message: string) => Promise<void>;
+  pushToRepo: (path: string, content: string, message: string, repoOverride?: string, branchOverride?: string) => Promise<boolean>;
   addLog: (msg: string, color?: string) => void;
   dnaSignature: string;
   saturationGuidelines: string;
@@ -117,7 +117,7 @@ export const ManualControlPanel: React.FC<ManualControlPanelProps> = ({
               disabled={isRunning || isAnalyzingDNA}
             />
             <button 
-              onClick={siphonExternalDNA}
+              onClick={() => siphonExternalDNA()}
               disabled={isRunning || isAnalyzingDNA}
               className={`dalek-btn px-4 text-[10px] ${isAnalyzingDNA ? 'animate-pulse text-dalek-gold' : ''}`}
             >

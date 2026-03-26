@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "GrogBrain": {
+      "title": "GrogBrain Source",
+      "description": "The persistent source code and versioning for GrogBrain.",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string", "description": "The full source code of GrogBrain.ts" },
+        "version": { "type": "number", "description": "Evolution version counter" },
+        "lastUpdated": { "type": "string", "format": "date-time" }
+      },
+      "required": ["content", "version", "lastUpdated"]
+    },
+    "DeathRecord": {
+      "title": "System Death Record",
+      "description": "A record of a system failure or 'death' for strategic analysis.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" },
+        "context": { "type": "object" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "reason"]
+    },
+    "StrategicLesson": {
+      "title": "Strategic Lesson",
+      "description": "A learned lesson or heuristic stored in the Shared Consciousness.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "lesson": { "type": "string" },
+        "context": { "type": "object" },
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" }
+      },
+      "required": ["id", "timestamp", "lesson"]
+    }
+  },
+  "firestore": {
+    "/system/grog-brain": { "schema": "GrogBrain", "description": "Primary brain storage" },
+    "/deaths/{deathId}": { "schema": "DeathRecord", "description": "Shared death registry" },
+    "/lessons/{lessonId}": { "schema": "StrategicLesson", "description": "Shared strategic memory" }
+  }
+}

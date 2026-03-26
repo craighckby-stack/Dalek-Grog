@@ -14,7 +14,7 @@ interface SystemControlPanelProps {
   setTargetBranch: (branch: string) => void;
   backupRepo: string;
   setBackupRepo: (repo: string) => void;
-  fetchRepoFiles: () => Promise<string[]>;
+  fetchRepoFiles: (repo?: string, branch?: string) => Promise<string[]>;
   isFetchingFiles: boolean;
   showManualControls: boolean;
   setShowManualControls: (show: boolean) => void;
@@ -26,7 +26,7 @@ interface SystemControlPanelProps {
   isAnalyzingDNA: boolean;
   externalDnaRepo: string;
   setExternalDnaRepo: (repo: string) => void;
-  siphonExternalDNA: () => Promise<void>;
+  siphonExternalDNA: (repoName?: string, skipLoading?: boolean) => Promise<string | null>;
   handleDNAUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setSiphonedRepos: (repos: string[]) => void;
   pruneRedundantMetadata: () => Promise<void>;
@@ -36,7 +36,7 @@ interface SystemControlPanelProps {
   saturationGuidelines: string;
   handleSaturationUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isAnalyzingSaturation: boolean;
-  googleDriveFiles: any[];
+  googleDriveFiles: File[];
   handleGoogleDriveUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   selectedFile: string;
   setSelectedFile: (file: string) => void;
@@ -65,7 +65,7 @@ interface SystemControlPanelProps {
   manualFileContent: string;
   manualEnhancedCode: string | null;
   isEnhancingManual: boolean;
-  pushToRepo: (path: string, content: string, message: string) => Promise<void>;
+  pushToRepo: (path: string, content: string, message: string, repoOverride?: string, branchOverride?: string) => Promise<boolean>;
   addLog: (msg: string, color?: string) => void;
   dnaSignature: string;
   strategicLedger: any[];
