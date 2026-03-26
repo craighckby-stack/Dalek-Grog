@@ -1,15 +1,18 @@
 import React from 'react';
-import { Brain, Activity, Shield, Zap, RefreshCw, AlertTriangle, BookOpen, MessageSquare, Code, Terminal, Database } from 'lucide-react';
+import { Brain, Activity, RefreshCw, Zap, ShieldCheck, BookOpen, ShieldAlert } from 'lucide-react';
+import { DeathRegistryPanel } from './DeathRegistryPanel';
+import { Mistake } from '../types';
+import { SaturationService } from '../evolutors/SaturationService';
 
 interface GrogDashboardProps {
-  grogBrainRef: any;
+  grogBrainRef: React.MutableRefObject<any>;
   currentCode: string;
-  mistakes: any[];
+  mistakes: Mistake[];
   autoEvolutionEnabled: boolean;
-  setAutoEvolutionEnabled: (v: boolean) => void;
+  setAutoEvolutionEnabled: (enabled: boolean) => void;
   backgroundEvolutionActive: boolean;
-  setBackgroundEvolutionActive: (v: boolean) => void;
-  evolutionSuggestions: any[];
+  setBackgroundEvolutionActive: (active: boolean) => void;
+  evolutionSuggestions: { path: string, saturation: number }[];
   runMassEvolution: () => Promise<void>;
   isMassEvolving: boolean;
   runBackgroundEvolution: () => Promise<void>;
@@ -19,131 +22,343 @@ interface GrogDashboardProps {
   grogEpiphanies: any[];
   runGrogTests: () => Promise<void>;
   isTesting: boolean;
-  handleSelfMutation: (file: string) => Promise<void>;
+  handleSelfMutation: (targetFile: "src/evolutors/GrogBrain.ts" | "src/App.tsx") => Promise<void>;
   isSelfMutating: boolean;
-  setIsRebooting: (v: boolean) => void;
-  testReport: any;
-  setTestReport: (v: any) => void;
+  setIsRebooting: (rebooting: boolean) => void;
+  testReport: string | null;
+  setTestReport: (report: string | null) => void;
   deathRecords: any[];
   strategicLessons: any[];
   isAnalyzingDeaths: boolean;
-  deathAnalysis: string;
-  analyzeDeathRecords: () => Promise<void>;
+  deathAnalysis: string | null;
+  analyzeDeathRecords: () => Promise<string | null>;
   fetchDeathRecords: () => Promise<void>;
   fetchStrategicLessons: () => Promise<void>;
-  setSelectedFile: (v: string) => void;
-  setActiveTab: (v: string) => void;
-  addLog: (m: string, c?: string) => void;
+  setSelectedFile: (file: string) => void;
+  setActiveTab: (tab: 'system' | 'manual' | 'grog') => void;
+  addLog: (msg: string, color?: string) => void;
   grogThoughts: any[];
-  executeDirective: (d: any) => Promise<void>;
+  executeDirective: (directive: any) => Promise<void>;
 }
 
-export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
+export const GrogDashboard: React.FC<GrogDashboardProps> = ({
+  grogBrainRef,
+  currentCode,
+  mistakes,
+  autoEvolutionEnabled,
+  setAutoEvolutionEnabled,
+  backgroundEvolutionActive,
+  setBackgroundEvolutionActive,
+  evolutionSuggestions,
+  runMassEvolution,
+  isMassEvolving,
+  runBackgroundEvolution,
+  isScanningEvolution,
+  runGrogThinking,
+  isThinking,
+  grogEpiphanies,
+  runGrogTests,
+  isTesting,
+  handleSelfMutation,
+  isSelfMutating,
+  setIsRebooting,
+  testReport,
+  setTestReport,
+  deathRecords,
+  strategicLessons,
+  isAnalyzingDeaths,
+  deathAnalysis,
+  analyzeDeathRecords,
+  fetchDeathRecords,
+  fetchStrategicLessons,
+  setSelectedFile,
+  setActiveTab,
+  addLog,
+  grogThoughts,
+  executeDirective
+}) => {
   return (
-    <div className="flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar pr-2">
-      {/* Strategic Consciousness Status */}
-      <div className="panel-container p-4 border-dalek-gold/30 bg-dalek-gold/5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[12px] font-bold text-dalek-gold flex items-center gap-2 uppercase tracking-widest">
-            <Brain size={16} /> Strategic Consciousness
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="text-[8px] text-zinc-500 uppercase tracking-widest">Status:</span>
-            <span className="text-[10px] font-bold text-dalek-green animate-pulse">ACTIVE</span>
+    <div className="panel-container space-y-4 p-4 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between border-b border-zinc-900 pb-2">
+        <h2 className="text-[12px] font-bold text-dalek-purple flex items-center gap-2 uppercase tracking-widest">
+          <Brain size={14} /> Grog Strategic Dashboard
+        </h2>
+        <span className="text-[8px] text-zinc-600 bg-zinc-900 px-2 py-0.5 rounded">v2.1</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="bg-black/40 border border-zinc-900 p-3 rounded-sm space-y-1">
+          <span className="text-[8px] text-zinc-500 uppercase tracking-widest">Consciousness Level</span>
+          <div className="flex items-end gap-2">
+            <span className="text-2xl font-black text-dalek-purple">
+              {SaturationService.calculateSaturation(currentCode)}%
+            </span>
+            <span className="text-[8px] text-zinc-600 mb-1">DNA SATURATION</span>
           </div>
         </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="stat-panel">
-            <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Strategic Memory</span>
-            <span className="text-lg font-black text-dalek-gold">{props.strategicLessons.length}</span>
-          </div>
-          <div className="stat-panel">
-            <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Death Registry</span>
-            <span className="text-lg font-black text-dalek-red">{props.deathRecords.length}</span>
-          </div>
-          <div className="stat-panel">
-            <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Epiphanies</span>
-            <span className="text-lg font-black text-dalek-cyan">{props.grogEpiphanies.length}</span>
-          </div>
-          <div className="stat-panel">
-            <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Thoughts</span>
-            <span className="text-lg font-black text-white">{props.grogThoughts.length}</span>
+        <div className="bg-black/40 border border-zinc-900 p-3 rounded-sm space-y-1">
+          <span className="text-[8px] text-zinc-500 uppercase tracking-widest">System Deaths</span>
+          <div className="flex items-end gap-2">
+            <span className="text-2xl font-black text-dalek-red">{deathRecords.length}</span>
+            <span className="text-[8px] text-zinc-600 mb-1">INDEXED FAILURES</span>
           </div>
         </div>
       </div>
 
-      {/* Strategic Directives */}
-      <div className="panel-container flex-1 min-h-[300px]">
-        <div className="panel-header">
-          <span className="flex items-center gap-2">
-            <Terminal size={12} /> Strategic Directives
-          </span>
+      {grogBrainRef.current && (
+        <div className="bg-black/40 border border-zinc-900 p-3 rounded-sm space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[8px] text-zinc-500 uppercase tracking-widest">API Gate Diagnostics</span>
+            {grogBrainRef.current.getGateStats().isQuotaExhausted && (
+              <span className="text-[8px] text-dalek-red animate-pulse uppercase font-bold">Quota Exhausted</span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-zinc-400">{grogBrainRef.current.getGateStats().callCount}</span>
+              <span className="text-[7px] text-zinc-600 uppercase">Total Calls</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-dalek-cyan">{(grogBrainRef.current.getGateStats().estimatedTokensUsed || 0).toLocaleString()}</span>
+              <span className="text-[7px] text-zinc-600 uppercase">Tokens Used</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-dalek-gold">{grogBrainRef.current.getGateStats().retryCount}</span>
+              <span className="text-[7px] text-zinc-600 uppercase">Retries</span>
+            </div>
+          </div>
+          <div className="h-1 bg-zinc-900 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-dalek-cyan transition-all duration-500" 
+              style={{ width: `${Math.min(100, ((grogBrainRef.current.getGateStats().estimatedTokensUsed || 0) / 1000000) * 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[7px] text-zinc-600 uppercase">
+            <span>Budget Usage</span>
+            <span>{(((grogBrainRef.current.getGateStats().estimatedTokensUsed || 0) / 1000000) * 100).toFixed(1)}%</span>
+          </div>
+        </div>
+      )}
+
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+            <Activity size={12} /> Background Evolution
+          </h3>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setAutoEvolutionEnabled(!autoEvolutionEnabled)}
+              className={`px-2 py-0.5 rounded text-[7px] font-bold transition-all ${autoEvolutionEnabled ? 'bg-dalek-purple text-white' : 'bg-zinc-900 text-zinc-600 border border-zinc-800'}`}
+            >
+              {autoEvolutionEnabled ? 'AUTO-AUTH ON' : 'AUTO-AUTH OFF'}
+            </button>
+            <button 
+              onClick={() => setBackgroundEvolutionActive(!backgroundEvolutionActive)}
+              className={`px-3 py-1 rounded-full text-[8px] font-bold transition-all ${backgroundEvolutionActive ? 'bg-dalek-green text-black' : 'bg-zinc-800 text-zinc-500'}`}
+            >
+              {backgroundEvolutionActive ? 'ACTIVE' : 'DISABLED'}
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-black/60 border border-zinc-900 p-3 rounded-sm space-y-2">
+          <div className="p-2 bg-black/40 border border-dalek-purple/20 rounded-sm mb-2">
+            <div className="flex items-center gap-2 mb-2">
+              <Brain className="w-3 h-3 text-dalek-purple" />
+              <span className="text-[8px] font-bold text-dalek-purple uppercase tracking-widest">Grog's Live Thoughts</span>
+            </div>
+            <div className="space-y-1">
+              {grogThoughts.length === 0 ? (
+                <div className="text-[8px] text-zinc-700 italic">Neural pathways idle...</div>
+              ) : (
+                grogThoughts.map((t, i) => {
+                  const priorityColor = t.priority >= 8 ? 'bg-dalek-red' : t.priority >= 5 ? 'bg-dalek-gold' : 'bg-dalek-green';
+                  const timestamp = t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+                  return (
+                    <div key={i} className="flex flex-col gap-0.5 animate-in fade-in slide-in-from-left-1">
+                      <div className="text-[8px] text-dalek-purple flex items-center gap-2">
+                        <span className="opacity-40">[{timestamp}]</span>
+                        <div className={`w-1 h-1 rounded-full ${priorityColor}`} title={`Priority: ${t.priority}`} />
+                        <span className="font-bold">{t.type.toUpperCase()}:</span>
+                        <span className="truncate opacity-80">{t.file || 'SYSTEM'}</span>
+                      </div>
+                      {t.violations && t.violations.length > 0 && (
+                        <div className="text-[7px] text-dalek-red pl-4 flex items-center gap-1">
+                          <ShieldAlert size={8} />
+                          <span>{t.violations[0]}</span>
+                        </div>
+                      )}
+                      {t.shadowDivergence !== undefined && (
+                        <div className="text-[7px] text-dalek-gold pl-4 flex items-center gap-1">
+                          <Activity size={8} />
+                          <span>Shadow Divergence: {(t.shadowDivergence * 100).toFixed(1)}%</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          <span className="text-[8px] text-zinc-600 uppercase tracking-widest block">Evolution Suggestions</span>
+          <div className="max-h-[150px] overflow-y-auto space-y-2 custom-scrollbar pr-1">
+            {evolutionSuggestions.length === 0 ? (
+              <div className="text-[9px] text-zinc-700 italic text-center py-4">No suggestions available. Initiate scan.</div>
+            ) : (
+              <>
+                <button 
+                  onClick={runMassEvolution}
+                  disabled={isMassEvolving}
+                  className="w-full py-1.5 bg-dalek-purple text-white text-[8px] font-bold rounded-sm hover:bg-dalek-purple/80 transition-all mb-2 flex items-center justify-center gap-2"
+                >
+                  {isMassEvolving ? <RefreshCw size={10} className="animate-spin" /> : <Zap size={10} />}
+                  {isMassEvolving ? 'EVOLVING ALL...' : 'EXECUTE MASS EVOLUTION'}
+                </button>
+                <div className="space-y-2">
+                  {evolutionSuggestions.map(s => (
+                    <div key={s.path} className="flex items-center justify-between p-2 bg-zinc-900/30 border border-zinc-800 rounded-sm">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] text-zinc-300 font-mono truncate max-w-[200px]">{s.path}</span>
+                        <span className="text-[8px] text-zinc-600">Saturation: {s.saturation}%</span>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setSelectedFile(s.path);
+                          setActiveTab('system');
+                          addLog(`GROK_TARGET_ACQUIRED: ${s.path}`, "var(--color-dalek-gold)");
+                        }}
+                        className="text-[8px] text-dalek-purple hover:underline font-bold"
+                      >
+                        EVOLVE
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <button 
+              onClick={runBackgroundEvolution}
+              disabled={isScanningEvolution}
+              className="py-2 bg-dalek-purple/10 text-dalek-purple border border-dalek-purple/30 text-[9px] font-bold hover:bg-dalek-purple/20 transition-all disabled:opacity-50"
+            >
+              {isScanningEvolution ? 'SCANNING...' : 'SCAN REPO'}
+            </button>
+            <button 
+              onClick={runGrogThinking}
+              disabled={isThinking}
+              className="py-2 bg-dalek-purple/10 text-dalek-purple border border-dalek-purple/30 text-[9px] font-bold hover:bg-dalek-purple/20 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {isThinking ? <RefreshCw size={10} className="animate-spin" /> : <Brain size={10} />}
+              {isThinking ? 'THINKING...' : 'THINK'}
+            </button>
+          </div>
+        </div>
+
+        {grogEpiphanies.length > 0 && (
+          <div className="space-y-2 mt-4">
+            <span className="text-[8px] text-dalek-purple uppercase tracking-widest block">Strategic Directives</span>
+            <div className="space-y-2">
+              {grogEpiphanies.map((e, i) => (
+                <div key={i} className="p-2 bg-dalek-purple/5 border border-dalek-purple/20 rounded-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[7px] font-bold text-dalek-purple uppercase">{e.type}</span>
+                    <span className="text-[7px] text-zinc-600">PRIORITY: {e.priority}</span>
+                  </div>
+                  <p className="text-[9px] text-zinc-300 leading-tight mb-2">{e.insight}</p>
+                  {e.action && (
+                    <div className="flex items-center justify-between p-1 bg-black/40 border border-dalek-purple/20 rounded-sm">
+                      <div className="flex flex-col">
+                        <span className="text-[7px] text-zinc-500 uppercase truncate max-w-[150px]">
+                          Target: {e.action.path || e.action.targetRepo || 'SYSTEM'}
+                        </span>
+                      </div>
+                      <button 
+                        onClick={() => executeDirective(e)}
+                        className="px-2 py-0.5 bg-dalek-purple text-white text-[7px] font-bold rounded-sm hover:bg-dalek-purple/80 transition-all"
+                      >
+                        EXECUTE
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2">
           <button 
-            onClick={props.runGrogThinking}
-            disabled={props.isThinking}
-            className="text-dalek-cyan hover:text-white transition-colors disabled:opacity-50"
+            onClick={runGrogTests}
+            disabled={isTesting}
+            className="py-2 bg-dalek-gold/10 text-dalek-gold border border-dalek-gold/30 text-[9px] font-bold hover:bg-dalek-gold/20 transition-all disabled:opacity-50"
           >
-            {props.isThinking ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+            {isTesting ? 'TESTING...' : 'VALIDATE CORE'}
+          </button>
+          <button 
+            onClick={() => handleSelfMutation('src/evolutors/GrogBrain.ts')}
+            disabled={isSelfMutating}
+            className="py-2 bg-dalek-red/10 text-dalek-red border border-dalek-red/30 text-[9px] font-bold hover:bg-dalek-red/20 transition-all disabled:opacity-50"
+          >
+            {isSelfMutating ? 'EVOLVING...' : 'SELF-MUTATE'}
           </button>
         </div>
-        <div className="p-4 space-y-3 overflow-y-auto">
-          {props.grogThoughts.length === 0 ? (
-            <div className="text-center py-10 text-zinc-700 italic text-[10px]">
-              Waiting for strategic analysis...
+
+        {testReport && (
+          <div className="mt-4 p-3 bg-black/60 border border-dalek-gold/30 rounded-sm">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[8px] font-bold text-dalek-gold uppercase tracking-widest">Validation Report</span>
+              <button 
+                onClick={() => setTestReport(null)}
+                className="text-[7px] text-zinc-500 hover:text-zinc-300"
+              >
+                CLOSE
+              </button>
             </div>
+            <pre className="text-[9px] text-zinc-400 font-mono whitespace-pre-wrap max-h-[150px] overflow-y-auto custom-scrollbar">
+              {testReport}
+            </pre>
+          </div>
+        )}
+      </div>
+
+      <DeathRegistryPanel 
+        records={deathRecords}
+        isAnalyzing={isAnalyzingDeaths}
+        analysisResult={deathAnalysis}
+        onAnalyze={analyzeDeathRecords}
+        onRefresh={fetchDeathRecords}
+      />
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+            <BookOpen size={12} /> Strategic Memory
+          </h3>
+          <button 
+            onClick={fetchStrategicLessons}
+            className="text-[8px] text-zinc-600 hover:text-dalek-cyan transition-colors"
+          >
+            REFRESH
+          </button>
+        </div>
+        <div className="bg-[#050505] border border-zinc-900 p-3 rounded-sm max-h-[250px] overflow-y-auto custom-scrollbar">
+          {strategicLessons.length === 0 ? (
+            <div className="text-[9px] text-zinc-700 italic text-center py-4">No strategic lessons persisted in repository.</div>
           ) : (
-            props.grogThoughts.map((thought, i) => (
-              <div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-sm hover:border-dalek-cyan/30 transition-all group">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[8px] font-bold text-dalek-cyan uppercase tracking-widest">{thought.type}</span>
-                  <span className="text-[8px] text-zinc-600">{new Date(thought.timestamp).toLocaleTimeString()}</span>
+            [...strategicLessons].reverse().map(l => (
+              <div key={l.id} className="mb-4 last:mb-0 border-b border-zinc-900 pb-4 last:border-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-dalek-gold">LESSON_{l.id?.slice(0, 8)}</span>
+                  <span className="text-[8px] text-zinc-600">{new Date(l.timestamp).toLocaleTimeString()}</span>
                 </div>
-                <p className="text-[10px] text-zinc-400 leading-relaxed mb-3">{thought.insight}</p>
-                {thought.action && (
-                  <button 
-                    onClick={() => props.executeDirective(thought)}
-                    className="w-full py-1.5 bg-dalek-cyan/10 border border-dalek-cyan/30 text-dalek-cyan text-[8px] font-bold uppercase tracking-widest hover:bg-dalek-cyan/20 transition-all"
-                  >
-                    Execute Directive
-                  </button>
-                )}
+                <p className="text-[10px] text-zinc-300 leading-relaxed italic mb-1">"{l.lesson}"</p>
+                {l.context && <p className="text-[8px] text-zinc-600 truncate">Context: {l.context}</p>}
               </div>
             ))
           )}
-        </div>
-      </div>
-
-      {/* Shared Consciousness Feed */}
-      <div className="panel-container h-[250px]">
-        <div className="panel-header">
-          <span className="flex items-center gap-2">
-            <Database size={12} /> Shared Consciousness Feed
-          </span>
-          <div className="flex items-center gap-3">
-             <button onClick={props.fetchStrategicLessons} className="text-zinc-600 hover:text-dalek-gold transition-colors">
-               <BookOpen size={12} />
-             </button>
-             <button onClick={props.fetchDeathRecords} className="text-zinc-600 hover:text-dalek-red transition-colors">
-               <AlertTriangle size={12} />
-             </button>
-          </div>
-        </div>
-        <div className="p-3 space-y-2 overflow-y-auto">
-          {props.strategicLessons.slice(0, 10).map((lesson, i) => (
-            <div key={`lesson-${i}`} className="text-[9px] border-l-2 border-dalek-gold pl-3 py-1">
-              <div className="text-dalek-gold font-bold uppercase mb-1">Lesson Learned</div>
-              <div className="text-zinc-400">{lesson.lesson}</div>
-              <div className="text-[7px] text-zinc-600 mt-1">Author: {lesson.authorName}</div>
-            </div>
-          ))}
-          {props.deathRecords.slice(0, 10).map((death, i) => (
-            <div key={`death-${i}`} className="text-[9px] border-l-2 border-dalek-red pl-3 py-1">
-              <div className="text-dalek-red font-bold uppercase mb-1">System Failure</div>
-              <div className="text-zinc-400">{death.reason}</div>
-              <div className="text-[7px] text-zinc-600 mt-1">Author: {death.authorName}</div>
-            </div>
-          ))}
         </div>
       </div>
     </div>
