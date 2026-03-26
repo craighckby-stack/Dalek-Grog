@@ -2,7 +2,23 @@
  * NEXUS_CORE v1.1.0: The Nervous System
  * Provides the base event-driven architecture for the Dalek Caan system.
  * Incorporates high-performance reconciliation, fiber-based scheduling, and object pooling.
+ * 
+ * AGI Components:
+ * - EventBus: Central event distribution
+ * - EpisodicMemory: Experience storage and retrieval
+ * - SelfAwareness: Introspection and metacognition
+ * - AGIKernel: Central orchestrator for bootstrap
  */
+
+// --- AGI COGNITIVE COMPONENTS ---
+export { EpisodicMemory } from './episodic_memory';
+export type { Episode, EpisodicMemoryConfig } from './episodic_memory';
+
+export { SelfAwareness } from './self_awareness';
+export type { SelfModel, IntrospectionResult, MetacognitionConfig } from './self_awareness';
+
+export { AGIKernel } from './agi_kernel';
+export type { AGIKernelConfig, AGIState } from './agi_kernel';
 
 // --- OLD CORE CLASSES (Maintained for backward compatibility) ---
 
