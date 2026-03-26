@@ -1,3 +1,11 @@
+last push failed studio kaput
+
+GrogBrain.ts in Firebase
+
+persistent memory 39000 peaces of dna for all users instead of starting fresh. 
+
+
+
 # DALEK_GROG v3.1: Autonomous Evolution Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
