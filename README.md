@@ -2,7 +2,7 @@ last push failed studio kaput
 
 GrogBrain.ts in Firebase
 
-persistent memory 39000 peaces of dna for all users instead of starting fresh. 
+Holla if ur interested and want to take repo over.
 
 
 
