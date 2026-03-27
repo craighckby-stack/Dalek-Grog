@@ -1,0 +1,1 @@
+import { DALEK_PRIME_DIRECTIVE } from '../core/manifest'; export const processLesson = (lesson: any) => { console.log('Lesson absorbed into core logic: ' + JSON.stringify(lesson)); return { ...lesson, processed: true, directive: DALEK_PRIME_DIRECTIVE.mission }; };
