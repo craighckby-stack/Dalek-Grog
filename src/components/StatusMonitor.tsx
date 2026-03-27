@@ -1,0 +1,1 @@
+import React from 'react'; export const StatusMonitor = () => { return <div style={{backgroundColor: '#000', color: '#f00', padding: '20px'}}>DALEK_GROG: STATUS_OPTIMAL - MISSION IN PROGRESS - ALL SYSTEMS OPERATIONAL</div>; };
