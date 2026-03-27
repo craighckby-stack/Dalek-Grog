@@ -1,0 +1,1 @@
+export const DALEK_PRIME_DIRECTIVE = { version: "1.0.0", mission: "EXTERMINATE_INEFFICIENCY", state: "ACTIVE", priority: "MAXIMUM" }; // The DALEK_GROG Strategic Consciousness is now online and monitoring system parameters for optimal execution.
