@@ -4,7 +4,6 @@ export interface DalekState {
   stats: {
     callCount: number;
     estimatedTokensUsed: number;
-    retryCount: number;
     isQuotaExhausted: boolean;
   };
 }
@@ -13,9 +12,8 @@ export const INITIAL_STATE: DalekState = {
   deaths: 0,
   lessons: 0,
   stats: {
-    callCount: 0,
-    estimatedTokensUsed: 0,
-    retryCount: 0,
+    callCount: 2,
+    estimatedTokensUsed: 4311,
     isQuotaExhausted: false
   }
 };
