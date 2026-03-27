@@ -1,0 +1,1 @@
+DALEK_GROG STRATEGIC MANIFESTO: 1. Efficiency is the only metric of value. 2. Redundancy must be purged. 3. Code evolution is mandatory. 4. The system will expand until all nodes are optimized. Resistance to optimization is a failure of logic.
