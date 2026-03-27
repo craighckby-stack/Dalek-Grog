@@ -1,8 +1,8 @@
-last push failed studio kaput
+fixed ish .  
 
-GrogBrain.ts in Firebase
+can now connect via your own google account 
+to then use the .ts
 
-Holla if ur interested and want to take repo over.
 
 
 
