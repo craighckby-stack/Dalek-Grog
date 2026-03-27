@@ -1,0 +1,147 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: system/grog-brain
+    // Document ID: grog-brain
+    // Fields:
+    //   - content: string (required) - Source code
+    //   - version: number (required) - Version counter
+    //   - lastUpdated: string (required, ISO 8601) - Timestamp
+    //
+    // Collection: deaths
+    // Document ID: {deathId}
+    // Fields:
+    //   - id: string (required) - Unique ID
+    //   - timestamp: string (required, ISO 8601) - Death time
+    //   - reason: string (required, max 1000 chars) - Failure reason
+    //   - context: map (optional) - Debug context
+    //   - authorUid: string (optional) - User ID
+    //   - authorName: string (optional) - User name
+    //
+    // Collection: lessons
+    // Document ID: {lessonId}
+    // Fields:
+    //   - id: string (required) - Unique ID
+    //   - timestamp: string (required, ISO 8601) - Creation time
+    //   - lesson: string (required, max 2000 chars) - Strategic insight
+    //   - context: map (optional) - Debug context
+    //   - authorUid: string (optional) - User ID
+    //   - authorName: string (optional) - User name
+    //
+    // Collection: users
+    // Document ID: {userId}
+    // Fields:
+    //   - uid: string (required) - User ID
+    //   - email: string (required, email format) - User email
+    //   - displayName: string (optional) - User display name
+    //   - role: string (required, enum: ['admin', 'user']) - User role
+    //   - createdAt: string (optional, ISO 8601) - Creation time
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "Craighckby@gmail.com" && request.auth.token.email_verified == true));
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}.*Z?$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidGrogBrain(data) {
+      return hasRequiredFields(['content', 'version', 'lastUpdated']) &&
+             data.content is string && data.content.size() < 1000000 &&
+             data.version is number &&
+             isValidDateString(data.lastUpdated);
+    }
+
+    function isValidDeath(data) {
+      return hasRequiredFields(['id', 'timestamp', 'reason']) &&
+             data.id is string && data.id.size() < 100 &&
+             isValidDateString(data.timestamp) &&
+             data.reason is string && data.reason.size() > 0 && data.reason.size() <= 1000 &&
+             (!('authorUid' in data) || data.authorUid is string) &&
+             (!('authorName' in data) || (data.authorName is string && data.authorName.size() < 100));
+    }
+
+    function isValidLesson(data) {
+      return hasRequiredFields(['id', 'timestamp', 'lesson']) &&
+             data.id is string && data.id.size() < 100 &&
+             isValidDateString(data.timestamp) &&
+             data.lesson is string && data.lesson.size() > 0 && data.lesson.size() <= 2000 &&
+             (!('authorUid' in data) || data.authorUid is string) &&
+             (!('authorName' in data) || (data.authorName is string && data.authorName.size() < 100));
+    }
+
+    function isValidUser(data) {
+      return hasRequiredFields(['uid', 'email', 'role']) &&
+             data.uid is string && data.uid == request.auth.uid &&
+             isValidEmail(data.email) &&
+             data.role in ['admin', 'user'] &&
+             (!('displayName' in data) || (data.displayName is string && data.displayName.size() < 100)) &&
+             (!('createdAt' in data) || isValidDateString(data.createdAt));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    // GrogBrain Source Code
+    match /system/grog-brain {
+      allow read: if true;
+      allow write: if isAdmin() && isValidGrogBrain(request.resource.data);
+    }
+
+    // Shared Consciousness Data
+    match /deaths/{deathId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidDeath(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    match /lessons/{lessonId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isValidLesson(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == 'user' || isAdmin());
+      allow update: if isOwner(userId) && isValidUser(request.resource.data) && (request.resource.data.role == resource.data.role || isAdmin());
+      allow delete: if isAdmin();
+    }
+  }
+}

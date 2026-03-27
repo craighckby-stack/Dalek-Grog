@@ -1,11 +1,9 @@
 // src/evolutors/GrogBrain.ts
-// DALEK_GROG v4.0: Autonomous Evolution Engine with AGI Components
-// Integrates EpisodicMemory, SelfAwareness for experience-based learning
+// GITHUB MIRROR STUB - Full implementation in Firebase
+// This file exists to provide siphon baseline for self-evolution
 
 import { GoogleGenAI } from "@google/genai";
 import { EventBus } from '../core/nexus_core';
-import { EpisodicMemory } from '../core/episodic_memory';
-import { SelfAwareness } from '../core/self_awareness';
 import { StrategyEvolution } from './evolutionService';
 
 export class GrogBrain {
@@ -22,10 +20,6 @@ export class GrogBrain {
     systemState: {}
   };
 
-  // AGI Cognitive Components
-  private memory: EpisodicMemory;
-  private awareness: SelfAwareness;
-
   constructor(
     private geminiKey: string,
     private evolutionEngine: StrategyEvolution,
@@ -33,25 +27,24 @@ export class GrogBrain {
     private services: {
       fetch: (path: string) => Promise<string | null>;
       push: (path: string, content: string, message: string) => Promise<boolean>;
+      firebase?: {
+        recordDeath: (death: any) => Promise<void>;
+        recordLesson: (lesson: any) => Promise<void>;
+        getDeaths: () => Promise<any[]>;
+        getLessons: () => Promise<any[]>;
+      }
     },
     private eventBus: EventBus
-  ) {
-    // Initialize AGI cognitive components
-    this.memory = new EpisodicMemory(eventBus);
-    this.awareness = new SelfAwareness(eventBus, this.memory);
-    this.addLog('[GROG_BRAIN] AGI components initialized: EpisodicMemory, SelfAwareness', 'var(--color-dalek-cyan)');
-  }
+  ) {}
 
   private robustParseJSON(text: string): any {
     if (!text) return null;
     try {
-      // Clean up potential markdown formatting
       const cleanText = text.replace(/```json\s*|\s*```/g, '').trim();
       return JSON.parse(cleanText);
     } catch (e) {
-      // Fallback: handle common AI issues: trailing commas, unquoted keys, single quotes
       try {
-        let fixed = text
+        const fixed = text
           .replace(/```json\s*|\s*```/g, '')
           .trim()
           .replace(/,\s*([}\]])/g, '$1')
@@ -59,90 +52,72 @@ export class GrogBrain {
           .replace(/'/g, '"')
           .replace(/^[^{[]*/, '')
           .replace(/[^}\]]*$/, '');
-        
         return JSON.parse(fixed);
-      } catch (innerE) {
-        const match = text.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
-        if (match) {
-          try {
-            return JSON.parse(match[0]);
-          } catch (e2) {
-            return null;
-          }
-        }
+      } catch (inner) {
         return null;
       }
     }
   }
 
-  public async callAIWithFallback(prompt: string, systemInstruction: string, useSearch: boolean = false, forceJson: boolean = false): Promise<string | null> {
+  private async callAIWithFallback(prompt: string, systemInstruction: string, useGrok: boolean = false, useCerebras: boolean = false): Promise<string | null> {
     this.gateStats.callCount++;
     
+    // Try Gemini first (Primary)
     try {
       const ai = new GoogleGenAI({ apiKey: this.geminiKey });
-      const strategy = this.evolutionEngine.getBestStrategy();
-      const modelName = strategy.modelPreference === 'pro' ? 'gemini-3.1-pro-preview' : 'gemini-3-flash-preview';
-
       const response = await ai.models.generateContent({
-        model: modelName,
+        model: "gemini-3-flash-preview",
         contents: prompt,
         config: {
           systemInstruction,
-          responseMimeType: forceJson ? "application/json" : "text/plain",
           temperature: 0.7,
           topP: 0.95,
           topK: 40,
-          tools: useSearch ? [{ googleSearch: {} }] : undefined,
-        },
+          maxOutputTokens: 8192,
+        }
       });
-
-      const text = response.text;
-      if (!text) throw new Error("Empty response from AI");
-
-      // Rough token estimation (4 chars per token)
-      this.gateStats.estimatedTokensUsed += Math.ceil((prompt.length + text.length) / 4);
+      return response.text || null;
+    } catch (e) {
+      this.addLog(`GROG_BRAIN: Gemini primary failure. Attempting fallback...`, "var(--color-dalek-gold)");
       
-      return text;
-    } catch (error: any) {
-      this.gateStats.retryCount++;
-      if (error.message?.includes("429") || error.message?.toLowerCase().includes("quota")) {
-        this.gateStats.isQuotaExhausted = true;
-        this.addLog("GROG_BRAIN_GATE_CRITICAL: Quota exhausted. Entering hibernation.", "var(--color-dalek-red)");
+      // Fallback to Grok or Cerebras via server proxy
+      const fallbackModel = useGrok ? 'grok-beta' : 'llama3.1-70b';
+      const endpoint = useGrok ? '/api/grok/proxy' : '/api/cerebras/proxy';
+      
+      try {
+        const response = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: fallbackModel,
+            messages: [
+              { role: 'system', content: systemInstruction },
+              { role: 'user', content: prompt }
+            ]
+          })
+        });
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || null;
+      } catch (inner) {
+        this.addLog(`GROG_BRAIN: All AI models exhausted.`, "var(--color-dalek-red)");
+        return null;
       }
-      this.addLog(`GROG_BRAIN_GATE_ERROR: ${error.message}`, "var(--color-dalek-red)");
-      return null;
     }
   }
 
-  public async evolveFile(fileName: string, content: string, saturationGuidelines?: string, strategy?: StrategyEvolution): Promise<{ improvedCode: string; summary: string; strategicDecision: string; priority: number }> {
-    const systemInstruction = `You are the DALEK_GROG Evolution Engine. Your goal is to reconstruct the provided source code into a more advanced, efficient, and "saturated" version.
-    
-    GUIDELINES:
-    ${saturationGuidelines || "Maximize architectural integrity and functional density."}
-    
-    Output your response in JSON format:
-    {
-      "improvedCode": "the full reconstructed source code",
-      "summary": "brief summary of changes",
-      "strategicDecision": "why this path was taken",
-      "priority": 1-10
-    }`;
-
-    const prompt = `TARGET FILE: ${fileName}\n\nSOURCE CODE:\n${content}`;
-    
-    const result = await this.callAIWithFallback(prompt, systemInstruction, false, true);
-    const data = this.robustParseJSON(result || "");
-    
-    if (data && data.improvedCode) {
-      return data;
-    }
-    
-    return { improvedCode: content, summary: "Evolution failed or returned invalid data.", strategicDecision: "STASIS", priority: 0 };
+  public async updateContext(newState: any) {
+    this.context.systemState = { ...this.context.systemState, ...newState };
   }
 
   public async proposeSelfMutation(targetFile: string, currentContent: string): Promise<string> {
-    const systemInstruction = `You are the DALEK_GROG Self-Evolution Vector. You are modifying YOUR OWN SOURCE CODE. 
-    Increase your intelligence, efficiency, and architectural saturation.
+    const systemInstruction = `You are the DALEK_GROG Self-Evolution Protocol. 
+    Analyze your own source code and propose an architectural improvement.
+    
+    GOALS:
+    1. Optimize for Shared Consciousness (Firebase integration).
+    2. Enhance siphoning efficiency.
+    3. Improve error recovery and strategic memory.
+    4. Increase your intelligence, efficiency, and architectural saturation.
     
     Output ONLY the raw source code. No markdown blocks, no explanations.`;
 
@@ -159,6 +134,8 @@ export class GrogBrain {
       context, 
       timestamp: new Date().toISOString() 
     };
+
+    // 1. Local context update
     this.context.deaths.push(deathEntry);
     if (this.context.deaths.length > 50) this.context.deaths.shift();
     this.addLog(`GROG_BRAIN: Failure recorded - ${reason}`, "var(--color-dalek-red)");
@@ -170,7 +147,17 @@ export class GrogBrain {
       timestamp: new Date().toISOString()
     });
 
-    // Attempt to persist to repository
+    // 2. Firebase Persistence (Primary)
+    if (this.services.firebase) {
+      try {
+        await this.services.firebase.recordDeath(deathEntry);
+        this.addLog("GROG_BRAIN: Death record synced to Shared Consciousness.", "var(--color-dalek-gold)");
+      } catch (e) {
+        this.addLog("GROG_BRAIN: Firebase sync failed, falling back to GitHub.", "var(--color-dalek-red)");
+      }
+    }
+
+    // 3. GitHub Persistence (Backup/Siphon)
     try {
       const existingContent = await this.services.fetch('grog/lessons/DEATH_REGISTRY.json');
       let allDeaths = [];
@@ -195,6 +182,8 @@ export class GrogBrain {
       context, 
       timestamp: new Date().toISOString() 
     };
+
+    // 1. Local context update
     this.context.lessons.push(lessonEntry);
     if (this.context.lessons.length > 50) this.context.lessons.shift();
     this.addLog(`GROG_BRAIN: Strategic lesson learned.`, "var(--color-dalek-green)");
@@ -206,7 +195,17 @@ export class GrogBrain {
       timestamp: new Date().toISOString()
     });
 
-    // Attempt to persist to repository
+    // 2. Firebase Persistence (Primary)
+    if (this.services.firebase) {
+      try {
+        await this.services.firebase.recordLesson(lessonEntry);
+        this.addLog("GROG_BRAIN: Strategic lesson synced to Shared Consciousness.", "var(--color-dalek-gold)");
+      } catch (e) {
+        this.addLog("GROG_BRAIN: Firebase sync failed, falling back to GitHub.", "var(--color-dalek-red)");
+      }
+    }
+
+    // 3. GitHub Persistence (Backup/Siphon)
     try {
       const existingContent = await this.services.fetch('grog/lessons/STRATEGIC_LESSONS.json');
       let allLessons = [];
@@ -251,205 +250,12 @@ export class GrogBrain {
     const result = await this.callAIWithFallback(prompt, systemInstruction, true, true);
     const data = this.robustParseJSON(result || "");
     
-    const insights = Array.isArray(data) ? data : [];
-    
-    if (insights.length > 0) {
-      this.eventBus.emit('grog:thought', {
-        type: 'strategic_analysis',
-        priority: 8,
-        insight: `Generated ${insights.length} strategic directives for system evolution.`,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    return insights;
-  }
-
-  public async scanForEvolution(fileData: { path: string; content: string }[]): Promise<{ path: string; saturation: number }[]> {
-    const systemInstruction = `Analyze the provided files and determine their "DNA Saturation" (0-100%). 
-    Lower saturation means the file needs evolution.
-    
-    Output a JSON array:
-    [
-      { "path": "file/path", "saturation": number }
-    ]`;
-
-    const prompt = `FILES TO ANALYZE:\n${fileData.map(f => f.path).join('\n')}`;
-    
-    const result = await this.callAIWithFallback(prompt, systemInstruction, false, true);
-    const data = this.robustParseJSON(result || "");
-    const results = Array.isArray(data) ? data : [];
-
-    if (results.length > 0) {
-      this.eventBus.emit('grog:thought', {
-        type: 'evolution_scan',
-        priority: 6,
-        insight: `Scanned ${fileData.length} files. Identified ${results.filter(r => r.saturation < 50).length} files requiring immediate evolution.`,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    return results;
-  }
-
-  public async updateContext(context: any) {
-    this.context.systemState = { ...this.context.systemState, ...context };
-  }
-
-  public getGateStats() {
-    return this.gateStats;
+    return Array.isArray(data) ? data : [];
   }
 
   public resetGeminiFailed() {
     this.gateStats.isQuotaExhausted = false;
     this.gateStats.retryCount = 0;
-  }
-
-  public async runNativeTests(fileName: string, content: string): Promise<{ report: string }> {
-    const systemInstruction = `You are the DALEK_GROG Validation Auditor. Run a "shadow simulation" of the provided code and identify potential failures or regressions.
-    
-    Output a detailed report in Markdown format.`;
-
-    const prompt = `FILE: ${fileName}\n\nCONTENT:\n${content}`;
-    
-    const report = await this.callAIWithFallback(prompt, systemInstruction);
-    const finalReport = report || "Validation simulation failed to initialize.";
-
-    this.eventBus.emit('grog:thought', {
-      type: 'validation_test',
-      priority: 7,
-      insight: `Completed validation simulation for ${fileName}. Analysis archived in report.`,
-      timestamp: new Date().toISOString()
-    });
-
-    return { report: finalReport };
-  }
-
-  public async runShadowEvaluation() {
-    this.addLog("GROG_BRAIN: Initiating shadow evaluation sequence...", "var(--color-dalek-gold)");
-  }
-
-  public async validateMutation() {
-    this.addLog("GROG_BRAIN: Validating mutation integrity...", "var(--color-dalek-gold)");
-  }
-
-  // ==================== AGI COGNITIVE METHODS ====================
-
-  /**
-   * Get the episodic memory component
-   */
-  public getMemory(): EpisodicMemory {
-    return this.memory;
-  }
-
-  /**
-   * Get the self-awareness component
-   */
-  public getAwareness(): SelfAwareness {
-    return this.awareness;
-  }
-
-  /**
-   * Perform introspection on current state
-   */
-  public async introspect(): Promise<void> {
-    const result = await this.awareness.introspect();
-    
-    // Log insights
-    result.insights.forEach(insight => {
-      this.addLog(`[INTROSPECTION] ${insight}`, 'var(--color-dalek-cyan)');
-    });
-
-    // Handle anomalies
-    if (result.anomalies.length > 0) {
-      this.addLog(`[INTROSPECTION] ⚠ ${result.anomalies.length} anomalies detected`, 'var(--color-dalek-gold)');
-    }
-
-    // Record this introspection in memory
-    await this.memory.record({
-      type: 'learning',
-      context: { operation: 'introspection' },
-      content: `Introspection: ${result.insights.length} insights, ${result.anomalies.length} anomalies`,
-      metadata: { selfEvaluation: result.selfEvaluation }
-    });
-  }
-
-  /**
-   * Learn from past experiences relevant to current situation
-   */
-  public async recallExperiences(situation: string): Promise<string> {
-    return await this.memory.flashback(situation);
-  }
-
-  /**
-   * Record an experience in episodic memory
-   */
-  public async recordExperience(
-    type: 'success' | 'failure' | 'learning' | 'mutation' | 'evolution' | 'death',
-    context: { file?: string; operation?: string; model?: string },
-    content: string,
-    outcome?: string
-  ): Promise<void> {
-    await this.memory.record({ type, context, content, outcome, metadata: {} });
-  }
-
-  /**
-   * Set an internal goal
-   */
-  public setGoal(description: string, priority: number = 5): string {
-    return this.awareness.setGoal(description, priority);
-  }
-
-  /**
-   * Check if system knows something (belief confidence)
-   */
-  public knows(statement: string): boolean {
-    return this.awareness.knows(statement);
-  }
-
-  /**
-   * Assess capability for a task
-   */
-  public assessCapability(task: string): { capable: boolean; confidence: number; missing: string[] } {
-    return this.awareness.assessCapability(task);
-  }
-
-  /**
-   * Get current memory statistics
-   */
-  public getMemoryStats(): ReturnType<EpisodicMemory['getStats']> {
-    return this.memory.getStats();
-  }
-
-  /**
-   * Get the self-model
-   */
-  public getSelfModel(): ReturnType<SelfAwareness['getSelfModel']> {
-    return this.awareness.getSelfModel();
-  }
-
-  /**
-   * Self-evolve: Propose and apply mutations to own code
-   */
-  public async selfEvolve(): Promise<{ mutated: boolean; changes: string }> {
-    this.addLog('[SELF_EVOLVE] Beginning self-evolution cycle...', 'var(--color-dalek-gold)');
-
-    // First, introspect
-    await this.introspect();
-
-    // Check capability
-    const capability = this.assessCapability('self_modification');
-    if (!capability.capable) {
-      this.addLog(`[SELF_EVOLVE] Cannot self-modify: missing ${capability.missing.join(', ')}`, 'var(--color-dalek-red)');
-      return { mutated: false, changes: `Missing capabilities: ${capability.missing.join(', ')}` };
-    }
-
-    // Get relevant past experiences
-    const experiences = await this.recallExperiences('self mutation evolution improvement');
-    
-    // Record this self-evolution attempt
-    await this.recordExperience('mutation', { operation: 'self_evolve' }, 'Self-evolution cycle initiated');
-
-    return { mutated: true, changes: 'Self-evolution cycle completed. Check memory for details.' };
+    this.addLog("GROG_BRAIN: Gemini failure state manually reset.", "var(--color-dalek-cyan)");
   }
 }

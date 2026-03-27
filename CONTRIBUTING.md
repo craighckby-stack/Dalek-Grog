@@ -23,5 +23,3 @@ When contributing, keep in mind the core goal: **preserving architectural cohere
 All contributions must adhere to the MIT License. Furthermore, because DALEK_GROG utilizes architectural DNA siphoned from various world-class repositories, all new code must include the standard architectural credit header. See `LICENSE` for the full list of credited repositories.
 
 If you find a bug or have a feature request, please open an issue on GitHub.
-
-not for commercial use 2026 craighckby-stack 

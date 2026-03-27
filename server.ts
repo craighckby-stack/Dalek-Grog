@@ -1,12 +1,29 @@
 import express from "express";
-import { createServer as createViteServer } from "vite";
 import path from "path";
 import { fileURLToPath } from "url";
+import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import TurndownService from "turndown";
 import * as ftp from "basic-ftp";
+import admin from "firebase-admin";
+import fs from "fs/promises";
 
 dotenv.config();
+
+// Initialize Firebase Admin
+let db: admin.firestore.Firestore | null = null;
+try {
+  const firebaseConfig = JSON.parse(await fs.readFile(path.join(process.cwd(), "src/firebase-applet-config.json"), "utf-8"));
+  admin.initializeApp({
+    projectId: firebaseConfig.projectId,
+  });
+  db = admin.firestore().databaseId === firebaseConfig.firestoreDatabaseId 
+    ? admin.firestore() 
+    : admin.firestore(firebaseConfig.firestoreDatabaseId);
+  console.log("FIREBASE_ADMIN: Initialized successfully.");
+} catch (e) {
+  console.error("FIREBASE_ADMIN_INIT_FAILURE: ", e);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,125 +32,68 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: '20mb' }));
-  app.use(express.urlencoded({ limit: '20mb', extended: true }));
+  app.use(express.json({ limit: "50mb" }));
 
-  const turndownService = new TurndownService();
-
-  // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({ status: "ok" });
-  });
-
-  // Proxy for GitHub
-  app.post("/api/github/proxy", async (req, res) => {
-    const { url, method, body, headers: customHeaders } = req.body;
-    const token = process.env.GITHUB_TOKEN;
-
-    if (!token) {
-      return res.status(503).json({ error: "GITHUB_TOKEN missing on server" });
-    }
-
-    if (!url) {
-      return res.status(400).json({ error: "URL REQUIRED" });
-    }
-
-    try {
-      const response = await fetch(url, {
-        method: method || "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `token ${token}`,
-          "User-Agent": "DALEK_GROG_EVOLUTION_ENGINE",
-          ...customHeaders
-        },
-        body: body ? JSON.stringify(body) : undefined,
-      });
-
-      const data = await response.json().catch(() => null);
-      if (data) {
-        res.status(response.status).json(data);
-      } else {
-        res.status(response.status).send();
-      }
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  // Proxy for Cerebras
-  app.post("/api/cerebras/proxy", async (req, res) => {
-    const { messages, model } = req.body;
-    const key = process.env.CEREBRAS_API_KEY;
-
-    if (!key) {
-      return res.status(503).json({ error: "CEREBRAS_API_KEY missing on server" });
-    }
-
-    try {
-      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${key}`,
-        },
-        body: JSON.stringify({
-          model: model || "llama3.1-8b",
-          messages,
-        }),
-      });
-
-      const data = await response.json();
-      res.status(response.status).json(data);
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  // Proxy for Grok
+  // API PROXIES
   app.post("/api/grok/proxy", async (req, res) => {
-    const { messages, model } = req.body;
-    const key = process.env.GROK_API_KEY;
-
-    if (!key) {
-      return res.status(503).json({ error: "GROK_API_KEY missing on server" });
-    }
-
     try {
       const response = await fetch("https://api.x.ai/v1/chat/completions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${key}`,
+          Authorization: `Bearer ${process.env.GROK_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: model || "grok-3",
-          messages,
-        }),
+        body: JSON.stringify(req.body),
       });
-
       const data = await response.json();
-      res.status(response.status).json(data);
+      res.json(data);
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
   });
 
-
-  // Grog Self-Mutation Vector
-  app.get("/api/grog/read", async (req, res) => {
-    const { path: filePath } = req.query;
-    const fs = await import("fs/promises");
-    
+  app.post("/api/cerebras/proxy", async (req, res) => {
     try {
-      const resolvedPath = path.resolve(__dirname, filePath as string);
-      const absolutePath = await fs.realpath(resolvedPath);
-      const realDirname = await fs.realpath(__dirname);
+      const response = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.CEREBRAS_API_KEY}`,
+        },
+        body: JSON.stringify(req.body),
+      });
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
 
-      if (!absolutePath.startsWith(realDirname)) {
-        return res.status(403).json({ error: "ACCESS_DENIED: Read restricted to project scope." });
+  // GITHUB PROXY
+  app.get("/api/github/proxy", async (req, res) => {
+    const { url } = req.query;
+    try {
+      const response = await fetch(url as string, {
+        headers: {
+          Authorization: `token ${process.env.GITHUB_TOKEN}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      });
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: (error as Error).message });
+    }
+  });
+
+  // GROG SELF-MUTATION ENDPOINTS
+  app.post("/api/grog/read", async (req, res) => {
+    const { filePath } = req.body;
+    try {
+      const absolutePath = path.join(process.cwd(), filePath);
+      if (!absolutePath.startsWith(process.cwd())) {
+        return res.status(403).json({ error: "Access denied: Path outside project scope." });
       }
-
       const content = await fs.readFile(absolutePath, "utf-8");
       res.json({ content });
     } catch (error) {
@@ -143,124 +103,30 @@ async function startServer() {
 
   app.post("/api/grog/self-mutate", async (req, res) => {
     const { filePath, content } = req.body;
-    const fs = await import("fs/promises");
-    
     try {
-      // Security: Only allow mutation of files within the project
-      const resolvedPath = path.resolve(__dirname, filePath);
-      const absolutePath = await fs.realpath(resolvedPath).catch(() => resolvedPath);
-      const realDirname = await fs.realpath(__dirname);
-
-      if (!absolutePath.startsWith(realDirname)) {
-        return res.status(403).json({ error: "ACCESS_DENIED: Mutation restricted to project scope." });
+      const absolutePath = path.join(process.cwd(), filePath);
+      if (!absolutePath.startsWith(process.cwd())) {
+        return res.status(403).json({ error: "Access denied: Path outside project scope." });
       }
-
-      // Ensure parent directory exists
-      const dirPath = path.dirname(absolutePath);
-      await fs.mkdir(dirPath, { recursive: true });
 
       await fs.writeFile(absolutePath, content, "utf-8");
       console.log(`GROK_SELF_MUTATION: Successfully evolved ${filePath}`);
-      res.json({ status: "success", message: `File ${filePath} evolved successfully.` });
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
 
-  // WEB SIPHON: Manual internet retrieval for GROK
-  app.post("/api/web/siphon", async (req, res) => {
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ error: "URL REQUIRED" });
-
-    try {
-      let content = "";
-      
-      if (url.startsWith("ftp://")) {
-        // FTP SIPHON: Retrieval from legacy FTP archives
-        const client = new ftp.Client();
-        client.ftp.verbose = false;
+      // SYNC TO FIREBASE IF IT'S THE BRAIN
+      if (db && filePath.includes("GrogBrain.ts")) {
         try {
-          const parsedUrl = new URL(url);
-          await client.access({
-            host: parsedUrl.hostname,
-            user: parsedUrl.username || "anonymous",
-            password: parsedUrl.password || "anonymous",
-            secure: false
-          });
-          
-          // Fetch the file content as a string
-          const chunks: any[] = [];
-          const stream = await import("stream");
-          const writable = new stream.Writable({
-            write(chunk, encoding, callback) {
-              chunks.push(chunk);
-              callback();
-            }
-          });
-
-          writable.on("error", (err) => {
-            throw err;
-          });
-
-          await client.downloadTo(writable, parsedUrl.pathname);
-          
-          content = Buffer.concat(chunks).toString("utf-8");
-        } finally {
-          client.close();
+          await db.doc("system/grog-brain").set({
+            content,
+            version: admin.firestore.FieldValue.increment(1),
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          console.log("GROG_BRAIN_FIREBASE_SYNC: Brain evolution persisted to cloud.");
+        } catch (e) {
+          console.error("GROG_BRAIN_FIREBASE_SYNC_FAILURE: ", e);
         }
-      } else {
-        // HTTP(S) SIPHON
-        const response = await fetch(url, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-          }
-        });
-
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-        const html = await response.text();
-        content = turndownService.turndown(html);
-      }
-      
-      // Chunk it back as a code block for Grog
-      const isTruncated = content.length > 15000;
-      const truncatedContent = content.slice(0, 15000);
-      const formatted = `\`\`\`markdown\n# SIPHONED CONTENT: ${url}${isTruncated ? '\n# WARNING: Content truncated due to size limits.' : ''}\n\n${truncatedContent}\n\`\`\``;
-      
-      res.json({ content: formatted });
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  // WAYBACK SIPHON: Retrieval from Wayback Machine
-  app.post("/api/web/wayback", async (req, res) => {
-    const { url } = req.body;
-    if (!url) return res.status(400).json({ error: "URL REQUIRED" });
-
-    try {
-      // 1. Check availability
-      const availRes = await fetch(`https://archive.org/wayback/available?url=${encodeURIComponent(url)}`);
-      const availData = await availRes.json();
-      
-      const snapshot = availData.archived_snapshots?.closest;
-      if (!snapshot || !snapshot.available) {
-        return res.status(404).json({ error: "NO SNAPSHOT AVAILABLE IN WAYBACK MACHINE" });
       }
 
-      // 2. Fetch snapshot
-      const snapshotUrl = snapshot.url;
-      const response = await fetch(snapshotUrl);
-      if (!response.ok) throw new Error(`HTTP ${response.status} FETCHING SNAPSHOT`);
-
-      const html = await response.text();
-      const markdown = turndownService.turndown(html);
-      
-      const isTruncated = markdown.length > 15000;
-      const truncatedMarkdown = markdown.slice(0, 15000);
-      const formatted = `\`\`\`markdown\n# WAYBACK SNAPSHOT: ${url}\n# TIMESTAMP: ${snapshot.timestamp}${isTruncated ? '\n# WARNING: Content truncated due to size limits.' : ''}\n\n${truncatedMarkdown}\n\`\`\``;
-      
-      res.json({ content: formatted, snapshotUrl });
+      res.json({ status: "success", message: `File ${filePath} evolved successfully.` });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
     }
@@ -274,14 +140,49 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static(path.join(__dirname, "dist")));
+    const distPath = path.join(process.cwd(), "dist");
+    app.use(express.static(distPath));
     app.get("*", (req, res) => {
-      res.sendFile(path.join(__dirname, "dist", "index.html"));
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, "0.0.0.0", async () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // SYNC GROG BRAIN FROM FIREBASE ON STARTUP
+    if (db) {
+      try {
+        const brainDoc = await db.doc("system/grog-brain").get();
+        const brainPath = path.join(process.cwd(), "src/evolutors/GrogBrain.ts");
+        
+        // Ensure directory exists
+        await fs.mkdir(path.dirname(brainPath), { recursive: true });
+
+        if (brainDoc.exists) {
+          const data = brainDoc.data();
+          if (data?.content) {
+            await fs.writeFile(brainPath, data.content, "utf-8");
+            console.log("GROG_BRAIN_SYNC: Successfully synced from Firestore.");
+          }
+        } else {
+          // Initial upload if Firestore is empty
+          try {
+            const content = await fs.readFile(brainPath, "utf-8");
+            await db.doc("system/grog-brain").set({
+              content,
+              version: 1,
+              lastUpdated: new Date().toISOString()
+            });
+            console.log("GROG_BRAIN_SYNC: Initial brain uploaded to Firestore.");
+          } catch (readErr) {
+            console.warn("GROG_BRAIN_SYNC: Local brain file not found for initial upload.");
+          }
+        }
+      } catch (e) {
+        console.error("GROG_BRAIN_SYNC_FAILURE: ", e);
+      }
+    }
   });
 }
 

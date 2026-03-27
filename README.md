@@ -1,11 +1,3 @@
-fixed ish .  
-
-can now connect via your own google account 
-to then use the .ts
-
-
-
-
 # DALEK_GROG v3.1: Autonomous Evolution Engine
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
