@@ -1,5 +1,6 @@
 import React from 'react';
 import { Brain, Activity, Shield, Zap, RefreshCw, AlertTriangle, BookOpen, MessageSquare, Code, Terminal, Database } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface GrogDashboardProps {
   grogBrainRef: any;
@@ -42,10 +43,10 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
   return (
     <div className="flex flex-col gap-4 h-full overflow-y-auto custom-scrollbar pr-2">
       {/* Strategic Consciousness Status */}
-      <div className="panel-container p-4 border-dalek-gold/30 bg-dalek-gold/5">
+      <div className="panel-container p-4 border-dalek-red/30 bg-dalek-red/5 shadow-[inset_0_0_20px_rgba(255,0,0,0.05)]">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-[12px] font-bold text-dalek-gold flex items-center gap-2 uppercase tracking-widest">
-            <Brain size={16} /> Strategic Consciousness
+          <h2 className="text-[12px] font-bold text-dalek-red flex items-center gap-2 uppercase tracking-widest">
+            <Brain size={16} className="text-dalek-red" /> Strategic Consciousness
           </h2>
           <div className="flex items-center gap-2">
             <span className="text-[8px] text-zinc-500 uppercase tracking-widest">Status:</span>
@@ -54,47 +55,60 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="stat-panel">
+          <div className="stat-panel border-dalek-red/20">
             <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Strategic Memory</span>
-            <span className="text-lg font-black text-dalek-gold">{props.strategicLessons.length}</span>
+            <span className="text-lg font-black text-dalek-red">{props.strategicLessons.length}</span>
           </div>
-          <div className="stat-panel">
+          <div className="stat-panel border-dalek-red/20">
             <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Death Registry</span>
             <span className="text-lg font-black text-dalek-red">{props.deathRecords.length}</span>
           </div>
-          <div className="stat-panel">
+          <div className="stat-panel border-dalek-red/20">
             <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Epiphanies</span>
             <span className="text-lg font-black text-dalek-cyan">{props.grogEpiphanies.length}</span>
           </div>
-          <div className="stat-panel">
+          <div className="stat-panel border-dalek-red/20">
             <span className="text-[7px] text-zinc-600 uppercase tracking-widest">Thoughts</span>
-            <span className="text-lg font-black text-white">{props.grogThoughts.length}</span>
+            <span className="text-lg font-black text-dalek-silver">{props.grogThoughts.length}</span>
           </div>
         </div>
       </div>
 
       {/* Strategic Directives */}
-      <div className="panel-container flex-1 min-h-[300px]">
-        <div className="panel-header">
-          <span className="flex items-center gap-2">
+      <div className="panel-container flex-1 min-h-[300px] border-dalek-red/20">
+        <div className="panel-header bg-dalek-red/10 border-b border-dalek-red/20">
+          <span className="flex items-center gap-2 text-dalek-red">
             <Terminal size={12} /> Strategic Directives
           </span>
           <button 
-            onClick={props.runGrogThinking}
+            onClick={async () => {
+              try {
+                await props.runGrogThinking();
+                toast.success("Strategic Analysis Complete", {
+                  description: "New directives generated for the Shared Consciousness.",
+                  duration: 3000
+                });
+              } catch (e) {
+                toast.error("Strategic Analysis Failed", {
+                  description: e instanceof Error ? e.message : "Unknown error",
+                  duration: 5000
+                });
+              }
+            }}
             disabled={props.isThinking}
             className="text-dalek-cyan hover:text-white transition-colors disabled:opacity-50"
           >
             {props.isThinking ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
           </button>
         </div>
-        <div className="p-4 space-y-3 overflow-y-auto">
+        <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar">
           {props.grogThoughts.length === 0 ? (
             <div className="text-center py-10 text-zinc-700 italic text-[10px]">
               Waiting for strategic analysis...
             </div>
           ) : (
             props.grogThoughts.map((thought, i) => (
-              <div key={i} className="p-3 bg-zinc-900/50 border border-zinc-800 rounded-sm hover:border-dalek-cyan/30 transition-all group">
+              <div key={i} className="p-3 bg-zinc-950 border border-dalek-red/20 rounded-sm hover:border-dalek-cyan/30 transition-all group">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[8px] font-bold text-dalek-cyan uppercase tracking-widest">{thought.type}</span>
                   <span className="text-[8px] text-zinc-600">{new Date(thought.timestamp).toLocaleTimeString()}</span>
@@ -102,7 +116,20 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
                 <p className="text-[10px] text-zinc-400 leading-relaxed mb-3">{thought.insight}</p>
                 {thought.action && (
                   <button 
-                    onClick={() => props.executeDirective(thought)}
+                    onClick={async () => {
+                      try {
+                        await props.executeDirective(thought);
+                        toast.success("Directive Executed", {
+                          description: `Successfully executed: ${thought.type}`,
+                          duration: 3000
+                        });
+                      } catch (e) {
+                        toast.error("Execution Failed", {
+                          description: e instanceof Error ? e.message : "Unknown error",
+                          duration: 5000
+                        });
+                      }
+                    }}
                     className="w-full py-1.5 bg-dalek-cyan/10 border border-dalek-cyan/30 text-dalek-cyan text-[8px] font-bold uppercase tracking-widest hover:bg-dalek-cyan/20 transition-all"
                   >
                     Execute Directive
@@ -115,30 +142,36 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
       </div>
 
       {/* Shared Consciousness Feed */}
-      <div className="panel-container h-[250px]">
-        <div className="panel-header">
-          <span className="flex items-center gap-2">
+      <div className="panel-container h-[250px] border-dalek-red/20">
+        <div className="panel-header bg-dalek-red/10 border-b border-dalek-red/20">
+          <span className="flex items-center gap-2 text-dalek-red">
             <Database size={12} /> Shared Consciousness Feed
           </span>
           <div className="flex items-center gap-3">
-             <button onClick={props.fetchStrategicLessons} className="text-zinc-600 hover:text-dalek-gold transition-colors">
+             <button onClick={async () => {
+               await props.fetchStrategicLessons();
+               toast.info("Lessons Refreshed", { duration: 2000 });
+             }} className="text-zinc-600 hover:text-dalek-gold transition-colors">
                <BookOpen size={12} />
              </button>
-             <button onClick={props.fetchDeathRecords} className="text-zinc-600 hover:text-dalek-red transition-colors">
+             <button onClick={async () => {
+               await props.fetchDeathRecords();
+               toast.info("Death Registry Refreshed", { duration: 2000 });
+             }} className="text-zinc-600 hover:text-dalek-red transition-colors">
                <AlertTriangle size={12} />
              </button>
           </div>
         </div>
-        <div className="p-3 space-y-2 overflow-y-auto">
+        <div className="p-3 space-y-2 overflow-y-auto custom-scrollbar">
           {props.strategicLessons.slice(0, 10).map((lesson, i) => (
-            <div key={`lesson-${i}`} className="text-[9px] border-l-2 border-dalek-gold pl-3 py-1">
-              <div className="text-dalek-gold font-bold uppercase mb-1">Lesson Learned</div>
+            <div key={`lesson-${i}`} className="text-[9px] border-l-2 border-dalek-red pl-3 py-1 bg-dalek-red/5">
+              <div className="text-dalek-red font-bold uppercase mb-1">Lesson Learned</div>
               <div className="text-zinc-400">{lesson.lesson}</div>
               <div className="text-[7px] text-zinc-600 mt-1">Author: {lesson.authorName}</div>
             </div>
           ))}
           {props.deathRecords.slice(0, 10).map((death, i) => (
-            <div key={`death-${i}`} className="text-[9px] border-l-2 border-dalek-red pl-3 py-1">
+            <div key={`death-${i}`} className="text-[9px] border-l-2 border-dalek-red pl-3 py-1 bg-dalek-red/5">
               <div className="text-dalek-red font-bold uppercase mb-1">System Failure</div>
               <div className="text-zinc-400">{death.reason}</div>
               <div className="text-[7px] text-zinc-600 mt-1">Author: {death.authorName}</div>

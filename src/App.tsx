@@ -10,6 +10,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Sentry from "@sentry/react";
+import { Toaster, toast } from 'sonner';
 import { Terminal, Cpu, Database, Activity, AlertTriangle, Shield, ShieldCheck, RefreshCw, FileCode, Sparkles, Square, Play, RotateCcw, FileText, Trash2, Zap, Brain, Bug, Search, Copy, BookOpen, Users, LogOut } from 'lucide-react';
 import { LogEntry, Mistake, MetaState } from './types';
 import { robustParseJSON, safeFetchJson, safeAtob, safeBtoa } from './core/utils';
@@ -105,6 +106,10 @@ export default function App() {
               authorName: auth.currentUser?.displayName || 'Anonymous'
             });
           } catch (e) {
+            toast.error("SHARED_CONSCIOUSNESS: Death sync failed", {
+              description: "Could not persist failure record to Firestore.",
+              duration: 4000
+            });
             handleFirestoreError(e, OperationType.WRITE, 'deaths');
           }
         },
@@ -116,15 +121,45 @@ export default function App() {
               authorName: auth.currentUser?.displayName || 'Anonymous'
             });
           } catch (e) {
+            toast.error("SHARED_CONSCIOUSNESS: Lesson sync failed", {
+              description: "Could not persist strategic lesson to Firestore.",
+              duration: 4000
+            });
             handleFirestoreError(e, OperationType.WRITE, 'lessons');
           }
         },
         getDeaths: async () => [],
-        getLessons: async () => []
+        getLessons: async () => [],
+        fetch: async (path: string) => {
+          try {
+            const docRef = doc(db, 'files', path.replace(/\//g, '_'));
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              return docSnap.data().content;
+            }
+            return null;
+          } catch (e) {
+            return null;
+          }
+        },
+        push: async (path: string, content: string, message: string) => {
+          try {
+            const docRef = doc(db, 'files', path.replace(/\//g, '_'));
+            await setDoc(docRef, {
+              path,
+              content,
+              lastUpdated: new Date().toISOString(),
+              message
+            });
+            return true;
+          } catch (e) {
+            return false;
+          }
+        }
       };
 
-      grogBrainRef.current = new GrogBrain(undefined, evolutionEngineRef.current, addLog, {
-        fetch: async (path) => {
+      const repoOps = {
+        fetch: async (path: string) => {
           const res = await fetch('/api/grog/read', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -133,7 +168,7 @@ export default function App() {
           const data = await res.json();
           return data.content || null;
         },
-        push: async (path, content, message) => {
+        push: async (path: string, content: string, message: string) => {
           const res = await fetch('/api/grog/self-mutate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -141,9 +176,10 @@ export default function App() {
           });
           const data = await res.json();
           return data.status === 'success';
-        },
-        firebase: firebaseOps
-      }, eventBusRef.current);
+        }
+      };
+
+      grogBrainRef.current = new GrogBrain(undefined, evolutionEngineRef.current, addLog, repoOps, firebaseOps, eventBusRef.current);
     }
   }, []);
 
@@ -169,15 +205,17 @@ export default function App() {
   }, [isAuthReady]);
 
   return (
-    <div className="min-h-screen bg-[#050505] text-zinc-300 font-sans p-4 flex flex-col gap-4">
-      <header className="flex items-center justify-between border-b border-zinc-900 pb-4">
+    <div className="min-h-screen bg-black text-white selection:bg-dalek-red selection:text-white font-sans p-4 flex flex-col gap-4">
+      <Toaster position="top-right" theme="dark" richColors closeButton />
+      
+      <header className="flex items-center justify-between border-b-2 border-dalek-red pb-4 bg-black/90 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 bg-dalek-red flex items-center justify-center rounded-sm shadow-[0_0_20px_rgba(255,0,0,0.3)]">
-            <Brain size={24} className="text-white" />
+          <div className="w-10 h-10 bg-dalek-red flex items-center justify-center rounded-sm shadow-[0_0_20px_rgba(255,0,0,0.5)] border border-dalek-red/30">
+            <Brain size={24} className="text-black" />
           </div>
           <div>
-            <h1 className="text-lg font-black tracking-tighter text-white uppercase italic">DALEK_GROG <span className="text-dalek-red">v3.1</span></h1>
-            <p className="text-[9px] tracking-[0.3em] text-zinc-500 uppercase font-bold">Autonomous Strategic Consciousness</p>
+            <h1 className="text-lg font-black tracking-tighter text-dalek-red uppercase italic">DALEK_GROG <span className="text-white not-italic font-light opacity-50">v3.1</span></h1>
+            <p className="text-[9px] tracking-[0.3em] text-dalek-red uppercase font-bold">Autonomous Strategic Consciousness</p>
           </div>
         </div>
 

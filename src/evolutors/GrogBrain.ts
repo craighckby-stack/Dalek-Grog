@@ -25,18 +25,36 @@ export class GrogBrain {
     private geminiKey: string | undefined,
     private evolutionEngine: StrategyEvolution,
     private addLog: (message: string, color?: string) => void,
-    private services: {
+    private repoOps: {
       fetch: (path: string) => Promise<string | null>;
       push: (path: string, content: string, message: string) => Promise<boolean>;
-      firebase?: {
-        recordDeath: (death: any) => Promise<void>;
-        recordLesson: (lesson: any) => Promise<void>;
-        getDeaths: () => Promise<any[]>;
-        getLessons: () => Promise<any[]>;
-      }
+    },
+    private firebaseOps: {
+      recordDeath: (death: any) => Promise<void>;
+      recordLesson: (lesson: any) => Promise<void>;
+      getDeaths: () => Promise<any[]>;
+      getLessons: () => Promise<any[]>;
+      fetch?: (path: string) => Promise<string | null>;
+      push?: (path: string, content: string, message: string) => Promise<boolean>;
     },
     private eventBus: EventBus
   ) {}
+
+  private async fetchFile(path: string): Promise<string | null> {
+    if (this.firebaseOps.fetch) {
+      const content = await this.firebaseOps.fetch(path);
+      if (content) return content;
+    }
+    return this.repoOps.fetch(path);
+  }
+
+  private async pushFile(path: string, content: string, message: string): Promise<boolean> {
+    if (this.firebaseOps.push) {
+      const success = await this.firebaseOps.push(path, content, message);
+      if (success) return true;
+    }
+    return this.repoOps.push(path, content, message);
+  }
 
   private robustParseJSON(text: string): any {
     if (!text) return null;
@@ -85,7 +103,7 @@ export class GrogBrain {
       });
       return response.text || null;
     } catch (e) {
-      this.addLog(`GROG_BRAIN: Gemini primary failure. Attempting fallback...`, "var(--color-dalek-gold)");
+      this.addLog(`GROG_BRAIN: Gemini primary failure. Attempting fallback...`, "var(--color-dalek-red)");
       
       // Fallback to Grok or Cerebras via server proxy
       const fallbackModel = useGrok ? 'grok-beta' : 'llama3.1-70b';
@@ -161,10 +179,10 @@ export class GrogBrain {
     });
 
     // 2. Firebase Persistence (Primary)
-    if (this.services.firebase) {
+    if (this.firebaseOps) {
       try {
-        await this.services.firebase.recordDeath(deathEntry);
-        this.addLog("GROG_BRAIN: Death record synced to Shared Consciousness.", "var(--color-dalek-gold)");
+        await this.firebaseOps.recordDeath(deathEntry);
+        this.addLog("GROG_BRAIN: Death record synced to Shared Consciousness.", "var(--color-dalek-red)");
       } catch (e) {
         this.addLog("GROG_BRAIN: Firebase sync failed, falling back to GitHub.", "var(--color-dalek-red)");
       }
@@ -172,7 +190,7 @@ export class GrogBrain {
 
     // 3. GitHub Persistence (Backup/Siphon)
     try {
-      const existingContent = await this.services.fetch('grog/lessons/DEATH_REGISTRY.json');
+      const existingContent = await this.fetchFile('grog/lessons/DEATH_REGISTRY.json');
       let allDeaths = [];
       if (existingContent) {
         allDeaths = this.robustParseJSON(existingContent) || [];
@@ -182,7 +200,7 @@ export class GrogBrain {
       if (allDeaths.length > 100) allDeaths.shift(); 
       
       const content = safeStringify(allDeaths, 2);
-      await this.services.push('grog/lessons/DEATH_REGISTRY.json', content, `GROG_BRAIN: Recording system failure - ${reason.slice(0, 50)}`);
+      await this.pushFile('grog/lessons/DEATH_REGISTRY.json', content, `GROG_BRAIN: Recording system failure - ${reason.slice(0, 50)}`);
     } catch (e) {
       this.addLog(`GROG_BRAIN: Failed to persist death record to repository.`, "var(--color-dalek-red)");
     }
@@ -215,10 +233,10 @@ export class GrogBrain {
     });
 
     // 2. Firebase Persistence (Primary)
-    if (this.services.firebase) {
+    if (this.firebaseOps) {
       try {
-        await this.services.firebase.recordLesson(lessonEntry);
-        this.addLog("GROG_BRAIN: Strategic lesson synced to Shared Consciousness.", "var(--color-dalek-gold)");
+        await this.firebaseOps.recordLesson(lessonEntry);
+        this.addLog("GROG_BRAIN: Strategic lesson synced to Shared Consciousness.", "var(--color-dalek-red)");
       } catch (e) {
         this.addLog("GROG_BRAIN: Firebase sync failed, falling back to GitHub.", "var(--color-dalek-red)");
       }
@@ -226,7 +244,7 @@ export class GrogBrain {
 
     // 3. GitHub Persistence (Backup/Siphon)
     try {
-      const existingContent = await this.services.fetch('grog/lessons/STRATEGIC_LESSONS.json');
+      const existingContent = await this.fetchFile('grog/lessons/STRATEGIC_LESSONS.json');
       let allLessons = [];
       if (existingContent) {
         allLessons = this.robustParseJSON(existingContent) || [];
@@ -236,7 +254,7 @@ export class GrogBrain {
       if (allLessons.length > 100) allLessons.shift();
       
       const content = safeStringify(allLessons, 2);
-      await this.services.push('grog/lessons/STRATEGIC_LESSONS.json', content, `GROG_BRAIN: Archiving strategic lesson.`);
+      await this.pushFile('grog/lessons/STRATEGIC_LESSONS.json', content, `GROG_BRAIN: Archiving strategic lesson.`);
     } catch (e) {
       // Silent fail
     }
@@ -275,6 +293,6 @@ export class GrogBrain {
   public resetGeminiFailed() {
     this.gateStats.isQuotaExhausted = false;
     this.gateStats.retryCount = 0;
-    this.addLog("GROG_BRAIN: Gemini failure state manually reset.", "var(--color-dalek-cyan)");
+    this.addLog("GROG_BRAIN: Gemini failure state manually reset.", "var(--color-dalek-red)");
   }
 }
