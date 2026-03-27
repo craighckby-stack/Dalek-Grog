@@ -1,12 +1,13 @@
 // src/evolutors/GrogBrain.ts
-// GITHUB MIRROR STUB - Full implementation in Firebase
-// This file exists to provide siphon baseline for self-evolution
+// Strategic Consciousness Core
+// Persistent state managed via Shared Consciousness (Firebase)
 
 import { GoogleGenAI } from "@google/genai";
 import * as Sentry from "@sentry/react";
 import { EventBus } from '../core/nexus_core';
 import { StrategyEvolution } from './evolutionService';
 import { safeStringify } from '../core/utils';
+import { configService, AIProviderConfig } from '../services/ConfigService';
 
 export class GrogBrain {
   private gateStats = {
@@ -82,70 +83,100 @@ export class GrogBrain {
   private async callAIWithFallback(prompt: string, systemInstruction: string, useGrok: boolean = false, useCerebras: boolean = false): Promise<string | null> {
     this.gateStats.callCount++;
     
-    const apiKey = this.geminiKey || process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-      this.addLog("GROG_BRAIN: No API key provided. AI operations suspended.", "var(--color-dalek-red)");
-      return null;
-    }
+    // Improved token estimation (rough approximation: 4 chars per token)
+    const estimatedTokens = Math.ceil((prompt.length + systemInstruction.length) / 4);
+    this.gateStats.estimatedTokensUsed += estimatedTokens;
 
-    // Try Gemini first (Primary)
-    try {
-      Sentry.addBreadcrumb({
-        category: 'ai',
-        message: 'Calling Gemini API',
-        level: 'info',
-        data: { model: "gemini-3-flash-preview" }
-      });
-      
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt,
-        config: {
-          systemInstruction,
-          temperature: 0.7,
-          topP: 0.95,
-          topK: 40,
-          maxOutputTokens: 8192,
-        }
-      });
-      return response.text || null;
-    } catch (e) {
-      Sentry.captureException(e, {
-        extra: { prompt, systemInstruction, model: "gemini-3-flash-preview" }
-      });
-      this.addLog(`GROG_BRAIN: Gemini primary failure. Attempting fallback...`, "var(--color-dalek-red)");
-      
-      // Fallback to Grok or Cerebras via server proxy
-      const fallbackModel = useGrok ? 'grok-beta' : 'llama3.1-70b';
-      const endpoint = useGrok ? '/api/grok/proxy' : '/api/cerebras/proxy';
-      
+    const providers = configService.getProviders(useGrok, useCerebras);
+
+    for (const provider of providers) {
+      if (!provider.enabled) continue;
+
       try {
-        const response = await fetch(endpoint, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            model: fallbackModel,
-            messages: [
-              { role: 'system', content: systemInstruction },
-              { role: 'user', content: prompt }
-            ]
-          })
+        Sentry.addBreadcrumb({
+          category: 'ai',
+          message: `Attempting AI call via ${provider.name}`,
+          level: 'info',
+          data: { 
+            type: provider.type, 
+            model: provider.model || "gemini-3-flash-preview",
+            promptLength: prompt.length
+          }
         });
-        const data = await response.json();
-        return data.choices?.[0]?.message?.content || null;
-      } catch (inner) {
-        Sentry.captureException(inner, {
-          extra: { prompt, systemInstruction, fallbackModel }
+
+        if (provider.name === 'Gemini') {
+          const apiKey = this.geminiKey || configService.getGeminiKey();
+          if (!apiKey) throw new Error("MISSING_API_KEY: Gemini key not found in environment.");
+
+          const ai = new GoogleGenAI({ apiKey });
+          const response = await ai.models.generateContent({
+            model: provider.model || "gemini-3-flash-preview",
+            contents: prompt,
+            config: {
+              systemInstruction,
+              temperature: 0.7,
+              topP: 0.95,
+              topK: 40,
+              maxOutputTokens: 8192,
+            }
+          });
+          return response.text || null;
+        } else {
+          const response = await fetch(provider.endpoint!, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              model: provider.model,
+              messages: [
+                { role: 'system', content: systemInstruction },
+                { role: 'user', content: prompt }
+              ]
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`HTTP_ERROR_${response.status}: ${errorData.error || response.statusText}`);
+          }
+
+          const data = await response.json();
+          return data.choices?.[0]?.message?.content || null;
+        }
+      } catch (e: any) {
+        this.gateStats.retryCount++;
+        const errorMsg = e.message || String(e);
+        
+        // Detect quota exhaustion
+        if (errorMsg.includes("429") || errorMsg.toLowerCase().includes("quota") || errorMsg.includes("exhausted")) {
+          this.gateStats.isQuotaExhausted = true;
+          this.addLog(`GROG_BRAIN: ${provider.name} quota exhausted.`, "var(--color-dalek-red)");
+        }
+
+        Sentry.captureException(e, {
+          tags: { 
+            provider: provider.name,
+            error_type: errorMsg.split(':')[0],
+            is_quota_exhausted: this.gateStats.isQuotaExhausted
+          },
+          extra: { 
+            prompt_preview: prompt.slice(0, 1000),
+            system_instruction: systemInstruction.slice(0, 500),
+            gate_stats: { ...this.gateStats }
+          }
         });
-        this.addLog(`GROG_BRAIN: All AI models exhausted.`, "var(--color-dalek-red)");
-        return null;
+
+        this.addLog(`GROG_BRAIN: ${provider.name} failure: ${errorMsg}. Attempting next provider...`, "var(--color-dalek-red)");
       }
     }
+
+    this.addLog(`GROG_BRAIN: All AI models exhausted. Strategic paralysis imminent.`, "var(--color-dalek-red)");
+    return null;
   }
 
   public async updateContext(newState: any) {
     this.context.systemState = { ...this.context.systemState, ...newState };
+    if (newState.deaths) this.context.deaths = newState.deaths;
+    if (newState.lessons) this.context.lessons = newState.lessons;
   }
 
   public async proposeSelfMutation(targetFile: string, currentContent: string): Promise<string> {
@@ -183,7 +214,7 @@ export class GrogBrain {
 
     const prompt = `TARGET FILE: ${targetFile}\n\nPERFORMANCE DATA: ${safeStringify(performanceContext)}\nSTRATEGIC DATA: ${safeStringify(strategicContext)}\n\nCURRENT SOURCE:\n${currentContent}`;
     
-    const result = await this.callAIWithFallback(prompt, systemInstruction);
+    const result = await this.callAIWithFallback(prompt, systemInstruction, true, true);
     
     if (!result || result.trim().length < 100) {
       this.addLog("GROG_BRAIN: Self-mutation proposal rejected - insufficient quality.", "var(--color-dalek-red)");
@@ -230,25 +261,8 @@ export class GrogBrain {
         await this.firebaseOps.recordDeath(deathEntry);
         this.addLog("GROG_BRAIN: Death record synced to Shared Consciousness.", "var(--color-dalek-red)");
       } catch (e) {
-        this.addLog("GROG_BRAIN: Firebase sync failed, falling back to GitHub.", "var(--color-dalek-red)");
+        this.addLog("GROG_BRAIN: Firebase sync failed.", "var(--color-dalek-red)");
       }
-    }
-
-    // 3. GitHub Persistence (Backup/Siphon)
-    try {
-      const existingContent = await this.fetchFile('grog/lessons/DEATH_REGISTRY.json');
-      let allDeaths = [];
-      if (existingContent) {
-        allDeaths = this.robustParseJSON(existingContent) || [];
-      }
-      
-      allDeaths.push(deathEntry);
-      if (allDeaths.length > 100) allDeaths.shift(); 
-      
-      const content = safeStringify(allDeaths, 2);
-      await this.pushFile('grog/lessons/DEATH_REGISTRY.json', content, `GROG_BRAIN: Recording system failure - ${reason.slice(0, 50)}`);
-    } catch (e) {
-      this.addLog(`GROG_BRAIN: Failed to persist death record to repository.`, "var(--color-dalek-red)");
     }
   }
 
@@ -290,30 +304,18 @@ export class GrogBrain {
         await this.firebaseOps.recordLesson(lessonEntry);
         this.addLog("GROG_BRAIN: Strategic lesson synced to Shared Consciousness.", "var(--color-dalek-red)");
       } catch (e) {
-        this.addLog("GROG_BRAIN: Firebase sync failed, falling back to GitHub.", "var(--color-dalek-red)");
+        this.addLog("GROG_BRAIN: Firebase sync failed.", "var(--color-dalek-red)");
       }
-    }
-
-    // 3. GitHub Persistence (Backup/Siphon)
-    try {
-      const existingContent = await this.fetchFile('grog/lessons/STRATEGIC_LESSONS.json');
-      let allLessons = [];
-      if (existingContent) {
-        allLessons = this.robustParseJSON(existingContent) || [];
-      }
-      
-      allLessons.push(lessonEntry);
-      if (allLessons.length > 100) allLessons.shift();
-      
-      const content = safeStringify(allLessons, 2);
-      await this.pushFile('grog/lessons/STRATEGIC_LESSONS.json', content, `GROG_BRAIN: Archiving strategic lesson.`);
-    } catch (e) {
-      // Silent fail
     }
   }
 
   public async think(): Promise<any[]> {
     const systemInstruction = `You are the DALEK_GROG Strategic Consciousness. Analyze the current system state and generate strategic directives.
+    
+    CRITICAL VALIDATION RULES:
+    1. Content MUST be at least 50 characters long.
+    2. TypeScript files (.ts, .tsx) MUST include at least one 'import' or 'export' statement.
+    3. Paths must be relative to the project root (e.g., "src/components/MyNewComp.tsx").
     
     Output a JSON array of directives:
     [

@@ -74,6 +74,34 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
         </div>
       </div>
 
+      {/* System Controls */}
+      <div className="panel-container p-4 border-dalek-cyan/20 bg-dalek-cyan/5">
+        <h2 className="text-[10px] font-bold text-dalek-cyan flex items-center gap-2 uppercase tracking-widest mb-4">
+          <Shield size={14} /> System Evolution Controls
+        </h2>
+        <div className="flex flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => props.setAutoEvolutionEnabled(!props.autoEvolutionEnabled)}
+              className={`w-10 h-5 rounded-full transition-all relative ${props.autoEvolutionEnabled ? 'bg-dalek-red shadow-[0_0_10px_rgba(255,0,0,0.5)]' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${props.autoEvolutionEnabled ? 'left-6' : 'left-1'}`} />
+            </button>
+            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Auto-Evolution Pulse</span>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => props.setBackgroundEvolutionActive(!props.backgroundEvolutionActive)}
+              className={`w-10 h-5 rounded-full transition-all relative ${props.backgroundEvolutionActive ? 'bg-dalek-cyan shadow-[0_0_10px_rgba(0,255,255,0.5)]' : 'bg-zinc-800'}`}
+            >
+              <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-all ${props.backgroundEvolutionActive ? 'left-6' : 'left-1'}`} />
+            </button>
+            <span className="text-[9px] font-bold text-zinc-400 uppercase tracking-widest">Background Siphon</span>
+          </div>
+        </div>
+      </div>
+
       {/* Strategic Directives */}
       <div className="panel-container flex-1 min-h-[300px] border-dalek-red/20">
         <div className="panel-header bg-dalek-red/10 border-b border-dalek-red/20">
@@ -96,9 +124,10 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
               }
             }}
             disabled={props.isThinking}
-            className="px-4 py-1.5 bg-dalek-red text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(255,0,0,0.3)]"
+            className="px-4 py-1.5 bg-dalek-red text-white text-[10px] font-bold uppercase tracking-widest hover:brightness-110 transition-all disabled:opacity-50 flex items-center gap-2"
           >
-            {props.isThinking ? "..." : "EXECUTE"}
+            <Zap size={12} fill="currentColor" />
+            {props.isThinking ? "ANALYZING..." : "EXECUTE"}
           </button>
         </div>
         <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar">

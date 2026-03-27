@@ -6,7 +6,7 @@
  * Copyright (c) 2026 craighckby-stack
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import { motion, AnimatePresence } from "framer-motion";
 import * as Sentry from "@sentry/react";
@@ -40,6 +40,12 @@ export default function App() {
   const [isSelfMutating, setIsSelfMutating] = useState(false);
   const [isAnalyzingDeaths, setIsAnalyzingDeaths] = useState(false);
   const [deathAnalysis, setDeathAnalysis] = useState("");
+  const [autoEvolutionEnabled, setAutoEvolutionEnabled] = useState(false);
+  const [backgroundEvolutionActive, setBackgroundEvolutionActive] = useState(false);
+  const [evolutionSuggestions, setEvolutionSuggestions] = useState<any[]>([]);
+  const [isScanningEvolution, setIsScanningEvolution] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
+  const [testReport, setTestReport] = useState<any>(null);
 
   const grogBrainRef = useRef<GrogBrain | null>(null);
   const eventBusRef = useRef(new EventBus());
@@ -180,6 +186,10 @@ export default function App() {
             body: JSON.stringify({ filePath: path, content })
           });
           const data = await res.json();
+          if (data.status !== 'success') {
+            console.error(`GROG_MUTATION_ERROR: ${data.error || 'Unknown error'}`);
+            addLog(`GROG_BRAIN: Mutation error - ${data.error || 'Unknown error'}`, "var(--color-dalek-red)");
+          }
           return data.status === 'success';
         }
       };
@@ -195,12 +205,18 @@ export default function App() {
     const unsubDeaths = onSnapshot(qDeaths, (snap) => {
       const records = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setDeathRecords(records);
+      if (grogBrainRef.current) {
+        grogBrainRef.current.updateContext({ deaths: records });
+      }
     }, (e) => handleFirestoreError(e, OperationType.GET, 'deaths'));
 
     const qLessons = query(collection(db, 'lessons'), orderBy('timestamp', 'desc'), limit(100));
     const unsubLessons = onSnapshot(qLessons, (snap) => {
       const lessons = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setStrategicLessons(lessons);
+      if (grogBrainRef.current) {
+        grogBrainRef.current.updateContext({ lessons: lessons });
+      }
     }, (e) => handleFirestoreError(e, OperationType.GET, 'lessons'));
 
     return () => {
@@ -209,7 +225,7 @@ export default function App() {
     };
   }, [isAuthReady]);
 
-  const runGrogThinking = async () => {
+  const runGrogThinking = useCallback(async () => {
     if (!grogBrainRef.current || isThinking) return;
     setIsThinking(true);
     addLog("GROG_BRAIN: Initiating strategic analysis...", "var(--color-dalek-red)");
@@ -224,7 +240,20 @@ export default function App() {
     } finally {
       setIsThinking(false);
     }
-  };
+  }, [isThinking]);
+
+  // Background Evolution Loop
+  useEffect(() => {
+    let interval: any;
+    if (autoEvolutionEnabled && !isThinking && !isSelfMutating) {
+      // Run thinking every 5 minutes if auto-evolution is enabled
+      interval = setInterval(() => {
+        addLog("GROG_BRAIN: Auto-evolution pulse triggered.", "var(--color-dalek-red)");
+        runGrogThinking();
+      }, 300000); 
+    }
+    return () => clearInterval(interval);
+  }, [autoEvolutionEnabled, isThinking, isSelfMutating, runGrogThinking]);
 
   const executeDirective = async (directive: any) => {
     if (!grogBrainRef.current) return;
@@ -235,7 +264,7 @@ export default function App() {
         if (success) {
           addLog(`GROG_BRAIN: Successfully ${directive.type === 'MUTATE_FILE' ? 'mutated' : 'created'} ${directive.action.path}`, "var(--color-dalek-green)");
         } else {
-          throw new Error(`Failed to ${directive.type === 'MUTATE_FILE' ? 'mutate' : 'create'} file.`);
+          // Error already logged by repoOps.push
         }
       } else if (directive.type === 'SIPHON_DNA') {
         addLog(`GROG_BRAIN: Siphoning DNA from ${directive.action.targetRepo}...`, "var(--color-dalek-cyan)");
@@ -330,29 +359,36 @@ export default function App() {
           grogBrainRef={grogBrainRef}
           currentCode={""}
           mistakes={[]}
-          autoEvolutionEnabled={false}
-          setAutoEvolutionEnabled={() => {}}
-          backgroundEvolutionActive={false}
-          setBackgroundEvolutionActive={() => {}}
-          evolutionSuggestions={[]}
+          autoEvolutionEnabled={autoEvolutionEnabled}
+          setAutoEvolutionEnabled={setAutoEvolutionEnabled}
+          backgroundEvolutionActive={backgroundEvolutionActive}
+          setBackgroundEvolutionActive={setBackgroundEvolutionActive}
+          evolutionSuggestions={evolutionSuggestions}
           runMassEvolution={async () => {}}
           isMassEvolving={false}
           runBackgroundEvolution={async () => {}}
-          isScanningEvolution={false}
+          isScanningEvolution={isScanningEvolution}
           runGrogThinking={runGrogThinking}
           isThinking={isThinking}
           grogEpiphanies={[]}
           runGrogTests={async () => {}}
-          isTesting={false}
+          isTesting={isTesting}
           handleSelfMutation={async (file) => {
-            if (!grogBrainRef.current) return;
+            if (!grogBrainRef.current || isSelfMutating) return;
             setIsSelfMutating(true);
             try {
               const content = await grogBrainRef.current.fetchFile(file);
               if (content) {
                 const mutation = await grogBrainRef.current.proposeSelfMutation(file, content);
-                await grogBrainRef.current.pushFile(file, mutation, "GROG_BRAIN: Self-evolution successful.");
-                addLog(`GROG_BRAIN: Self-mutation of ${file} complete.`, "var(--color-dalek-green)");
+                if (mutation !== content) {
+                  const success = await grogBrainRef.current.pushFile(file, mutation, "GROG_BRAIN: Self-evolution successful.");
+                  if (success) {
+                    addLog(`GROG_BRAIN: Self-mutation of ${file} complete.`, "var(--color-dalek-green)");
+                    toast.success("Self-Mutation Success", { description: `Successfully evolved ${file}` });
+                  }
+                } else {
+                  addLog(`GROG_BRAIN: Mutation rejected for ${file} - no improvements found.`, "var(--color-dalek-red)");
+                }
               }
             } catch (e) {
               addLog(`GROG_BRAIN: Self-mutation of ${file} failed.`, "var(--color-dalek-red)");
@@ -363,8 +399,8 @@ export default function App() {
           }}
           isSelfMutating={isSelfMutating}
           setIsRebooting={() => {}}
-          testReport={null}
-          setTestReport={() => {}}
+          testReport={testReport}
+          setTestReport={setTestReport}
           deathRecords={deathRecords}
           strategicLessons={strategicLessons}
           isAnalyzingDeaths={isAnalyzingDeaths}

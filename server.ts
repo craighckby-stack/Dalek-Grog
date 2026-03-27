@@ -120,6 +120,9 @@ async function startServer() {
         }
       }
 
+      // Ensure directory exists
+      await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+
       await fs.writeFile(absolutePath, content, "utf-8");
       console.log(`GROK_SELF_MUTATION: Successfully evolved ${filePath}`);
 
