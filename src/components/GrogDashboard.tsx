@@ -96,9 +96,9 @@ export const GrogDashboard: React.FC<GrogDashboardProps> = (props) => {
               }
             }}
             disabled={props.isThinking}
-            className="text-dalek-cyan hover:text-white transition-colors disabled:opacity-50"
+            className="px-4 py-1.5 bg-dalek-red text-black text-[10px] font-black uppercase tracking-[0.2em] hover:bg-white transition-all disabled:opacity-50 shadow-[0_0_15px_rgba(255,0,0,0.3)]"
           >
-            {props.isThinking ? <RefreshCw size={12} className="animate-spin" /> : <Zap size={12} />}
+            {props.isThinking ? "..." : "EXECUTE"}
           </button>
         </div>
         <div className="p-4 space-y-3 overflow-y-auto custom-scrollbar">

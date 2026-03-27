@@ -109,6 +109,17 @@ async function startServer() {
         return res.status(403).json({ error: "Access denied: Path outside project scope." });
       }
 
+      // BASIC VALIDATION
+      if (!content || content.trim().length < 50) {
+        return res.status(400).json({ error: "Validation failed: Content too short or empty." });
+      }
+
+      if (filePath.endsWith(".ts") || filePath.endsWith(".tsx")) {
+        if (!content.includes("export") && !content.includes("import")) {
+          return res.status(400).json({ error: "Validation failed: Missing module exports/imports in TS file." });
+        }
+      }
+
       await fs.writeFile(absolutePath, content, "utf-8");
       console.log(`GROK_SELF_MUTATION: Successfully evolved ${filePath}`);
 

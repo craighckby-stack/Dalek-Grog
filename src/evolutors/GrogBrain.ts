@@ -3,6 +3,7 @@
 // This file exists to provide siphon baseline for self-evolution
 
 import { GoogleGenAI } from "@google/genai";
+import * as Sentry from "@sentry/react";
 import { EventBus } from '../core/nexus_core';
 import { StrategyEvolution } from './evolutionService';
 import { safeStringify } from '../core/utils';
@@ -89,6 +90,13 @@ export class GrogBrain {
 
     // Try Gemini first (Primary)
     try {
+      Sentry.addBreadcrumb({
+        category: 'ai',
+        message: 'Calling Gemini API',
+        level: 'info',
+        data: { model: "gemini-3-flash-preview" }
+      });
+      
       const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
@@ -103,6 +111,9 @@ export class GrogBrain {
       });
       return response.text || null;
     } catch (e) {
+      Sentry.captureException(e, {
+        extra: { prompt, systemInstruction, model: "gemini-3-flash-preview" }
+      });
       this.addLog(`GROG_BRAIN: Gemini primary failure. Attempting fallback...`, "var(--color-dalek-red)");
       
       // Fallback to Grok or Cerebras via server proxy
@@ -124,6 +135,9 @@ export class GrogBrain {
         const data = await response.json();
         return data.choices?.[0]?.message?.content || null;
       } catch (inner) {
+        Sentry.captureException(inner, {
+          extra: { prompt, systemInstruction, fallbackModel }
+        });
         this.addLog(`GROG_BRAIN: All AI models exhausted.`, "var(--color-dalek-red)");
         return null;
       }
@@ -135,8 +149,29 @@ export class GrogBrain {
   }
 
   public async proposeSelfMutation(targetFile: string, currentContent: string): Promise<string> {
+    const performanceContext = {
+      avgTokens: this.gateStats.estimatedTokensUsed / (this.gateStats.callCount || 1),
+      errorRate: this.gateStats.retryCount / (this.gateStats.callCount || 1),
+      isQuotaExhausted: this.gateStats.isQuotaExhausted
+    };
+
+    const strategicContext = {
+      recentFailures: this.context.deaths.slice(-5).map((d: any) => d.reason),
+      lessonsLearned: this.context.lessons.slice(-5).map((l: any) => l.lesson),
+      activeStrategies: this.evolutionEngine.getStrategies().length
+    };
+
     const systemInstruction = `You are the DALEK_GROG Self-Evolution Protocol. 
-    Analyze your own source code and propose an architectural improvement.
+    Analyze your own source code and propose an architectural improvement based on current performance and strategic context.
+    
+    PERFORMANCE ANALYSIS:
+    - If Token Usage is high (>4000 avg): Prioritize prompt compression and token optimization.
+    - If Error Rate is high (>0.2): Prioritize robustness, error handling, and fallback logic.
+    - If Quota is exhausted: Prioritize efficiency and model-switching logic.
+    
+    STRATEGIC ANALYSIS:
+    - Address recent failures: ${strategicContext.recentFailures.join(', ')}
+    - Incorporate lessons: ${strategicContext.lessonsLearned.join(', ')}
     
     GOALS:
     1. Optimize for Shared Consciousness (Firebase integration).
@@ -146,10 +181,16 @@ export class GrogBrain {
     
     Output ONLY the raw source code. No markdown blocks, no explanations.`;
 
-    const prompt = `TARGET FILE: ${targetFile}\n\nCURRENT SOURCE:\n${currentContent}`;
+    const prompt = `TARGET FILE: ${targetFile}\n\nPERFORMANCE DATA: ${safeStringify(performanceContext)}\nSTRATEGIC DATA: ${safeStringify(strategicContext)}\n\nCURRENT SOURCE:\n${currentContent}`;
     
     const result = await this.callAIWithFallback(prompt, systemInstruction);
-    return result || currentContent;
+    
+    if (!result || result.trim().length < 100) {
+      this.addLog("GROG_BRAIN: Self-mutation proposal rejected - insufficient quality.", "var(--color-dalek-red)");
+      return currentContent;
+    }
+
+    return result;
   }
 
   public async recordDeath(reason: string, context: any) {
@@ -171,6 +212,11 @@ export class GrogBrain {
     if (this.context.deaths.length > 50) this.context.deaths.shift();
     this.addLog(`GROG_BRAIN: Failure recorded - ${reason}`, "var(--color-dalek-red)");
     
+    Sentry.captureMessage(`GROG_BRAIN_DEATH: ${reason}`, {
+      level: 'error',
+      extra: { context: enrichedContext }
+    });
+
     this.eventBus.emit('grog:thought', {
       type: 'failure_analysis',
       priority: 9,
@@ -224,6 +270,12 @@ export class GrogBrain {
     this.context.lessons.push(lessonEntry);
     if (this.context.lessons.length > 50) this.context.lessons.shift();
     this.addLog(`GROG_BRAIN: Strategic lesson learned.`, "var(--color-dalek-green)");
+
+    Sentry.addBreadcrumb({
+      category: 'strategy',
+      message: `Lesson learned: ${lesson.slice(0, 100)}`,
+      level: 'info'
+    });
 
     this.eventBus.emit('grog:thought', {
       type: 'lesson_learned',

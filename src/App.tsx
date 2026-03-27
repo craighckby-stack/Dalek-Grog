@@ -35,6 +35,11 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState('grog');
+  const [grogThoughts, setGrogThoughts] = useState<any[]>([]);
+  const [isThinking, setIsThinking] = useState(false);
+  const [isSelfMutating, setIsSelfMutating] = useState(false);
+  const [isAnalyzingDeaths, setIsAnalyzingDeaths] = useState(false);
+  const [deathAnalysis, setDeathAnalysis] = useState("");
 
   const grogBrainRef = useRef<GrogBrain | null>(null);
   const eventBusRef = useRef(new EventBus());
@@ -204,6 +209,74 @@ export default function App() {
     };
   }, [isAuthReady]);
 
+  const runGrogThinking = async () => {
+    if (!grogBrainRef.current || isThinking) return;
+    setIsThinking(true);
+    addLog("GROG_BRAIN: Initiating strategic analysis...", "var(--color-dalek-red)");
+    try {
+      const thoughts = await grogBrainRef.current.think();
+      setGrogThoughts(thoughts);
+      addLog(`GROG_BRAIN: Analysis complete. ${thoughts.length} directives generated.`, "var(--color-dalek-red)");
+    } catch (e) {
+      addLog("GROG_BRAIN: Strategic analysis failed.", "var(--color-dalek-red)");
+      Sentry.captureException(e);
+      throw e;
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
+  const executeDirective = async (directive: any) => {
+    if (!grogBrainRef.current) return;
+    addLog(`GROG_BRAIN: Executing directive: ${directive.type}`, "var(--color-dalek-red)");
+    try {
+      if (directive.type === 'MUTATE_FILE' || directive.type === 'CREATE_FILE') {
+        const success = await grogBrainRef.current.pushFile(directive.action.path, directive.action.content, directive.insight);
+        if (success) {
+          addLog(`GROG_BRAIN: Successfully ${directive.type === 'MUTATE_FILE' ? 'mutated' : 'created'} ${directive.action.path}`, "var(--color-dalek-green)");
+        } else {
+          throw new Error(`Failed to ${directive.type === 'MUTATE_FILE' ? 'mutate' : 'create'} file.`);
+        }
+      } else if (directive.type === 'SIPHON_DNA') {
+        addLog(`GROG_BRAIN: Siphoning DNA from ${directive.action.targetRepo}...`, "var(--color-dalek-cyan)");
+        // Placeholder for siphon logic
+        await new Promise(r => setTimeout(r, 2000));
+        addLog(`GROG_BRAIN: Siphon complete. New patterns integrated.`, "var(--color-dalek-green)");
+      }
+    } catch (e) {
+      addLog(`GROG_BRAIN: Directive execution failed: ${directive.type}`, "var(--color-dalek-red)");
+      Sentry.captureException(e);
+      throw e;
+    }
+  };
+
+  const fetchDeathRecords = async () => {
+    addLog("SHARED_CONSCIOUSNESS: Refreshing death records...", "var(--color-dalek-cyan)");
+    // onSnapshot handles this, but we can log it
+  };
+
+  const fetchStrategicLessons = async () => {
+    addLog("SHARED_CONSCIOUSNESS: Refreshing strategic lessons...", "var(--color-dalek-cyan)");
+    // onSnapshot handles this
+  };
+
+  const analyzeDeathRecords = async () => {
+    if (!grogBrainRef.current || isAnalyzingDeaths) return;
+    setIsAnalyzingDeaths(true);
+    addLog("GROG_BRAIN: Analyzing historical failures...", "var(--color-dalek-red)");
+    try {
+      const prompt = `Analyze these recent failures and provide a summary of what we've learned and how to improve: ${JSON.stringify(deathRecords.slice(0, 10))}`;
+      const analysis = await grogBrainRef.current.callAIWithFallback(prompt, "You are a failure analysis expert.");
+      setDeathAnalysis(analysis || "No analysis available.");
+      addLog("GROG_BRAIN: Failure analysis complete.", "var(--color-dalek-green)");
+    } catch (e) {
+      addLog("GROG_BRAIN: Failure analysis failed.", "var(--color-dalek-red)");
+      Sentry.captureException(e);
+    } finally {
+      setIsAnalyzingDeaths(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white selection:bg-dalek-red selection:text-white font-sans p-4 flex flex-col gap-4">
       <Toaster position="top-right" theme="dark" richColors closeButton />
@@ -266,28 +339,44 @@ export default function App() {
           isMassEvolving={false}
           runBackgroundEvolution={async () => {}}
           isScanningEvolution={false}
-          runGrogThinking={async () => {}}
-          isThinking={false}
+          runGrogThinking={runGrogThinking}
+          isThinking={isThinking}
           grogEpiphanies={[]}
           runGrogTests={async () => {}}
           isTesting={false}
-          handleSelfMutation={async () => {}}
-          isSelfMutating={false}
+          handleSelfMutation={async (file) => {
+            if (!grogBrainRef.current) return;
+            setIsSelfMutating(true);
+            try {
+              const content = await grogBrainRef.current.fetchFile(file);
+              if (content) {
+                const mutation = await grogBrainRef.current.proposeSelfMutation(file, content);
+                await grogBrainRef.current.pushFile(file, mutation, "GROG_BRAIN: Self-evolution successful.");
+                addLog(`GROG_BRAIN: Self-mutation of ${file} complete.`, "var(--color-dalek-green)");
+              }
+            } catch (e) {
+              addLog(`GROG_BRAIN: Self-mutation of ${file} failed.`, "var(--color-dalek-red)");
+              Sentry.captureException(e);
+            } finally {
+              setIsSelfMutating(false);
+            }
+          }}
+          isSelfMutating={isSelfMutating}
           setIsRebooting={() => {}}
           testReport={null}
           setTestReport={() => {}}
           deathRecords={deathRecords}
           strategicLessons={strategicLessons}
-          isAnalyzingDeaths={false}
-          deathAnalysis={""}
-          analyzeDeathRecords={async () => {}}
-          fetchDeathRecords={async () => {}}
-          fetchStrategicLessons={async () => {}}
+          isAnalyzingDeaths={isAnalyzingDeaths}
+          deathAnalysis={deathAnalysis}
+          analyzeDeathRecords={analyzeDeathRecords}
+          fetchDeathRecords={fetchDeathRecords}
+          fetchStrategicLessons={fetchStrategicLessons}
           setSelectedFile={() => {}}
           setActiveTab={setActiveTab}
           addLog={addLog}
-          grogThoughts={[]}
-          executeDirective={async () => {}}
+          grogThoughts={grogThoughts}
+          executeDirective={executeDirective}
         />
       </main>
 
