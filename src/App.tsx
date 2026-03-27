@@ -34,10 +34,10 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthReady, setIsAuthReady] = useState(false);
   const [activeTab, setActiveTab] = useState('grog');
-  const [geminiKey] = useState(process.env.GEMINI_API_KEY || '');
 
   const grogBrainRef = useRef<GrogBrain | null>(null);
   const eventBusRef = useRef(new EventBus());
+  const evolutionEngineRef = useRef(new StrategyEvolution());
 
   const addLog = (message: string, color: string = "var(--color-dalek-cyan)") => {
     const newLog = { timestamp: new Date().toLocaleTimeString(), message, color };
@@ -95,7 +95,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!grogBrainRef.current && geminiKey) {
+    if (!grogBrainRef.current) {
       const firebaseOps = {
         recordDeath: async (death: any) => {
           try {
@@ -123,7 +123,7 @@ export default function App() {
         getLessons: async () => []
       };
 
-      grogBrainRef.current = new GrogBrain(geminiKey, {} as any, addLog, {
+      grogBrainRef.current = new GrogBrain(undefined, evolutionEngineRef.current, addLog, {
         fetch: async (path) => {
           const res = await fetch('/api/grog/read', {
             method: 'POST',
@@ -145,7 +145,7 @@ export default function App() {
         firebase: firebaseOps
       }, eventBusRef.current);
     }
-  }, [geminiKey]);
+  }, []);
 
   useEffect(() => {
     if (!isAuthReady) return;

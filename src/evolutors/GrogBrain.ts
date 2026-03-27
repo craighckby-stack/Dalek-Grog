@@ -5,6 +5,7 @@
 import { GoogleGenAI } from "@google/genai";
 import { EventBus } from '../core/nexus_core';
 import { StrategyEvolution } from './evolutionService';
+import { safeStringify } from '../core/utils';
 
 export class GrogBrain {
   private gateStats = {
@@ -21,7 +22,7 @@ export class GrogBrain {
   };
 
   constructor(
-    private geminiKey: string,
+    private geminiKey: string | undefined,
     private evolutionEngine: StrategyEvolution,
     private addLog: (message: string, color?: string) => void,
     private services: {
@@ -62,9 +63,15 @@ export class GrogBrain {
   private async callAIWithFallback(prompt: string, systemInstruction: string, useGrok: boolean = false, useCerebras: boolean = false): Promise<string | null> {
     this.gateStats.callCount++;
     
+    const apiKey = this.geminiKey || process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      this.addLog("GROG_BRAIN: No API key provided. AI operations suspended.", "var(--color-dalek-red)");
+      return null;
+    }
+
     // Try Gemini first (Primary)
     try {
-      const ai = new GoogleGenAI({ apiKey: this.geminiKey });
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
         contents: prompt,
@@ -128,10 +135,16 @@ export class GrogBrain {
   }
 
   public async recordDeath(reason: string, context: any) {
+    const enrichedContext = {
+      ...context,
+      gateStats: { ...this.gateStats },
+      strategies: this.evolutionEngine.getStrategies()
+    };
+
     const deathEntry = { 
       id: Math.random().toString(36).substring(2, 15),
       reason, 
-      context, 
+      context: enrichedContext, 
       timestamp: new Date().toISOString() 
     };
 
@@ -168,7 +181,7 @@ export class GrogBrain {
       allDeaths.push(deathEntry);
       if (allDeaths.length > 100) allDeaths.shift(); 
       
-      const content = JSON.stringify(allDeaths, null, 2);
+      const content = safeStringify(allDeaths, 2);
       await this.services.push('grog/lessons/DEATH_REGISTRY.json', content, `GROG_BRAIN: Recording system failure - ${reason.slice(0, 50)}`);
     } catch (e) {
       this.addLog(`GROG_BRAIN: Failed to persist death record to repository.`, "var(--color-dalek-red)");
@@ -176,10 +189,16 @@ export class GrogBrain {
   }
 
   public async recordLesson(lesson: string, context: any) {
+    const enrichedContext = {
+      ...context,
+      gateStats: { ...this.gateStats },
+      strategies: this.evolutionEngine.getStrategies()
+    };
+
     const lessonEntry = { 
       id: Math.random().toString(36).substring(2, 15),
       lesson, 
-      context, 
+      context: enrichedContext, 
       timestamp: new Date().toISOString() 
     };
 
@@ -216,7 +235,7 @@ export class GrogBrain {
       allLessons.push(lessonEntry);
       if (allLessons.length > 100) allLessons.shift();
       
-      const content = JSON.stringify(allLessons, null, 2);
+      const content = safeStringify(allLessons, 2);
       await this.services.push('grog/lessons/STRATEGIC_LESSONS.json', content, `GROG_BRAIN: Archiving strategic lesson.`);
     } catch (e) {
       // Silent fail
@@ -241,7 +260,7 @@ export class GrogBrain {
     ]`;
 
     const prompt = `Analyze the system and propose 3-5 strategic directives. 
-    Current Context: ${JSON.stringify({ 
+    Current Context: ${safeStringify({ 
       deaths: this.context.deaths.length, 
       lessons: this.context.lessons.length,
       stats: this.gateStats 

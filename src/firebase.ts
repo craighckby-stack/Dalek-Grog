@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+import { safeStringify } from './core/utils';
 
 // Import the Firebase configuration
 import firebaseConfig from './firebase-applet-config.json';
@@ -71,6 +72,7 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  const serialized = safeStringify(errInfo);
+  console.error('Firestore Error: ', serialized);
+  throw new Error(serialized);
 }

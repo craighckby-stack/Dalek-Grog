@@ -10,6 +10,8 @@ export interface MemoryEntry {
   metadata?: any;
 }
 
+import { safeStringify } from '../core/utils';
+
 export class GrogMemory {
   private shortTerm: MemoryEntry[] = [];
   private longTerm: MemoryEntry[] = [];
@@ -47,7 +49,7 @@ export class GrogMemory {
     const lowerQuery = query.toLowerCase();
     return this.longTerm.filter(e => 
       e.content.toLowerCase().includes(lowerQuery) || 
-      JSON.stringify(e.metadata || {}).toLowerCase().includes(lowerQuery)
+      safeStringify(e.metadata || {}).toLowerCase().includes(lowerQuery)
     );
   }
 
